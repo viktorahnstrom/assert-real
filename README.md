@@ -1,4 +1,4 @@
-# XADE - eXplainable Automated Deepfake Devaluation
+# XADE - eXplainable Automated Deepfake Evaluation
 
 Bachelor's Thesis project - Viktor Ahnström & Viktor Carlsson
 
