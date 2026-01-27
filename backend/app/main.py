@@ -17,6 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def read_root():
     return {
@@ -24,6 +25,7 @@ async def read_root():
         "version": "0.1.0",
         "status": "running",
     }
+
 
 @app.get("/health")
 async def health_check():
