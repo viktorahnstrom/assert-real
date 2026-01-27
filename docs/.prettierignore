@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.expo/
+
+# Mobile native folders
+android/
+ios/
+
+# Backend (Python has its own formatter)
+backend/
+
+# Misc
+*.md
+*.lock
+package-lock.json
