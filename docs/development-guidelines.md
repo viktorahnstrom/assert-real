@@ -1,4 +1,4 @@
-## XADE Development Guidelines
+# XADE Development Guidelines
 
 ## Git Workflow
 
