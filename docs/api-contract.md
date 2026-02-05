@@ -15,13 +15,14 @@ Currently none (development). Production will require API keys.
 
 **Response 200:**
 
+```
 json:
 
 {
     "status": "healthy",
     "timestamp: "2026-02-05T10:30:00Z"
 }
-
+```
 ---
 
 ### 2. Analyze Image from Deepfake
