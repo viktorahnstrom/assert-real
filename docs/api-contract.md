@@ -15,9 +15,9 @@ Currently none (development). Production will require API keys.
 
 **Response 200:**
 
-```
 json:
 
+```
 {
     "status": "healthy",
     "timestamp: "2026-02-05T10:30:00Z"
@@ -39,6 +39,7 @@ json:
 
 json:
 
+```
 {
     "analysis_id": "uuid-string",
     "timestamp": "2026-02-05T10:30:00Z",
@@ -66,6 +67,7 @@ json:
 **Response 400:** Invalid image format
 **Response 413:** File too large
 **Response 500:** Processing error
+```
 
 ---
 
@@ -80,6 +82,7 @@ json:
 
 json:
 
+```
 {
     "total": 45,
     "results: [
@@ -92,6 +95,7 @@ json:
         }
     ]
 }
+```
 
 ---
 
@@ -109,6 +113,7 @@ json:
 
 json:
 
+```
 {
     "providers": [
         {
@@ -137,6 +142,7 @@ json:
         }
     ]
 }
+```
 
 ---
 
@@ -144,6 +150,7 @@ json:
 
 json:
 
+```
 {
     "error": {
         "code": "INVALID_IMAGE_FORMAT",
@@ -151,7 +158,7 @@ json:
         "details": {}
     }
 }
-
+```
 
 ---
 
