@@ -41,3 +41,36 @@ coverage/
 # Misc
 *.tgz
 .cache/
+
+# ====================
+# ML/Dataset specific
+# ====================
+
+# Dataset - DO NOT COMMIT (large files)
+data/real_vs_fake/
+data/raw/
+backend/data/real_vs_fake/
+backend/data/raw/
+*.zip
+*.tar.gz
+140k-real-and-fake-faces/
+
+# Model checkpoints (large files)
+checkpoints/
+backend/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.pkl
+*.pickle
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Training outputs
+runs/
+outputs/
+logs/
+wandb/
