@@ -23,9 +23,7 @@ class Settings:
         self.environment = os.getenv("ENVIRONMENT", "development")
 
         if not self.supabase_url or not self.supabase_anon_key:
-            raise ValueError(
-                "SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment"
-            )
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment")
 
 
 @lru_cache

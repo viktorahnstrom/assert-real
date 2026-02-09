@@ -147,6 +147,7 @@ class Analysis(AnalysisBase):
 # ============================================
 class AnalysisWithImage(Analysis):
     """Analysis response including image metadata."""
+
     image: Image
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
+
 def organize_dataset(source_dir: str, dest_dir: str):
     """Split dataset into train/val/test with 80/10/10 split"""
 
@@ -19,7 +20,7 @@ def organize_dataset(source_dir: str, dest_dir: str):
     for images, label in [(real_images, "real"), (fake_images, "fake")]:
         # First split: 80% train, 20%temp
         train, temp = train_test_split(images, test_size=0.2, random_state=42)
-        #Second split: 10 %val, 10% test
+        # Second split: 10 %val, 10% test
         val, test = train_test_split(temp, test_size=0.5, random_state=42)
 
         # Copy files
@@ -38,8 +39,6 @@ def organize_dataset(source_dir: str, dest_dir: str):
         fake_count = len(list((dest / split / "fake").glob("*.*")))
         print(f"{split}: {real_count} real, {fake_count} fake")
 
+
 if __name__ == "__main__":
-    organize_dataset(
-        source_dir="data/raw",
-        dest_dir="data"
-    )
+    organize_dataset(source_dir="data/raw", dest_dir="data")

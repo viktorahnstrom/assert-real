@@ -11,9 +11,11 @@ from pathlib import Path
 from datetime import datetime
 from PIL import Image
 
+
 # Custom dataset class that skips corrupted images
 class SafeImageFolder(datasets.ImageFolder):
     """ImageFolder that skips corrupted images"""
+
     def __getitem__(self, index):
         try:
             return super().__getitem__(index)
@@ -21,6 +23,7 @@ class SafeImageFolder(datasets.ImageFolder):
             print(f"\nWarning: Skipping corrupted image at index {index}: {e}")
             # Return next valid image
             return self.__getitem__((index + 1) % len(self))
+
 
 class DeepfakeDetector(nn.Module):
     def __init__(self, num_classes=2):
@@ -41,13 +44,16 @@ class DeepfakeDetector(nn.Module):
             nn.Linear(num_features, 512),
             nn.ReLU(),
             nn.Dropout(p=0.3),
-            nn.Linear(512, num_classes)
+            nn.Linear(512, num_classes),
         )
 
     def forward(self, x):
         return self.model(x)
 
-def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001, max_train_samples=15000):
+
+def train_model(
+    data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001, max_train_samples=15000
+):
     """Train deepfake detector with limited samples for faster training"""
 
     # Device selection - Apple Silicon support
@@ -62,30 +68,28 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
     print(f"Training with max {max_train_samples} samples for faster iteration")
 
     # Data transforms
-    train_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    train_transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(10),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
 
-    val_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    val_transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
 
     # Load full datasets
-    full_train_dataset = SafeImageFolder(
-        root=f"{data_dir}/train",
-        transform=train_transform
-    )
-    full_val_dataset = SafeImageFolder(
-        root=f"{data_dir}/valid",
-        transform=val_transform
-    )
+    full_train_dataset = SafeImageFolder(root=f"{data_dir}/train", transform=train_transform)
+    full_val_dataset = SafeImageFolder(root=f"{data_dir}/valid", transform=val_transform)
 
     # Limit dataset size for faster training
     train_size = min(max_train_samples, len(full_train_dataset))
@@ -119,9 +123,9 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
     for epoch in range(epochs):
-        print(f"\n{'='*60}")
-        print(f"Epoch {epoch+1}/{epochs}")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print(f"Epoch {epoch + 1}/{epochs}")
+        print(f"{'=' * 60}")
 
         # Training phase
         model.train()
@@ -183,14 +187,17 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             Path("checkpoints").mkdir(exist_ok=True)
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'val_acc': val_acc,
-                'train_samples': train_size,
-                'class_names': full_train_dataset.classes
-            }, "checkpoints/best_model.pt")
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "val_acc": val_acc,
+                    "train_samples": train_size,
+                    "class_names": full_train_dataset.classes,
+                },
+                "checkpoints/best_model.pt",
+            )
             print(f"   ✓ Saved best model (val_acc: {val_acc:.2f}%)")
 
     # Save final results
@@ -202,28 +209,29 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
         "train_samples": train_size,
         "val_samples": val_size,
         "history": history,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
     Path("checkpoints").mkdir(exist_ok=True)
     with open("checkpoints/training_results.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"✓ Training complete!")
     print(f"   Best validation accuracy: {best_val_acc:.2f}%")
     print(f"   Model saved to: checkpoints/best_model.pt")
     print(f"   Results saved to: checkpoints/training_results.json")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     return model, history
+
 
 if __name__ == "__main__":
     # Train with smaller dataset for faster development
     model, history = train_model(
         data_dir="data/real_vs_fake",
-        epochs=5,                  # Reduced from 10
+        epochs=5,  # Reduced from 10
         batch_size=32,
         lr=0.001,
-        max_train_samples=15000    # Use 15k instead of 100k
+        max_train_samples=15000,  # Use 15k instead of 100k
     )
