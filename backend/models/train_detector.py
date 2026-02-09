@@ -1,15 +1,16 @@
 # backend/models/train_detector.py
 
+import json
+from datetime import datetime
+from pathlib import Path
+
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
-from torchvision import transforms, datasets
-from torchvision.models import efficientnet_b4, EfficientNet_B4_Weights
-from tqdm import tqdm
-import json
-from pathlib import Path
-from datetime import datetime
 from PIL import Image
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
+from tqdm import tqdm
 
 
 # Custom dataset class that skips corrupted images
@@ -19,7 +20,7 @@ class SafeImageFolder(datasets.ImageFolder):
     def __getitem__(self, index):
         try:
             return super().__getitem__(index)
-        except (IOError, OSError, Image.UnidentifiedImageError) as e:
+        except (OSError, Image.UnidentifiedImageError) as e:
             print(f"\nWarning: Skipping corrupted image at index {index}: {e}")
             # Return next valid image
             return self.__getitem__((index + 1) % len(self))
@@ -179,7 +180,7 @@ def train_model(
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
 
-        print(f"\n📊 Results:")
+        print("\n📊 Results:")
         print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
         print(f"   Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc:.2f}%")
 
@@ -217,10 +218,10 @@ def train_model(
         json.dump(results, f, indent=2)
 
     print(f"\n{'=' * 60}")
-    print(f"✓ Training complete!")
+    print("✓ Training complete!")
     print(f"   Best validation accuracy: {best_val_acc:.2f}%")
-    print(f"   Model saved to: checkpoints/best_model.pt")
-    print(f"   Results saved to: checkpoints/training_results.json")
+    print("   Model saved to: checkpoints/best_model.pt")
+    print("   Results saved to: checkpoints/training_results.json")
     print(f"{'=' * 60}")
 
     return model, history
