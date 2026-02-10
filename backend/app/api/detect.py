@@ -162,6 +162,7 @@ async def detect_deepfake(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}") from e
 
+
 @router.get("/model-info")
 async def get_model_info():
     """Get information about the loaded detection model"""
