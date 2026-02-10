@@ -49,13 +49,16 @@ class DeepfakeDetector(nn.Module):
             nn.ReLU(),
             nn.BatchNorm1d(512),  # Added batch norm
             nn.Dropout(p=0.4),
-            nn.Linear(512, num_classes)
+            nn.Linear(512, num_classes),
         )
 
     def forward(self, x):
         return self.model(x)
 
-def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0.001, max_train_samples=75000):
+
+def train_model(
+    data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0.001, max_train_samples=75000
+):
     """Train deepfake detector with improved settings"""
 
     # Device selection
@@ -70,21 +73,25 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
     print(f"Training with max {max_train_samples} samples, {epochs} epochs")
 
     # IMPROVED data transforms
-    train_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(15),
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    train_transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
 
-    val_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
+    val_transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ]
+    )
 
     # Load datasets
     full_train_dataset = SafeImageFolder(root=f"{data_dir}/train", transform=train_transform)
@@ -114,13 +121,16 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
     criterion = nn.CrossEntropyLoss()
 
     # Different learning rates for backbone vs classifier
-    optimizer = torch.optim.AdamW([
-        {'params': model.model.features.parameters(), 'lr': lr * 0.1},
-        {'params': model.model.classifier.parameters(), 'lr': lr}
-    ], weight_decay=0.01)
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": model.model.features.parameters(), "lr": lr * 0.1},
+            {"params": model.model.classifier.parameters(), "lr": lr},
+        ],
+        weight_decay=0.01,
+    )
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', patience=3, factor=0.5, verbose=True
+        optimizer, mode="min", patience=3, factor=0.5, verbose=True
     )
 
     # Training loop
@@ -212,7 +222,7 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
             print(f"   No improvement ({patience_counter}/{patience})")
 
         if patience_counter >= patience:
-            print(f"\n⚠️ Early stopping triggered after {epoch+1} epochs")
+            print(f"\n⚠️ Early stopping triggered after {epoch + 1} epochs")
             break
 
     # Save final results
@@ -247,5 +257,5 @@ if __name__ == "__main__":
         epochs=10,
         batch_size=64,
         lr=0.001,
-        max_train_samples=100000
+        max_train_samples=100000,
     )
