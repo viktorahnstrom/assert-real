@@ -1,24 +1,28 @@
 # models/train_detector.py
 
+import json
+from datetime import datetime
+from pathlib import Path
+
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
-from torchvision import transforms, datasets
-from torchvision.models import efficientnet_b4, EfficientNet_B4_Weights
-from tqdm import tqdm
-import json
-from pathlib import Path
-from datetime import datetime
 from PIL import Image
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
+from tqdm import tqdm
+
 
 class SafeImageFolder(datasets.ImageFolder):
     """ImageFolder that skips corrupted images"""
+
     def __getitem__(self, index):
         try:
             return super().__getitem__(index)
-        except (IOError, OSError, Image.UnidentifiedImageError) as e:
+        except (OSError, Image.UnidentifiedImageError) as e:
             print(f"\nWarning: Skipping corrupted image at index {index}: {e}")
             return self.__getitem__((index + 1) % len(self))
+
 
 class DeepfakeDetector(nn.Module):
     def __init__(self, num_classes=2):
@@ -126,9 +130,9 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
     for epoch in range(epochs):
-        print(f"\n{'='*60}")
-        print(f"Epoch {epoch+1}/{epochs}")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print(f"Epoch {epoch + 1}/{epochs}")
+        print(f"{'=' * 60}")
 
         # Training phase
         model.train()
@@ -182,7 +186,7 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
 
-        print(f"\n📊 Results:")
+        print("\n📊 Results:")
         print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
         print(f"   Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc:.2f}%")
 
@@ -191,14 +195,17 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
             best_val_acc = val_acc
             patience_counter = 0
             Path("checkpoints").mkdir(exist_ok=True)
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'val_acc': val_acc,
-                'train_samples': train_size,
-                'class_names': full_train_dataset.classes
-            }, "checkpoints/best_model.pt")
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "val_acc": val_acc,
+                    "train_samples": train_size,
+                    "class_names": full_train_dataset.classes,
+                },
+                "checkpoints/best_model.pt",
+            )
             print(f"   ✓ Saved best model (val_acc: {val_acc:.2f}%)")
         else:
             patience_counter += 1
@@ -217,21 +224,22 @@ def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0
         "train_samples": train_size,
         "val_samples": val_size,
         "history": history,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
     Path("checkpoints").mkdir(exist_ok=True)
     with open("checkpoints/training_results.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n{'='*60}")
-    print(f"✓ Training complete!")
+    print(f"\n{'=' * 60}")
+    print("✓ Training complete!")
     print(f"   Best validation accuracy: {best_val_acc:.2f}%")
-    print(f"   Model saved to: checkpoints/best_model.pt")
-    print(f"   Results saved to: checkpoints/training_results.json")
-    print(f"{'='*60}")
+    print("   Model saved to: checkpoints/best_model.pt")
+    print("   Results saved to: checkpoints/training_results.json")
+    print(f"{'=' * 60}")
 
     return model, history
+
 
 if __name__ == "__main__":
     model, history = train_model(
