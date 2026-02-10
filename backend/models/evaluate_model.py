@@ -1,23 +1,22 @@
 # backend/models/evaluate_model.py
 
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets
-from pathlib import Path
 import json
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
     roc_curve,
-    confusion_matrix,
-    classification_report,
 )
-import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+from torchvision import transforms
 from tqdm import tqdm
 
 # Import your model class
