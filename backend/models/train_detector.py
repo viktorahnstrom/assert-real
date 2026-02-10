@@ -1,4 +1,4 @@
-# backend/models/train_detector.py
+# models/train_detector.py
 
 import torch
 import torch.nn as nn
@@ -11,7 +11,6 @@ from pathlib import Path
 from datetime import datetime
 from PIL import Image
 
-# Custom dataset class that skips corrupted images
 class SafeImageFolder(datasets.ImageFolder):
     """ImageFolder that skips corrupted images"""
     def __getitem__(self, index):
@@ -19,38 +18,43 @@ class SafeImageFolder(datasets.ImageFolder):
             return super().__getitem__(index)
         except (IOError, OSError, Image.UnidentifiedImageError) as e:
             print(f"\nWarning: Skipping corrupted image at index {index}: {e}")
-            # Return next valid image
             return self.__getitem__((index + 1) % len(self))
 
 class DeepfakeDetector(nn.Module):
     def __init__(self, num_classes=2):
         super().__init__()
 
-        # Load pre-trained EfficientNet-B4
         weights = EfficientNet_B4_Weights.IMAGENET1K_V1
         self.model = efficientnet_b4(weights=weights)
 
-        # Freeze backbone initially
-        for param in self.model.features.parameters():
-            param.requires_grad = False
+        # Unfreeze last 30% of backbone layers
+        total_layers = len(list(self.model.features.parameters()))
+        freeze_until = int(total_layers * 0.7)
+
+        for idx, param in enumerate(self.model.features.parameters()):
+            if idx < freeze_until:
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
 
         # Replace classifier
         num_features = self.model.classifier[1].in_features
         self.model.classifier = nn.Sequential(
-            nn.Dropout(p=0.4),
+            nn.Dropout(p=0.5),  # Increased dropout
             nn.Linear(num_features, 512),
             nn.ReLU(),
-            nn.Dropout(p=0.3),
+            nn.BatchNorm1d(512),  # Added batch norm
+            nn.Dropout(p=0.4),
             nn.Linear(512, num_classes)
         )
 
     def forward(self, x):
         return self.model(x)
 
-def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001, max_train_samples=15000):
-    """Train deepfake detector with limited samples for faster training"""
+def train_model(data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0.001, max_train_samples=75000):
+    """Train deepfake detector with improved settings"""
 
-    # Device selection - Apple Silicon support
+    # Device selection
     if torch.backends.mps.is_available():
         device = torch.device("mps")
     elif torch.cuda.is_available():
@@ -59,14 +63,15 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
         device = torch.device("cpu")
 
     print(f"Using device: {device}")
-    print(f"Training with max {max_train_samples} samples for faster iteration")
+    print(f"Training with max {max_train_samples} samples, {epochs} epochs")
 
-    # Data transforms
+    # IMPROVED data transforms
     train_transform = transforms.Compose([
         transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(10),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
@@ -77,31 +82,23 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    # Load full datasets
-    full_train_dataset = SafeImageFolder(
-        root=f"{data_dir}/train",
-        transform=train_transform
-    )
-    full_val_dataset = SafeImageFolder(
-        root=f"{data_dir}/valid",
-        transform=val_transform
-    )
+    # Load datasets
+    full_train_dataset = SafeImageFolder(root=f"{data_dir}/train", transform=train_transform)
+    full_val_dataset = SafeImageFolder(root=f"{data_dir}/valid", transform=val_transform)
 
-    # Limit dataset size for faster training
+    # Limit dataset size
     train_size = min(max_train_samples, len(full_train_dataset))
-    val_size = min(max_train_samples // 5, len(full_val_dataset))  # 20% of train size
+    val_size = min(max_train_samples // 5, len(full_val_dataset))
 
     print(f"Full dataset: {len(full_train_dataset)} train, {len(full_val_dataset)} val")
     print(f"Using subset: {train_size} train, {val_size} val")
 
-    # Create random subsets
     train_indices = torch.randperm(len(full_train_dataset))[:train_size]
     val_indices = torch.randperm(len(full_val_dataset))[:val_size]
 
     train_dataset = Subset(full_train_dataset, train_indices)
     val_dataset = Subset(full_val_dataset, val_indices)
 
-    # Create data loaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
@@ -111,11 +108,21 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
     # Model, loss, optimizer
     model = DeepfakeDetector().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2)
+
+    # Different learning rates for backbone vs classifier
+    optimizer = torch.optim.AdamW([
+        {'params': model.model.features.parameters(), 'lr': lr * 0.1},
+        {'params': model.model.classifier.parameters(), 'lr': lr}
+    ], weight_decay=0.01)
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', patience=3, factor=0.5, verbose=True
+    )
 
     # Training loop
     best_val_acc = 0.0
+    patience = 7
+    patience_counter = 0
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
     for epoch in range(epochs):
@@ -182,6 +189,7 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
         # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            patience_counter = 0
             Path("checkpoints").mkdir(exist_ok=True)
             torch.save({
                 'epoch': epoch,
@@ -192,13 +200,20 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
                 'class_names': full_train_dataset.classes
             }, "checkpoints/best_model.pt")
             print(f"   ✓ Saved best model (val_acc: {val_acc:.2f}%)")
+        else:
+            patience_counter += 1
+            print(f"   No improvement ({patience_counter}/{patience})")
+
+        if patience_counter >= patience:
+            print(f"\n⚠️ Early stopping triggered after {epoch+1} epochs")
+            break
 
     # Save final results
     results = {
         "best_val_acc": best_val_acc,
         "final_train_acc": train_acc,
         "final_val_acc": val_acc,
-        "epochs": epochs,
+        "epochs_trained": epoch + 1,
         "train_samples": train_size,
         "val_samples": val_size,
         "history": history,
@@ -219,11 +234,10 @@ def train_model(data_dir="data/real_vs_fake", epochs=5, batch_size=32, lr=0.001,
     return model, history
 
 if __name__ == "__main__":
-    # Train with smaller dataset for faster development
     model, history = train_model(
-        data_dir="data/real_vs_fake",
-        epochs=5,                  # Reduced from 10
-        batch_size=32,
+        data_dir="data/raw/real_vs_fake",
+        epochs=10,
+        batch_size=64,
         lr=0.001,
-        max_train_samples=15000    # Use 15k instead of 100k
+        max_train_samples=100000
     )
