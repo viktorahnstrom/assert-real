@@ -291,7 +291,7 @@ if __name__ == "__main__":
     # Evaluate your trained model
     metrics, y_true, y_pred, y_scores = evaluate_model(
         model_path="checkpoints/best_model.pt",
-        test_data_dir="data/raw/real_vs_fake/test",  # ← Change this line
+        test_data_dir="data/140k-real-fake/test",
         device="cuda",
     )
 
