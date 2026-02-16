@@ -46,31 +46,54 @@ coverage/
 # ML/Dataset specific
 # ====================
 
-# Dataset - DO NOT COMMIT (large files)
-data/real_vs_fake/
-data/raw/
-backend/data/real_vs_fake/
-backend/data/raw/
+# Dataset directories - DO NOT COMMIT
+data/
+backend/data/
+**/data/
+140k-real-and-fake-faces/
+faceforensics_frames/
+real_vs_fake/
+
+# Archives
 *.zip
 *.tar.gz
-140k-real-and-fake-faces/
+*.rar
+*.7z
+*.gz
 
-# Model checkpoints (large files)
-checkpoints/
-backend/checkpoints/
+# Model checkpoint files (large) - DO NOT COMMIT
 *.pt
 *.pth
 *.ckpt
 *.h5
 *.pkl
 *.pickle
+*.safetensors
+*.bin
 
-# Jupyter notebooks
-.ipynb_checkpoints/
-*.ipynb
+# BUT keep checkpoint metadata (small JSON files)
+!backend/checkpoints/*.json
+!checkpoints/*.json
 
-# Training outputs
+# Result files - keep metadata, ignore large files
+backend/results/*.mp4
+backend/results/*.avi
+results/*.mp4
+results/*.avi
+
+# Training/experiment tracking
 runs/
 outputs/
 logs/
 wandb/
+tensorboard/
+mlruns/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Large data files
+*.csv
+!**/requirements*.txt
+!**/requirements*.csv
