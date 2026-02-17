@@ -14,8 +14,8 @@ from PIL import Image
 from pydantic import BaseModel
 from torchvision import transforms
 from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
-from app.utils.model_loader import load_model_checkpoint
 
+from app.utils.model_loader import load_model_checkpoint
 
 router = APIRouter()
 
@@ -103,7 +103,7 @@ def load_detection_model():
             ]
         )
 
-        print(f"✅ Detection model loaded successfully")
+        print("✅ Detection model loaded successfully")
         print(f"   Validation accuracy: {checkpoint.get('val_acc', 0):.2f}%")
         print(f"   Classes: {class_names}")
         print(f"   Device: {device}")

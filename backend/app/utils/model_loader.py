@@ -7,7 +7,6 @@ from pathlib import Path
 import torch
 from huggingface_hub import hf_hub_download
 
-
 HF_REPO_ID = "viktorahnstrom/xade-deepfake-detector"
 MODEL_FILENAME = "best_model.pt"
 
@@ -80,7 +79,7 @@ def load_model_checkpoint(model_path: Path = None) -> dict:
 
     try:
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
-        print(f"✓ Model loaded successfully")
+        print("✓ Model loaded successfully")
         print(f"   Trained for {checkpoint.get('epoch', 'unknown')} epochs")
         print(f"   Validation accuracy: {checkpoint.get('val_acc', 0):.2f}%")
         return checkpoint

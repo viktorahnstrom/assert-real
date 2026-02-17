@@ -8,9 +8,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import detect  # ← Add this import
 from app.db import get_postgrest_client
 from app.routers import auth
-from app.api import detect  # ← Add this import
 
 
 @asynccontextmanager
