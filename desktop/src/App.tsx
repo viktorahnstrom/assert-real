@@ -189,7 +189,10 @@ function UploadView({ onResult }: UploadViewProps) {
         {error && (
           <div className="mt-4 flex items-start justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <span>{errorMessages[error.type]}</span>
-            <button onClick={() => setError(null)} className="ml-3 shrink-0 text-red-400 hover:text-red-600">
+            <button
+              onClick={() => setError(null)}
+              className="ml-3 shrink-0 text-red-400 hover:text-red-600"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -210,6 +213,71 @@ function UploadView({ onResult }: UploadViewProps) {
   );
 }
 
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute right-6 top-6 text-white/70 hover:text-white"
+      >
+        <X className="h-6 w-6" />
+      </button>
+      <img
+        src={src}
+        alt="Full size"
+        className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+function TechnicalDetails({ result, isFake }: { result: DetectionResult; isFake: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-xl bg-white shadow-md">
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between px-6 py-4 text-left"
+      >
+        <h2 className="text-lg font-semibold text-xade-blue">Technical Details</h2>
+        <ChevronLeft
+          className={`h-4 w-4 text-xade-charcoal/40 transition-transform duration-200 ${
+            open ? '-rotate-90' : 'rotate-180'
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="border-t border-xade-charcoal/10 px-6 py-5">
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">Model</p>
+              <p className="mt-1 font-medium text-xade-charcoal">{result.model}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
+                Trained Accuracy
+              </p>
+              <p className="mt-1 font-medium text-xade-charcoal">{result.accuracy}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">Prediction</p>
+              <p className={`mt-1 font-medium ${isFake ? 'text-red-500' : 'text-green-500'}`}>
+                {result.prediction.charAt(0).toUpperCase() + result.prediction.slice(1)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ResultViewProps {
   result: DetectionResult;
   previewUrl: string;
@@ -221,9 +289,18 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
   const confidencePct = Math.round(result.confidence * 100);
   const fakePct = Math.round(result.probabilities.fake * 100);
   const realPct = Math.round(result.probabilities.real * 100);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  const evidenceItems = [
+    'Irregular blending at jawline boundary showing pixel discontinuities',
+    'Unnatural eye reflection pattern inconsistent with light source',
+    'Frequency domain anomaly visualization showing GAN artifacts',
+  ];
 
   return (
-    <div className="min-h-screen bg-white px-8 py-6">
+    <div className="min-h-screen bg-white px-24 py-10 max-w-5xl mx-auto">
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+
       <button
         onClick={onBack}
         className="mb-6 flex items-center gap-1 text-sm text-xade-charcoal/50 hover:text-xade-charcoal"
@@ -233,16 +310,13 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
       </button>
 
       <div className="mb-6 grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
-          <p
-            className={`mb-1 text-6xl font-bold ${isFake ? 'text-red-500' : 'text-green-500'}`}
-          >
+        <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
+          <p className={`mb-1 text-6xl font-bold ${isFake ? 'text-red-500' : 'text-green-500'}`}>
             {confidencePct}%
           </p>
           <p className={`text-lg font-semibold ${isFake ? 'text-red-500' : 'text-green-500'}`}>
             {isFake ? 'Deepfake' : 'Authentic'}
           </p>
-
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-xs text-xade-charcoal/40">
               <span>Fake</span>
@@ -261,7 +335,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
+          <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <p className="text-sm leading-relaxed text-xade-charcoal/70">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
             incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -270,90 +344,80 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        <div className="col-span-2 rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-xade-blue">Visual Analysis</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="mb-2 text-xs text-xade-charcoal/50">Original Image</p>
-              <img
-                src={previewUrl}
-                alt="Original"
-                className="w-full rounded-lg object-cover"
-                style={{ aspectRatio: '4/3' }}
-              />
+      <div className="mb-6 grid grid-cols-3 items-stretch gap-4">
+
+        <div className="col-span-2 flex flex-col gap-4">
+
+          <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
+            <h2 className="mb-4 text-lg font-semibold text-xade-blue">Visual Analysis</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="mb-2 text-xs text-xade-charcoal/50">Original Image</p>
+                <div
+                  className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                  style={{ aspectRatio: '1 / 1' }}
+                  onClick={() => setLightboxSrc(previewUrl)}
+                >
+                  <img
+                    src={previewUrl}
+                    alt="Original"
+                    className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-xade-charcoal/50">Detection Heatmap</p>
+                <div
+                  className="w-full rounded-lg bg-xade-charcoal/5"
+                  style={{ aspectRatio: '1 / 1' }}
+                />
+              </div>
             </div>
-            <div>
-              <p className="mb-2 text-xs text-xade-charcoal/50">Detection Heatmap</p>
-              <div
-                className="w-full rounded-lg bg-xade-charcoal/5"
-                style={{ aspectRatio: '4/3' }}
-              />
+          </div>
+
+          <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
+            <h2 className="mb-2 text-lg font-semibold text-xade-blue">Why this decision?</h2>
+            <p className="mb-4 text-sm leading-relaxed text-xade-charcoal/70">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+              exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
+              dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+            </p>
+            <p className="mb-3 text-sm font-medium text-xade-charcoal">Key Findings:</p>
+            <div className="space-y-2">
+              {[
+                'Irregular facial boundaries detected in the cheek and jawline region, showing pixel-level discontinuities typical of neural network-based face swapping.',
+                "Unnatural lighting inconsistencies between face and background, with shadow angles that don't align with the apparent light source.",
+                'Frequency domain anomalies in high-frequency components, showing patterns consistent with upsampling artifacts from generative models.',
+              ].map((finding, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg bg-xade-charcoal/5 px-4 py-3 text-sm text-xade-charcoal/70"
+                >
+                  • {finding}
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
+        <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold text-xade-blue">Supporting Evidence</h2>
           <div className="space-y-4">
-            {[
-              'Irregular blending at jawline boundary showing pixel discontinuities',
-              'Unnatural eye reflection pattern inconsistent with light source',
-              'Frequency domain anomaly visualization showing GAN artifacts',
-            ].map((caption, i) => (
+            {evidenceItems.map((caption, i) => (
               <div key={i}>
-                <div className="mb-1 h-20 w-full rounded-lg bg-xade-charcoal/5" />
-                <p className="text-xs text-xade-charcoal/50">{caption}</p>
+                <div
+                  className="w-full cursor-pointer overflow-hidden rounded-lg bg-xade-charcoal/5"
+                  style={{ aspectRatio: '1 / 1' }}
+                />
+                <p className="mt-1 text-xs text-xade-charcoal/50">{caption}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mb-6 rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold text-xade-blue">Why this decision?</h2>
-        <p className="mb-4 text-sm leading-relaxed text-xade-charcoal/70">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt
-          ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-          ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-        </p>
-        <p className="mb-3 text-sm font-medium text-xade-charcoal">Key Findings:</p>
-        <div className="space-y-2">
-          {[
-            'Irregular facial boundaries detected in the cheek and jawline region, showing pixel-level discontinuities typical of neural network-based face swapping.',
-            'Unnatural lighting inconsistencies between face and background, with shadow angles that don\'t align with the apparent light source.',
-            'Frequency domain anomalies in high-frequency components, showing patterns consistent with upsampling artifacts from generative models.',
-          ].map((finding, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-xade-charcoal/10 px-4 py-3 text-sm text-xade-charcoal/70"
-            >
-              • {finding}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-xade-charcoal/10 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-xade-blue">Technical Details</h2>
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-xs text-xade-charcoal/40 uppercase tracking-wide">Model</p>
-            <p className="mt-1 font-medium text-xade-charcoal">{result.model}</p>
-          </div>
-          <div>
-            <p className="text-xs text-xade-charcoal/40 uppercase tracking-wide">Trained Accuracy</p>
-            <p className="mt-1 font-medium text-xade-charcoal">{result.accuracy}</p>
-          </div>
-          <div>
-            <p className="text-xs text-xade-charcoal/40 uppercase tracking-wide">Prediction</p>
-            <p className={`mt-1 font-medium ${isFake ? 'text-red-500' : 'text-green-500'}`}>
-              {result.prediction.charAt(0).toUpperCase() + result.prediction.slice(1)}
-            </p>
-          </div>
-        </div>
-      </div>
+      <TechnicalDetails result={result} isFake={isFake} />
     </div>
   );
 }

@@ -104,8 +104,7 @@ export function SidebarGroup({ children, label, className, ...props }: SidebarGr
   return (
     <div className={cn('py-2', className)} {...props}>
       {label && !isCollapsed && (
-        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-xade-charcoal/50">
-          {label}
+        <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/50">          {label}
         </p>
       )}
       <nav className="space-y-1">{children}</nav>
@@ -123,7 +122,7 @@ export function SidebarItem({ children, icon, isActive, className, ...props }: S
   return (
     <button
       className={cn(
-        'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        'flex w-full items-center gap-3 rounded-md px-3 py-2 text-xs font-medium transition-colors',
         'hover:bg-xade-charcoal/5 hover:text-xade-charcoal',
         isActive ? 'bg-xade-blue/10 text-xade-blue' : 'text-xade-charcoal/70',
         isCollapsed && 'justify-center px-2',
