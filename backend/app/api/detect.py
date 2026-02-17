@@ -14,6 +14,8 @@ from PIL import Image
 from pydantic import BaseModel
 from torchvision import transforms
 from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
+from app.utils.model_loader import load_model_checkpoint
+
 
 router = APIRouter()
 
@@ -63,38 +65,36 @@ class DetectionResponse(BaseModel):
 
 
 def load_detection_model():
-    global model, device, transform
+    """Load the trained deepfake detection model (called on startup)"""
+    global model, device, transform, class_names
 
+    # Determine device
     if torch.cuda.is_available():
         device = torch.device("cuda")
+        print(f"🔧 Using GPU: {torch.cuda.get_device_name(0)}")
     elif torch.backends.mps.is_available():
         device = torch.device("mps")
+        print("🔧 Using Apple Silicon GPU (MPS)")
     else:
         device = torch.device("cpu")
+        print("🔧 Using CPU")
 
-    print(f"Loading model on device: {device}")
-
-    model_path = Path(__file__).parent.parent.parent / "checkpoints" / "best_model.pt"
-
-    if not model_path.exists():
-        print(f"Model not found at {model_path}")
-        print("    Detection endpoint will be unavailable")
-        return
+    # Download model if needed, then load
+    print("🔧 Loading detection model...")
 
     try:
-        # Load checkpoint
-        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        # This will auto-download from Hugging Face if not found locally
+        checkpoint = load_model_checkpoint()
 
-        # Initialize model
+        # Initialize model architecture
         model = DeepfakeDetector().to(device)
         model.load_state_dict(checkpoint["model_state_dict"])
         model.eval()
 
-        print("✅ Detection model loaded successfully")
-        print(f"   Validation accuracy: {checkpoint['val_acc']:.2f}%")
-        print(f"   Training samples: {checkpoint['train_samples']:,}")
+        # Get class names
+        class_names = checkpoint.get("class_names", ["fake", "real"])
 
-        # Image transform
+        # Setup transforms
         transform = transforms.Compose(
             [
                 transforms.Resize((224, 224)),
@@ -103,9 +103,18 @@ def load_detection_model():
             ]
         )
 
+        print(f"✅ Detection model loaded successfully")
+        print(f"   Validation accuracy: {checkpoint.get('val_acc', 0):.2f}%")
+        print(f"   Classes: {class_names}")
+        print(f"   Device: {device}")
+
     except Exception as e:
         print(f"❌ Failed to load detection model: {e}")
+        print("   Detection endpoints will not be available")
         model = None
+        device = None
+        transform = None
+        class_names = None
 
 
 @router.post("/detect", response_model=DetectionResponse)
