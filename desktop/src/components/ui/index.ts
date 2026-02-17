@@ -2,14 +2,7 @@
 // Add new components here as you create them
 
 export { Button, buttonVariants, type ButtonProps } from './button';
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from './card';
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card';
 export {
   Sidebar,
   SidebarProvider,

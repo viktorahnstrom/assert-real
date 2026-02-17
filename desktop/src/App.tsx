@@ -1,11 +1,4 @@
-import {
-  BarChart3,
-  HelpCircle,
-  History,
-  Upload,
-  User,
-  MoreVertical,
-} from 'lucide-react';
+import { BarChart3, HelpCircle, History, Upload, User, MoreVertical } from 'lucide-react';
 import {
   Button,
   SidebarProvider,

@@ -71,7 +71,11 @@ export function Sidebar({ children, className, ...props }: SidebarProps) {
 }
 
 // Sidebar Header
-export function SidebarHeader({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarHeader({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('flex items-center justify-between p-4', className)} {...props}>
       {children}
@@ -80,7 +84,11 @@ export function SidebarHeader({ children, className, ...props }: React.HTMLAttri
 }
 
 // Sidebar Content
-export function SidebarContent({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarContent({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('flex-1 overflow-y-auto px-3 py-2', className)} {...props}>
       {children}
@@ -89,7 +97,11 @@ export function SidebarContent({ children, className, ...props }: React.HTMLAttr
 }
 
 // Sidebar Footer
-export function SidebarFooter({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarFooter({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('mt-auto border-t border-xade-charcoal/10 p-4', className)} {...props}>
       {children}
@@ -144,18 +156,31 @@ export function SidebarItem({ children, icon, isActive, className, ...props }: S
 }
 
 // Sidebar Trigger
-export function SidebarTrigger({ className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function SidebarTrigger({
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const { toggle } = useSidebar();
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggle} className={cn('h-8 w-8', className)} {...props}>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggle}
+      className={cn('h-8 w-8', className)}
+      {...props}
+    >
       <PanelLeft className="h-4 w-4" />
     </Button>
   );
 }
 
 // Sidebar Inset (main content area)
-export function SidebarInset({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function SidebarInset({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <main className={cn('flex-1 overflow-auto bg-white', className)} {...props}>
       {children}
