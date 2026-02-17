@@ -104,7 +104,9 @@ export function SidebarGroup({ children, label, className, ...props }: SidebarGr
   return (
     <div className={cn('py-2', className)} {...props}>
       {label && !isCollapsed && (
-        <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/50">          {label}
+        <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/50">
+          {' '}
+          {label}
         </p>
       )}
       <nav className="space-y-1">{children}</nav>

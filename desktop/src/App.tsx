@@ -219,10 +219,7 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       onClick={onClose}
     >
-      <button
-        onClick={onClose}
-        className="absolute right-6 top-6 text-white/70 hover:text-white"
-      >
+      <button onClick={onClose} className="absolute right-6 top-6 text-white/70 hover:text-white">
         <X className="h-6 w-6" />
       </button>
       <img
@@ -335,7 +332,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
         </div>
 
-          <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
+        <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <p className="text-sm leading-relaxed text-xade-charcoal/70">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
             incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -345,9 +342,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
       </div>
 
       <div className="mb-6 grid grid-cols-3 items-stretch gap-4">
-
         <div className="col-span-2 flex flex-col gap-4">
-
           <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold text-xade-blue">Visual Analysis</h2>
             <div className="grid grid-cols-2 gap-4">
