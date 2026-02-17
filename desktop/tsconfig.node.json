@@ -1,19 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023"],
-    "module": "ESNext",
+    "composite": true,
     "skipLibCheck": true,
+    "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "allowSyntheticDefaultImports": true,
+    "strictNullChecks": true
   },
-  "include": ["vite.config.ts", "electron"]
+  "include": ["vite.config.ts", "electron/**/*"]
 }
