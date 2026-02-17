@@ -8,12 +8,17 @@
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./desktop/src/*"]
+    }
   },
   "include": ["desktop/**/*", "mobile/**/*", "shared/**/*"],
   "exclude": ["node_modules", "dist", "build", ".expo", "android", "ios"]
