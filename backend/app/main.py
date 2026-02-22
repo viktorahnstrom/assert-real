@@ -68,6 +68,8 @@ async def read_root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+
+    # Check database
     try:
         client = get_postgrest_client()
         client.from_("profiles").select("id").limit(1).execute()

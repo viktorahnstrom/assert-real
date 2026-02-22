@@ -57,7 +57,7 @@ class DeepfakeDetector(nn.Module):
 
 
 def train_model(
-    data_dir="data/raw/real_vs_fake", epochs=25, batch_size=64, lr=0.001, max_train_samples=75000
+    data_dir="data/140k-real-fake", epochs=25, batch_size=64, lr=0.001, max_train_samples=75000
 ):
     """Train deepfake detector with improved settings"""
 
@@ -130,7 +130,7 @@ def train_model(
     )
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", patience=3, factor=0.5, verbose=True
+        optimizer, mode="min", patience=3, factor=0.5
     )
 
     # Training loop
@@ -253,7 +253,7 @@ def train_model(
 
 if __name__ == "__main__":
     model, history = train_model(
-        data_dir="data/raw/real_vs_fake",
+        data_dir="data/140k-real-fake",
         epochs=10,
         batch_size=64,
         lr=0.001,

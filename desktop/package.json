@@ -1,0 +1,65 @@
+{
+  "name": "xade-desktop",
+  "version": "0.1.0",
+  "description": "XADE Desktop - eXplainable Automated Deepfake Evaluation",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "tsc -b && vite build",
+    "build:electron": "tsc -b && vite build && electron-builder",
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0",
+    "class-variance-authority": "^0.7.1",
+    "@radix-ui/react-slot": "^1.2.4",
+    "lucide-react": "^0.563.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/node": "^22.15.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.3.1",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.0.12",
+    "concurrently": "^9.1.0",
+    "wait-on": "^8.0.3",
+    "tailwindcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
+    "autoprefixer": "^10.4.21"
+  },
+  "build": {
+    "appId": "com.xade.desktop",
+    "productName": "XADE",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
