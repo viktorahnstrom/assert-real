@@ -27,6 +27,7 @@ pydantic>=2.5.0
 pydantic[email]
 
 # VLM APIs (for AI explanations)
+google-genai>=1.0.0
 openai>=1.10.0
 anthropic>=0.18.0
 
