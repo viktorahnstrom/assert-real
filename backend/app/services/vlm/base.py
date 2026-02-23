@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
 
+
 @dataclass
 class VLMExplanation:
     """Structured explanation response from a VLM provider."""
@@ -52,7 +53,7 @@ class DetectionContext:
     classification: str
     confidence: float
     model_used: str
-    probabilities: dict =field(fdefault_factory=dict)
+    probabilities: dict = field(fdefault_factory=dict)
 
 
 class BaseVLMProvider(ABC):
@@ -83,12 +84,10 @@ class BaseVLMProvider(ABC):
         """
         ...
 
-
     @abstractmethod
     def get_provider_info(self) -> ProviderInfo:
         """Return metdadata about this provider (name, model, availability, costs)"""
         ...
-
 
     @abstractmethod
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:

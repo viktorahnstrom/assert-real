@@ -47,8 +47,10 @@ async def lifespan(app: FastAPI):
             status = "✓ available" if p.available else "✗ not configured"
             print(f"  {p.id}: {p.name} — {status}")
 
-        print(f"  Limits: {vlm_config.max_requests_per_day} req/day, "
-              f"${vlm_config.max_monthly_cost_usd:.2f}/month")
+        print(
+            f"  Limits: {vlm_config.max_requests_per_day} req/day, "
+            f"${vlm_config.max_monthly_cost_usd:.2f}/month"
+        )
 
     except Exception as e:
         print(f"✗ VLM service initialization failed: {e}")
@@ -118,4 +120,3 @@ async def health_check():
         "detection_model": model_status,
         "vlm_service": vlm_status,
     }
-

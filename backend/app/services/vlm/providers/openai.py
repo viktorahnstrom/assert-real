@@ -12,12 +12,15 @@ import base64
 import logging
 import time
 
-from openai import OpenAI
-from openai import APIError, APITimeoutError, RateLimitError
+from openai import APIError, APITimeoutError, OpenAI, RateLimitError
 
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import ProviderConfig
-from app.services.vlm.prompt_builder import SYSTEM_PROMPT, build_explanation_prompt, parse_explanation_response
+from app.services.vlm.prompt_builder import (
+    SYSTEM_PROMPT,
+    build_explanation_prompt,
+    parse_explanation_response,
+)
 
 logger = logging.getLogger(__name__)
 

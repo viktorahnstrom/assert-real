@@ -7,7 +7,7 @@ to prevent accidental overspending.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 from app.services.vlm.config import VLMConfig
@@ -23,8 +23,7 @@ class UsageLimitExceeded(Exception):
         self.current = current
         self.maximum = maximum
         super().__init__(
-            f"VLM usage limit exceeded: {limit_type} "
-            f"(current: {current:.4f}, max: {maximum:.4f})"
+            f"VLM usage limit exceeded: {limit_type} (current: {current:.4f}, max: {maximum:.4f})"
         )
 
 
@@ -49,7 +48,7 @@ class UsageTracker:
 
     def _maybe_reset(self) -> None:
         """Reset counters if the day or month has changed."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if self._last_reset_day != now.day:
             self._daily_requests.clear()

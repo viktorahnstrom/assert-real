@@ -79,8 +79,7 @@ class VLMProviderFactory:
         elif provider_id == "openai":
             if not self._config.openai.enabled:
                 raise ValueError(
-                    "OpenAI provider is not configured. "
-                    "Set OPENAI_API_KEY environment variable."
+                    "OpenAI provider is not configured. Set OPENAI_API_KEY environment variable."
                 )
             from app.services.vlm.providers.openai import OpenAIProvider
 
@@ -91,8 +90,7 @@ class VLMProviderFactory:
 
         else:
             raise ValueError(
-                f"Unknown VLM provider: '{provider_id}'. "
-                f"Available providers: google, openai, mock"
+                f"Unknown VLM provider: '{provider_id}'. Available providers: google, openai, mock"
             )
 
     async def generate_explanation(
@@ -142,9 +140,7 @@ class VLMProviderFactory:
 
         # Get the provider and generate explanation
         provider = self.get_provider(resolved_id)
-        explanation = await provider.generate_explanation(
-            image_bytes, heatmap_bytes, detection
-        )
+        explanation = await provider.generate_explanation(image_bytes, heatmap_bytes, detection)
 
         # Record usage after successful call
         if resolved_id != "mock":
