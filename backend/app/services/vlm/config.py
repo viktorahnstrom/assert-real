@@ -16,7 +16,7 @@ class ProviderConfig:
     api_key: Optional[str] = None
     model: str = ""
     enabled: bool = False
-    timout_seconds: int = 30
+    timeout_seconds: int = 30
 
 
 @dataclass
@@ -27,7 +27,7 @@ class VLMConfig:
     default_provider: str = "google"
 
     # Usage limits
-    max_request_per_day: int = 500
+    max_requests_per_day: int = 500
     max_monthly_cost_usd: float = 5.00
 
     # Provider-specific configs

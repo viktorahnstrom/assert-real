@@ -22,7 +22,7 @@ class VLMExplanation:
     # Provider metadata
     provider: str = ""
     model: str = ""
-    procesing_time_ms: int = 0
+    processing_time_ms: int = 0
 
     # Cost tracking
     estimated_cost_usd: float = 0.0
@@ -53,7 +53,7 @@ class DetectionContext:
     classification: str
     confidence: float
     model_used: str
-    probabilities: dict = field(fdefault_factory=dict)
+    probabilities: dict = field(default_factory=dict)
 
 
 class BaseVLMProvider(ABC):
