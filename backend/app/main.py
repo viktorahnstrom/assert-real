@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import detect
 from app.db import get_postgrest_client
-from app.routers import auth, images
+from app.routers import analyses, auth, images
 
 
 @asynccontextmanager
@@ -54,6 +54,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(images.router)
 app.include_router(detect.router, prefix="/api", tags=["detection"])
+app.include_router(analyses.router)
 
 
 @app.get("/")
