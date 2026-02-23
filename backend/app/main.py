@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import detect, vlm
 from app.db import get_postgrest_client
-from app.routers import auth
+from app.routers import analyses, auth, images
 from app.services.vlm import VLMProviderFactory, get_vlm_config
 
 
@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     print("🚀 Starting XADE Backend...")
 
-    # Database connection (optional)
     try:
         client = get_postgrest_client()
         client.from_("profiles").select("id").limit(1).execute()
@@ -80,7 +79,9 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(images.router)
 app.include_router(detect.router, prefix="/api", tags=["detection"])
+app.include_router(analyses.router)
 app.include_router(vlm.router, prefix="/api", tags=["vlm"])
 
 
@@ -117,3 +118,4 @@ async def health_check():
         "detection_model": model_status,
         "vlm_service": vlm_status,
     }
+
