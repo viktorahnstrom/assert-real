@@ -1,5 +1,15 @@
 const API_BASE_URL = 'http://localhost:8000';
 
+export interface ExplanationResult {
+  summary: string;
+  detailed_analysis: string;
+  technical_notes: string | null;
+  provider: string;
+  model: string;
+  processing_time_ms: number;
+  estimated_cost_usd: number;
+}
+
 export interface DetectionResult {
   prediction: 'fake' | 'real';
   confidence: number;
@@ -9,6 +19,17 @@ export interface DetectionResult {
   };
   model: string;
   accuracy: string;
+  explanation: ExplanationResult | null;
+}
+
+export interface VLMProvider {
+  id: string;
+  name: string;
+  model: string;
+  available: boolean;
+  latency_estimate_ms: number | null;
+  cost_per_1m_input_tokens: number | null;
+  cost_per_1m_output_tokens: number | null;
 }
 
 export type ApiError =
@@ -17,14 +38,22 @@ export type ApiError =
   | { type: 'model_unavailable'; message: string }
   | { type: 'unknown'; message: string };
 
-export async function detectDeepfake(file: File): Promise<DetectionResult> {
+export async function detectDeepfake(
+  file: File,
+  vlmProvider: string = 'openai',
+): Promise<DetectionResult> {
   const formData = new FormData();
   formData.append('file', file);
+
+  const params = new URLSearchParams({
+    vlm_provider: vlmProvider,
+    explain: 'true',
+  });
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/detect`, {
+    response = await fetch(`${API_BASE_URL}/api/detect?${params}`, {
       method: 'POST',
       body: formData,
     });
@@ -54,4 +83,11 @@ export async function detectDeepfake(file: File): Promise<DetectionResult> {
   }
 
   return response.json() as Promise<DetectionResult>;
+}
+
+export async function fetchVLMProviders(): Promise<VLMProvider[]> {
+  const response = await fetch(`${API_BASE_URL}/api/vlm-providers`);
+  if (!response.ok) return [];
+  const data = await response.json();
+  return data.providers as VLMProvider[];
 }
