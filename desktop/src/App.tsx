@@ -8,6 +8,7 @@ import {
   MoreVertical,
   X,
   ChevronLeft,
+  Settings,
 } from 'lucide-react';
 import {
   Button,
@@ -22,7 +23,122 @@ import {
   SidebarInset,
   useSidebar,
 } from '@/components/ui';
-import { detectDeepfake, type DetectionResult, type ApiError } from '@/lib/api';
+import {
+  detectDeepfake,
+  analyzeImage,
+  type DetectionResult,
+  type ApiError,
+  type ApiMode,
+} from '@/lib/api';
+
+// ============================================
+// Dev toolbar for endpoint / VLM switching
+// ============================================
+
+interface DevToolbarProps {
+  apiMode: ApiMode;
+  onApiModeChange: (mode: ApiMode) => void;
+  vlmProvider: string;
+  onVlmProviderChange: (provider: string) => void;
+}
+
+function DevToolbar({
+  apiMode,
+  onApiModeChange,
+  vlmProvider,
+  onVlmProviderChange,
+}: DevToolbarProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      {open && (
+        <div className="mb-2 w-64 rounded-xl border border-xade-charcoal/10 bg-white p-4 shadow-lg">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-xade-charcoal/50">
+              Dev Settings
+            </p>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-xade-charcoal/30 hover:text-xade-charcoal"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* API Mode */}
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-xade-charcoal/70">Endpoint</p>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => onApiModeChange('detect')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  apiMode === 'detect'
+                    ? 'bg-xade-blue text-white'
+                    : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                }`}
+              >
+                /detect
+              </button>
+              <button
+                onClick={() => onApiModeChange('analyses')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  apiMode === 'analyses'
+                    ? 'bg-xade-blue text-white'
+                    : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                }`}
+              >
+                /analyses
+              </button>
+            </div>
+            <p className="mt-1 text-[10px] text-xade-charcoal/40">
+              {apiMode === 'detect'
+                ? 'Direct detection — no database'
+                : 'Full flow — saves to Supabase'}
+            </p>
+          </div>
+
+          {/* VLM Provider */}
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-xade-charcoal/70">VLM Provider</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['openai', 'google', 'mock', 'none'] as const).map((provider) => (
+                <button
+                  key={provider}
+                  onClick={() => onVlmProviderChange(provider)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    vlmProvider === provider
+                      ? 'bg-xade-blue text-white'
+                      : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                  }`}
+                >
+                  {provider === 'none'
+                    ? 'None'
+                    : provider.charAt(0).toUpperCase() + provider.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-colors ${
+          open
+            ? 'bg-xade-blue text-white'
+            : 'bg-white text-xade-charcoal/50 hover:text-xade-charcoal'
+        }`}
+      >
+        <Settings className="h-4.5 w-4.5" />
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// Sidebar
+// ============================================
 
 function SidebarLogo() {
   const { isCollapsed } = useSidebar();
@@ -78,11 +194,17 @@ function AppSidebar() {
   );
 }
 
+// ============================================
+// Upload View
+// ============================================
+
 interface UploadViewProps {
   onResult: (result: DetectionResult, previewUrl: string) => void;
+  apiMode: ApiMode;
+  vlmProvider: string;
 }
 
-function UploadView({ onResult }: UploadViewProps) {
+function UploadView({ onResult, apiMode, vlmProvider }: UploadViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -119,7 +241,14 @@ function UploadView({ onResult }: UploadViewProps) {
     setStatus('loading');
     setError(null);
     try {
-      const data = await detectDeepfake(selectedFile);
+      let data: DetectionResult;
+
+      if (apiMode === 'analyses') {
+        data = await analyzeImage(selectedFile, vlmProvider);
+      } else {
+        data = await detectDeepfake(selectedFile, vlmProvider);
+      }
+
       onResult(data, previewUrl);
     } catch (err) {
       setError(err as ApiError);
@@ -188,7 +317,7 @@ function UploadView({ onResult }: UploadViewProps) {
 
         {error && (
           <div className="mt-4 flex items-start justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span>{errorMessages[error.type]}</span>
+            <span>{error.type in errorMessages ? errorMessages[error.type] : error.message}</span>
             <button
               onClick={() => setError(null)}
               className="ml-3 shrink-0 text-red-400 hover:text-red-600"
@@ -198,7 +327,19 @@ function UploadView({ onResult }: UploadViewProps) {
           </div>
         )}
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-3 flex items-center justify-center gap-2 text-xs text-xade-charcoal/30">
+          <span
+            className={`rounded px-1.5 py-0.5 ${
+              apiMode === 'analyses' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+            }`}
+          >
+            {apiMode === 'analyses' ? 'DB Mode' : 'Direct Mode'}
+          </span>
+          <span>·</span>
+          <span>{vlmProvider === 'none' ? 'No VLM' : vlmProvider}</span>
+        </div>
+
+        <div className="mt-4 flex justify-center">
           <Button
             variant="outline"
             className="min-w-32"
@@ -212,6 +353,10 @@ function UploadView({ onResult }: UploadViewProps) {
     </div>
   );
 }
+
+// ============================================
+// Result View
+// ============================================
 
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
@@ -369,7 +514,6 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
         </div>
 
-        {/* Summary card — VLM explanation summary */}
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           {explanation ? (
             <>
@@ -384,7 +528,8 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
             </>
           ) : (
             <p className="text-sm leading-relaxed text-xade-charcoal/40">
-              No explanation available. The VLM service may not be configured.
+              No explanation available. Select a VLM provider in dev settings to enable AI-generated
+              explanations.
             </p>
           )}
         </div>
@@ -397,6 +542,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold text-xade-blue">Visual Analysis</h2>
             <div className="grid grid-cols-2 gap-4">
+              {/* Original image */}
               <div>
                 <p className="mb-2 text-xs text-xade-charcoal/50">Original Image</p>
                 <div
@@ -411,19 +557,41 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                   />
                 </div>
               </div>
+
+              {/* GradCAM heatmap */}
               <div>
-                <p className="mb-2 text-xs text-xade-charcoal/50">Detection Heatmap</p>
-                <div
-                  className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  GradCAM — coming soon
-                </div>
+                <p className="mb-2 text-xs text-xade-charcoal/50">
+                  Detection Heatmap
+                  <span className="ml-1 text-xade-charcoal/30">· red = high focus</span>
+                </p>
+                {result.gradcam_heatmap_url ? (
+                  <div
+                    className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                    style={{ aspectRatio: '1 / 1' }}
+                    onClick={() => setLightboxSrc(result.gradcam_heatmap_url!)}
+                  >
+                    <img
+                      src={result.gradcam_heatmap_url}
+                      alt="GradCAM heatmap"
+                      className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
+                    style={{ aspectRatio: '1 / 1' }}
+                  >
+                    GradCAM unavailable
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Why this decision — VLM detailed analysis */}
+          {/* Why this decision */}
           <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
             <h2 className="mb-2 text-lg font-semibold text-xade-blue">Why this decision?</h2>
             {explanation ? (
@@ -439,7 +607,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
         </div>
 
-        {/* Supporting Evidence — placeholder for future GradCAM regions */}
+        {/* Supporting Evidence */}
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold text-xade-blue">Supporting Evidence</h2>
           <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -458,9 +626,15 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
   );
 }
 
+// ============================================
+// Main Content & App
+// ============================================
+
 function MainContent() {
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [apiMode, setApiMode] = useState<ApiMode>('detect');
+  const [vlmProvider, setVlmProvider] = useState<string>('openai');
 
   function handleResult(data: DetectionResult, url: string) {
     setResult(data);
@@ -477,8 +651,14 @@ function MainContent() {
       {result && previewUrl ? (
         <ResultView result={result} previewUrl={previewUrl} onBack={handleBack} />
       ) : (
-        <UploadView onResult={handleResult} />
+        <UploadView onResult={handleResult} apiMode={apiMode} vlmProvider={vlmProvider} />
       )}
+      <DevToolbar
+        apiMode={apiMode}
+        onApiModeChange={setApiMode}
+        vlmProvider={vlmProvider}
+        onVlmProviderChange={setVlmProvider}
+      />
     </SidebarInset>
   );
 }

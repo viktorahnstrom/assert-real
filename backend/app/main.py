@@ -3,10 +3,13 @@ XADE Backend API
 eXplainable Automated Deepfake Evaluation
 """
 
+import tempfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api import detect, vlm
 from app.db import get_postgrest_client
@@ -78,6 +81,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve GradCAM heatmaps as static files
+_gradcam_dir = Path(tempfile.gettempdir()) / "xade_gradcam"
+_gradcam_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/gradcam", StaticFiles(directory=str(_gradcam_dir)), name="gradcam")
 
 # Include routers
 app.include_router(auth.router)
