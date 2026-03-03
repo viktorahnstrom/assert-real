@@ -40,7 +40,7 @@ export type ApiError =
 
 export async function detectDeepfake(
   file: File,
-  vlmProvider: string = 'openai',
+  vlmProvider: string = 'openai'
 ): Promise<DetectionResult> {
   const formData = new FormData();
   formData.append('file', file);
