@@ -528,14 +528,14 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
             </>
           ) : (
             <p className="text-sm leading-relaxed text-xade-charcoal/40">
-              No explanation available. Select a VLM provider in dev settings to enable AI-generated
-              explanations.
+              No explanation available. Select a VLM provider in dev settings to enable
+              AI-generated explanations.
             </p>
           )}
         </div>
       </div>
 
-      {/* Middle row: Visual Analysis + Detailed Analysis */}
+      {/* Middle row: Visual Analysis + Supporting Evidence */}
       <div className="mb-6 grid grid-cols-3 items-stretch gap-4">
         <div className="col-span-2 flex flex-col gap-4">
           {/* Visual Analysis */}

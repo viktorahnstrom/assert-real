@@ -67,7 +67,7 @@ export type ApiMode = 'detect' | 'analyses';
 
 export async function detectDeepfake(
   file: File,
-  vlmProvider: string = 'openai'
+  vlmProvider: string = 'openai',
 ): Promise<DetectionResult> {
   const formData = new FormData();
   formData.append('file', file);
@@ -126,7 +126,7 @@ async function uploadImage(file: File, userId: string): Promise<string> {
     {
       method: 'POST',
       body: formData,
-    }
+    },
   );
 
   if (!response.ok) {
@@ -141,7 +141,7 @@ async function uploadImage(file: File, userId: string): Promise<string> {
 async function createAnalysis(
   imageId: string,
   userId: string,
-  vlmProvider: string
+  vlmProvider: string,
 ): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/analyses/`, {
     method: 'POST',
@@ -164,7 +164,7 @@ async function createAnalysis(
 export async function analyzeImage(
   file: File,
   vlmProvider: string = 'openai',
-  userId: string = '00000000-0000-0000-0000-000000000000'
+  userId: string = '00000000-0000-0000-0000-000000000000',
 ): Promise<DetectionResult> {
   let imageId: string;
 
