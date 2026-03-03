@@ -32,8 +32,10 @@ class Classification(str, Enum):
 
 class VLMProvider(str, Enum):
     OPENAI = "openai"
+    GOOGLE = "google"
     ANTHROPIC = "anthropic"
     LOCAL = "local"
+    MOCK = "mock"
 
 
 class Theme(str, Enum):
@@ -156,7 +158,7 @@ class AnalysisWithImage(Analysis):
 # ============================================
 class UserPreferencesBase(BaseModel):
     default_model: Optional[str] = "efficientnet-b4"
-    vlm_provider: Optional[VLMProvider] = VLMProvider.ANTHROPIC
+    vlm_provider: Optional[VLMProvider] = VLMProvider.OPENAI
     theme: Optional[Theme] = Theme.SYSTEM
     notifications_enabled: Optional[bool] = True
 

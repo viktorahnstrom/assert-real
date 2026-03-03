@@ -8,6 +8,7 @@ import {
   MoreVertical,
   X,
   ChevronLeft,
+  Settings,
 } from 'lucide-react';
 import {
   Button,
@@ -22,7 +23,122 @@ import {
   SidebarInset,
   useSidebar,
 } from '@/components/ui';
-import { detectDeepfake, type DetectionResult, type ApiError } from '@/lib/api';
+import {
+  detectDeepfake,
+  analyzeImage,
+  type DetectionResult,
+  type ApiError,
+  type ApiMode,
+} from '@/lib/api';
+
+// ============================================
+// Dev toolbar for endpoint / VLM switching
+// ============================================
+
+interface DevToolbarProps {
+  apiMode: ApiMode;
+  onApiModeChange: (mode: ApiMode) => void;
+  vlmProvider: string;
+  onVlmProviderChange: (provider: string) => void;
+}
+
+function DevToolbar({
+  apiMode,
+  onApiModeChange,
+  vlmProvider,
+  onVlmProviderChange,
+}: DevToolbarProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      {open && (
+        <div className="mb-2 w-64 rounded-xl border border-xade-charcoal/10 bg-white p-4 shadow-lg">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-xade-charcoal/50">
+              Dev Settings
+            </p>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-xade-charcoal/30 hover:text-xade-charcoal"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* API Mode */}
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-xade-charcoal/70">Endpoint</p>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => onApiModeChange('detect')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  apiMode === 'detect'
+                    ? 'bg-xade-blue text-white'
+                    : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                }`}
+              >
+                /detect
+              </button>
+              <button
+                onClick={() => onApiModeChange('analyses')}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  apiMode === 'analyses'
+                    ? 'bg-xade-blue text-white'
+                    : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                }`}
+              >
+                /analyses
+              </button>
+            </div>
+            <p className="mt-1 text-[10px] text-xade-charcoal/40">
+              {apiMode === 'detect'
+                ? 'Direct detection — no database'
+                : 'Full flow — saves to Supabase'}
+            </p>
+          </div>
+
+          {/* VLM Provider */}
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-xade-charcoal/70">VLM Provider</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['openai', 'google', 'mock', 'none'] as const).map((provider) => (
+                <button
+                  key={provider}
+                  onClick={() => onVlmProviderChange(provider)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    vlmProvider === provider
+                      ? 'bg-xade-blue text-white'
+                      : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
+                  }`}
+                >
+                  {provider === 'none'
+                    ? 'None'
+                    : provider.charAt(0).toUpperCase() + provider.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-colors ${
+          open
+            ? 'bg-xade-blue text-white'
+            : 'bg-white text-xade-charcoal/50 hover:text-xade-charcoal'
+        }`}
+      >
+        <Settings className="h-4.5 w-4.5" />
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// Sidebar
+// ============================================
 
 function SidebarLogo() {
   const { isCollapsed } = useSidebar();
@@ -78,11 +194,17 @@ function AppSidebar() {
   );
 }
 
+// ============================================
+// Upload View
+// ============================================
+
 interface UploadViewProps {
   onResult: (result: DetectionResult, previewUrl: string) => void;
+  apiMode: ApiMode;
+  vlmProvider: string;
 }
 
-function UploadView({ onResult }: UploadViewProps) {
+function UploadView({ onResult, apiMode, vlmProvider }: UploadViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -119,7 +241,14 @@ function UploadView({ onResult }: UploadViewProps) {
     setStatus('loading');
     setError(null);
     try {
-      const data = await detectDeepfake(selectedFile);
+      let data: DetectionResult;
+
+      if (apiMode === 'analyses') {
+        data = await analyzeImage(selectedFile, vlmProvider);
+      } else {
+        data = await detectDeepfake(selectedFile, vlmProvider);
+      }
+
       onResult(data, previewUrl);
     } catch (err) {
       setError(err as ApiError);
@@ -188,7 +317,7 @@ function UploadView({ onResult }: UploadViewProps) {
 
         {error && (
           <div className="mt-4 flex items-start justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span>{errorMessages[error.type]}</span>
+            <span>{error.type in errorMessages ? errorMessages[error.type] : error.message}</span>
             <button
               onClick={() => setError(null)}
               className="ml-3 shrink-0 text-red-400 hover:text-red-600"
@@ -198,7 +327,19 @@ function UploadView({ onResult }: UploadViewProps) {
           </div>
         )}
 
-        <div className="mt-6 flex justify-center">
+        <div className="mt-3 flex items-center justify-center gap-2 text-xs text-xade-charcoal/30">
+          <span
+            className={`rounded px-1.5 py-0.5 ${
+              apiMode === 'analyses' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+            }`}
+          >
+            {apiMode === 'analyses' ? 'DB Mode' : 'Direct Mode'}
+          </span>
+          <span>·</span>
+          <span>{vlmProvider === 'none' ? 'No VLM' : vlmProvider}</span>
+        </div>
+
+        <div className="mt-4 flex justify-center">
           <Button
             variant="outline"
             className="min-w-32"
@@ -212,6 +353,10 @@ function UploadView({ onResult }: UploadViewProps) {
     </div>
   );
 }
+
+// ============================================
+// Result View
+// ============================================
 
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
@@ -269,6 +414,46 @@ function TechnicalDetails({ result, isFake }: { result: DetectionResult; isFake:
               </p>
             </div>
           </div>
+
+          {result.explanation && (
+            <div className="mt-4 grid grid-cols-3 gap-4 border-t border-xade-charcoal/10 pt-4 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
+                  Explanation Provider
+                </p>
+                <p className="mt-1 font-medium text-xade-charcoal">
+                  {result.explanation.provider} / {result.explanation.model}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
+                  Explanation Time
+                </p>
+                <p className="mt-1 font-medium text-xade-charcoal">
+                  {(result.explanation.processing_time_ms / 1000).toFixed(1)}s
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
+                  Estimated Cost
+                </p>
+                <p className="mt-1 font-medium text-xade-charcoal">
+                  ${result.explanation.estimated_cost_usd.toFixed(4)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {result.explanation?.technical_notes && (
+            <div className="mt-4 border-t border-xade-charcoal/10 pt-4">
+              <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
+                Technical Notes
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-xade-charcoal/70">
+                {result.explanation.technical_notes}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -288,11 +473,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
   const realPct = Math.round(result.probabilities.real * 100);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
-  const evidenceItems = [
-    'Irregular blending at jawline boundary showing pixel discontinuities',
-    'Unnatural eye reflection pattern inconsistent with light source',
-    'Frequency domain anomaly visualization showing GAN artifacts',
-  ];
+  const explanation = result.explanation;
 
   return (
     <div className="min-h-screen bg-white px-24 py-10 max-w-5xl mx-auto">
@@ -306,6 +487,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         Back
       </button>
 
+      {/* Top row: Confidence + Summary */}
       <div className="mb-6 grid grid-cols-2 gap-4">
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <p className={`mb-1 text-6xl font-bold ${isFake ? 'text-red-500' : 'text-green-500'}`}>
@@ -333,19 +515,34 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         </div>
 
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
-          <p className="text-sm leading-relaxed text-xade-charcoal/70">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          </p>
+          {explanation ? (
+            <>
+              <p className="mb-3 text-sm font-medium text-xade-blue">AI Summary</p>
+              <p className="text-sm leading-relaxed text-xade-charcoal/70">{explanation.summary}</p>
+              <div className="mt-auto pt-4">
+                <p className="text-xs text-xade-charcoal/30">
+                  Generated by {explanation.model} in{' '}
+                  {(explanation.processing_time_ms / 1000).toFixed(1)}s
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm leading-relaxed text-xade-charcoal/40">
+              No explanation available. Select a VLM provider in dev settings to enable AI-generated
+              explanations.
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Middle row: Visual Analysis + Supporting Evidence */}
       <div className="mb-6 grid grid-cols-3 items-stretch gap-4">
         <div className="col-span-2 flex flex-col gap-4">
+          {/* Visual Analysis */}
           <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
             <h2 className="mb-4 text-lg font-semibold text-xade-blue">Visual Analysis</h2>
             <div className="grid grid-cols-2 gap-4">
+              {/* Original image */}
               <div>
                 <p className="mb-2 text-xs text-xade-charcoal/50">Original Image</p>
                 <div
@@ -360,54 +557,66 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                   />
                 </div>
               </div>
+
+              {/* GradCAM heatmap */}
               <div>
-                <p className="mb-2 text-xs text-xade-charcoal/50">Detection Heatmap</p>
-                <div
-                  className="w-full rounded-lg bg-xade-charcoal/5"
-                  style={{ aspectRatio: '1 / 1' }}
-                />
+                <p className="mb-2 text-xs text-xade-charcoal/50">
+                  Detection Heatmap
+                  <span className="ml-1 text-xade-charcoal/30">· red = high focus</span>
+                </p>
+                {result.gradcam_heatmap_url ? (
+                  <div
+                    className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                    style={{ aspectRatio: '1 / 1' }}
+                    onClick={() => setLightboxSrc(result.gradcam_heatmap_url!)}
+                  >
+                    <img
+                      src={result.gradcam_heatmap_url}
+                      alt="GradCAM heatmap"
+                      className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
+                    style={{ aspectRatio: '1 / 1' }}
+                  >
+                    GradCAM unavailable
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Why this decision */}
           <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
             <h2 className="mb-2 text-lg font-semibold text-xade-blue">Why this decision?</h2>
-            <p className="mb-4 text-sm leading-relaxed text-xade-charcoal/70">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-              incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-              exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
-              dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-            </p>
-            <p className="mb-3 text-sm font-medium text-xade-charcoal">Key Findings:</p>
-            <div className="space-y-2">
-              {[
-                'Irregular facial boundaries detected in the cheek and jawline region, showing pixel-level discontinuities typical of neural network-based face swapping.',
-                "Unnatural lighting inconsistencies between face and background, with shadow angles that don't align with the apparent light source.",
-                'Frequency domain anomalies in high-frequency components, showing patterns consistent with upsampling artifacts from generative models.',
-              ].map((finding, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg bg-xade-charcoal/5 px-4 py-3 text-sm text-xade-charcoal/70"
-                >
-                  • {finding}
-                </div>
-              ))}
-            </div>
+            {explanation ? (
+              <p className="text-sm leading-relaxed text-xade-charcoal/70">
+                {explanation.detailed_analysis}
+              </p>
+            ) : (
+              <p className="text-sm leading-relaxed text-xade-charcoal/40">
+                Detailed analysis is not available. Enable a VLM provider to see AI-generated
+                explanations grounded in the detection heatmap.
+              </p>
+            )}
           </div>
         </div>
 
+        {/* Supporting Evidence */}
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold text-xade-blue">Supporting Evidence</h2>
-          <div className="space-y-4">
-            {evidenceItems.map((caption, i) => (
-              <div key={i}>
-                <div
-                  className="w-full cursor-pointer overflow-hidden rounded-lg bg-xade-charcoal/5"
-                  style={{ aspectRatio: '1 / 1' }}
-                />
-                <p className="mt-1 text-xs text-xade-charcoal/50">{caption}</p>
-              </div>
-            ))}
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <div className="rounded-lg bg-xade-charcoal/5 p-6">
+              <p className="text-sm text-xade-charcoal/40">
+                Visual evidence regions will appear here once GradCAM heatmap integration is
+                complete.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -417,9 +626,15 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
   );
 }
 
+// ============================================
+// Main Content & App
+// ============================================
+
 function MainContent() {
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [apiMode, setApiMode] = useState<ApiMode>('detect');
+  const [vlmProvider, setVlmProvider] = useState<string>('openai');
 
   function handleResult(data: DetectionResult, url: string) {
     setResult(data);
@@ -436,8 +651,14 @@ function MainContent() {
       {result && previewUrl ? (
         <ResultView result={result} previewUrl={previewUrl} onBack={handleBack} />
       ) : (
-        <UploadView onResult={handleResult} />
+        <UploadView onResult={handleResult} apiMode={apiMode} vlmProvider={vlmProvider} />
       )}
+      <DevToolbar
+        apiMode={apiMode}
+        onApiModeChange={setApiMode}
+        vlmProvider={vlmProvider}
+        onVlmProviderChange={setVlmProvider}
+      />
     </SidebarInset>
   );
 }

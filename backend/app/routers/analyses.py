@@ -1,8 +1,9 @@
 """
 Analysis routes for XADE.
-Runs deepfake detection and stores results in database.
+Runs deepfake detection, generates VLM explanations, and stores results in database.
 """
 
+import io
 import os
 import time
 
@@ -26,6 +27,17 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 class AnalysisRequest(BaseModel):
     image_id: str
     user_id: str
+    vlm_provider: str | None = None
+
+
+class ExplanationData(BaseModel):
+    summary: str
+    detailed_analysis: str
+    technical_notes: str | None = None
+    provider: str
+    model: str
+    processing_time_ms: int
+    estimated_cost_usd: float
 
 
 class AnalysisResponse(BaseModel):
@@ -36,9 +48,12 @@ class AnalysisResponse(BaseModel):
     deepfake_score: float | None = None
     classification: str | None = None
     model_used: str | None = None
+    vlm_explanation: str | None = None
+    vlm_model_used: str | None = None
     processing_time_ms: int | None = None
     created_at: str
     completed_at: str | None = None
+    explanation: ExplanationData | None = None
 
 
 class AnalysisListResponse(BaseModel):
@@ -67,6 +82,51 @@ def get_storage_headers():
     }
 
 
+def _generate_placeholder_heatmap(image):
+    """Generate a placeholder heatmap. TODO: Replace with real GradCAM."""
+    import numpy as np
+    from PIL import Image as PILImage
+
+    width, height = image.size
+    heatmap = np.zeros((height, width, 3), dtype=np.uint8)
+
+    for y in range(height):
+        for x in range(width):
+            cx, cy = width // 2, height // 2
+            dist = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+            max_dist = (cx**2 + cy**2) ** 0.5
+            intensity = max(0, 1.0 - dist / max_dist)
+            heatmap[y, x] = [int(255 * intensity), int(100 * intensity), 0]
+
+    heatmap_img = PILImage.fromarray(heatmap, "RGB")
+    blended = PILImage.blend(image.resize((width, height)), heatmap_img, alpha=0.4)
+
+    buffer = io.BytesIO()
+    blended.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _build_analysis_response(
+    a: dict, explanation: ExplanationData | None = None
+) -> AnalysisResponse:
+    """Build AnalysisResponse from database row."""
+    return AnalysisResponse(
+        id=a["id"],
+        image_id=a["image_id"],
+        user_id=a["user_id"],
+        status=a["status"],
+        deepfake_score=a.get("deepfake_score"),
+        classification=a.get("classification"),
+        model_used=a.get("model_used"),
+        vlm_explanation=a.get("vlm_explanation"),
+        vlm_model_used=a.get("vlm_model_used"),
+        processing_time_ms=a.get("processing_time_ms"),
+        created_at=a["created_at"],
+        completed_at=a.get("completed_at"),
+        explanation=explanation,
+    )
+
+
 # ============================================
 # Routes
 # ============================================
@@ -74,17 +134,17 @@ def get_storage_headers():
 async def create_analysis(request: AnalysisRequest):
     """
     Create a new analysis for an uploaded image.
-    1. Creates analysis record with 'pending' status
+    1. Creates analysis record with 'processing' status
     2. Fetches the image from storage
     3. Runs detection model
-    4. Updates analysis with results
+    4. Generates VLM explanation (if factory available)
+    5. Updates analysis with results
     """
-    import io
-
     import torch
     from PIL import Image
 
-    from app.api.detect import class_names, device, model, transform
+    from app.api.detect import class_names, device, model, transform, vlm_factory
+    from app.services.vlm import DetectionContext
 
     if model is None:
         raise HTTPException(status_code=503, detail="Detection model not loaded")
@@ -106,7 +166,7 @@ async def create_analysis(request: AnalysisRequest):
         image_data = images[0]
         storage_path = image_data["storage_path"]
 
-        # Create analysis record with pending status
+        # Create analysis record with processing status
         analysis_data = {
             "image_id": request.image_id,
             "user_id": request.user_id,
@@ -139,7 +199,6 @@ async def create_analysis(request: AnalysisRequest):
         )
 
         if img_download.status_code != 200:
-            # Update analysis as failed
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
                 headers=get_db_headers(),
@@ -150,6 +209,7 @@ async def create_analysis(request: AnalysisRequest):
         # Run detection
         try:
             image = Image.open(io.BytesIO(img_download.content)).convert("RGB")
+            image_bytes = img_download.content
             image_tensor = transform(image).unsqueeze(0).to(device)
 
             with torch.no_grad():
@@ -158,17 +218,70 @@ async def create_analysis(request: AnalysisRequest):
                 confidence, predicted = probabilities.max(1)
 
             prediction = class_names[predicted.item()]
+            confidence_value = float(confidence.item())
             fake_prob = float(probabilities[0][0].cpu().numpy())
+            real_prob = float(probabilities[0][1].cpu().numpy())
 
             processing_time = int((time.time() - start_time) * 1000)
 
-            # Map prediction to classification
             if prediction == "fake":
                 classification = "fake"
             elif prediction == "real":
                 classification = "real"
             else:
                 classification = "uncertain"
+
+            # Generate VLM explanation
+            explanation_data = None
+            vlm_explanation_text = None
+            vlm_model_used = None
+
+            if vlm_factory is not None:
+                try:
+                    detection_context = DetectionContext(
+                        classification=prediction,
+                        confidence=confidence_value,
+                        model_used="EfficientNet-B4",
+                        probabilities={"fake": fake_prob, "real": real_prob},
+                    )
+
+                    heatmap_bytes = _generate_placeholder_heatmap(image)
+
+                    vlm_explanation = await vlm_factory.generate_explanation(
+                        provider_id=request.vlm_provider,
+                        image_bytes=image_bytes,
+                        heatmap_bytes=heatmap_bytes,
+                        detection=detection_context,
+                    )
+
+                    # Build structured explanation for API response
+                    explanation_data = ExplanationData(
+                        summary=vlm_explanation.summary,
+                        detailed_analysis=vlm_explanation.detailed_analysis,
+                        technical_notes=vlm_explanation.technical_notes,
+                        provider=vlm_explanation.provider,
+                        model=vlm_explanation.model,
+                        processing_time_ms=vlm_explanation.processing_time_ms,
+                        estimated_cost_usd=vlm_explanation.estimated_cost_usd,
+                    )
+
+                    # Store combined explanation text for the database
+                    vlm_explanation_text = (
+                        f"[SUMMARY]\n{vlm_explanation.summary}\n\n"
+                        f"[DETAILED]\n{vlm_explanation.detailed_analysis}"
+                    )
+                    if vlm_explanation.technical_notes:
+                        vlm_explanation_text += (
+                            f"\n\n[TECHNICAL]\n{vlm_explanation.technical_notes}"
+                        )
+
+                    vlm_model_used = f"{vlm_explanation.provider}/{vlm_explanation.model}"
+
+                except Exception as e:
+                    # VLM failure should not fail the analysis
+                    import logging
+
+                    logging.getLogger(__name__).warning(f"VLM explanation failed: {e}")
 
             # Update analysis with results
             update_data = {
@@ -178,6 +291,11 @@ async def create_analysis(request: AnalysisRequest):
                 "processing_time_ms": processing_time,
                 "completed_at": "now()",
             }
+
+            if vlm_explanation_text:
+                update_data["vlm_explanation"] = vlm_explanation_text
+            if vlm_model_used:
+                update_data["vlm_model_used"] = vlm_model_used
 
             update_response = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
@@ -195,22 +313,11 @@ async def create_analysis(request: AnalysisRequest):
             )
 
             final_analysis = final_response.json()[0]
+            return _build_analysis_response(final_analysis, explanation=explanation_data)
 
-            return AnalysisResponse(
-                id=final_analysis["id"],
-                image_id=final_analysis["image_id"],
-                user_id=final_analysis["user_id"],
-                status=final_analysis["status"],
-                deepfake_score=final_analysis["deepfake_score"],
-                classification=final_analysis["classification"],
-                model_used=final_analysis["model_used"],
-                processing_time_ms=final_analysis["processing_time_ms"],
-                created_at=final_analysis["created_at"],
-                completed_at=final_analysis["completed_at"],
-            )
-
+        except HTTPException:
+            raise
         except Exception as e:
-            # Update analysis as failed
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
                 headers=get_db_headers(),
@@ -233,23 +340,7 @@ async def list_analyses(user_id: str | None = None):
             raise HTTPException(status_code=response.status_code, detail="Failed to fetch analyses")
 
         analyses_data = response.json()
-
-        analyses = [
-            AnalysisResponse(
-                id=a["id"],
-                image_id=a["image_id"],
-                user_id=a["user_id"],
-                status=a["status"],
-                deepfake_score=a["deepfake_score"],
-                classification=a["classification"],
-                model_used=a["model_used"],
-                processing_time_ms=a["processing_time_ms"],
-                created_at=a["created_at"],
-                completed_at=a["completed_at"],
-            )
-            for a in analyses_data
-        ]
-
+        analyses = [_build_analysis_response(a) for a in analyses_data]
         return AnalysisListResponse(analyses=analyses, count=len(analyses))
 
 
@@ -269,19 +360,7 @@ async def get_analysis(analysis_id: str):
         if not analyses:
             raise HTTPException(status_code=404, detail="Analysis not found")
 
-        a = analyses[0]
-        return AnalysisResponse(
-            id=a["id"],
-            image_id=a["image_id"],
-            user_id=a["user_id"],
-            status=a["status"],
-            deepfake_score=a["deepfake_score"],
-            classification=a["classification"],
-            model_used=a["model_used"],
-            processing_time_ms=a["processing_time_ms"],
-            created_at=a["created_at"],
-            completed_at=a["completed_at"],
-        )
+        return _build_analysis_response(analyses[0])
 
 
 @router.get("/image/{image_id}", response_model=AnalysisListResponse)
@@ -297,21 +376,5 @@ async def get_analyses_for_image(image_id: str):
             raise HTTPException(status_code=response.status_code, detail="Failed to fetch analyses")
 
         analyses_data = response.json()
-
-        analyses = [
-            AnalysisResponse(
-                id=a["id"],
-                image_id=a["image_id"],
-                user_id=a["user_id"],
-                status=a["status"],
-                deepfake_score=a["deepfake_score"],
-                classification=a["classification"],
-                model_used=a["model_used"],
-                processing_time_ms=a["processing_time_ms"],
-                created_at=a["created_at"],
-                completed_at=a["completed_at"],
-            )
-            for a in analyses_data
-        ]
-
+        analyses = [_build_analysis_response(a) for a in analyses_data]
         return AnalysisListResponse(analyses=analyses, count=len(analyses))
