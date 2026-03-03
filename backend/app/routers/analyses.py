@@ -9,7 +9,7 @@ import time
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 load_dotenv()

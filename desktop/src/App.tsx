@@ -528,8 +528,8 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
             </>
           ) : (
             <p className="text-sm leading-relaxed text-xade-charcoal/40">
-              No explanation available. Select a VLM provider in dev settings to enable
-              AI-generated explanations.
+              No explanation available. Select a VLM provider in dev settings to enable AI-generated
+              explanations.
             </p>
           )}
         </div>
