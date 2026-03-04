@@ -361,18 +361,22 @@ function UploadView({ onResult, apiMode, vlmProvider }: UploadViewProps) {
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
       onClick={onClose}
     >
       <button onClick={onClose} className="absolute right-6 top-6 text-white/70 hover:text-white">
         <X className="h-6 w-6" />
       </button>
-      <img
-        src={src}
-        alt="Full size"
-        className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+      <div
+        className="flex h-[90vh] w-[90vw] items-center justify-center"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <img
+          src={src}
+          alt="Full size"
+          className="h-full w-full rounded-xl object-contain shadow-2xl"
+        />
+      </div>
     </div>
   );
 }
@@ -610,14 +614,40 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         {/* Supporting Evidence */}
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold text-xade-blue">Supporting Evidence</h2>
-          <div className="flex flex-1 flex-col items-center justify-center text-center">
-            <div className="rounded-lg bg-xade-charcoal/5 p-6">
-              <p className="text-sm text-xade-charcoal/40">
-                Visual evidence regions will appear here once GradCAM heatmap integration is
-                complete.
-              </p>
+          {result.evidence_regions && result.evidence_regions.length > 0 ? (
+            <div className="space-y-4 overflow-y-auto">
+              {result.evidence_regions.map((region, i) => (
+                <div key={i}>
+                  <div
+                    className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                    style={{ aspectRatio: '1 / 1' }}
+                    onClick={() => setLightboxSrc(region.url)}
+                  >
+                    <img
+                      src={region.url}
+                      alt={region.label}
+                      className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs font-medium text-xade-charcoal/70">{region.label}</p>
+                  <p className="text-xs text-xade-charcoal/30">
+                    Activation strength: {Math.round(region.activation_score * 100)}%
+                  </p>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <div className="rounded-lg bg-xade-charcoal/5 p-6">
+                <p className="text-sm text-xade-charcoal/40">
+                  No high-activation regions detected in this image.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

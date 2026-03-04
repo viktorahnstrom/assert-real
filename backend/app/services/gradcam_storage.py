@@ -37,6 +37,32 @@ def get_local_heatmap_url(filepath: str) -> str:
     return f"{GRADCAM_SERVE_URL}/{filename}"
 
 
+def save_evidence_crops(crops: list[dict]) -> list[dict]:
+    """
+    Save evidence region crops to the temp directory and return HTTP URLs.
+
+    Args:
+        crops: List of dicts from extract_evidence_regions with
+               'image', 'label', 'activation_score' keys.
+
+    Returns:
+        List of dicts with 'url', 'label', 'activation_score'.
+    """
+    results = []
+    for i, crop in enumerate(crops):
+        file_id = f"{uuid.uuid4()}_region{i}"
+        filepath = _TEMP_DIR / f"gradcam_{file_id}.jpg"
+        crop["image"].save(filepath, format="JPEG", quality=90)
+        results.append(
+            {
+                "url": f"{GRADCAM_SERVE_URL}/{filepath.name}",
+                "label": crop["label"],
+                "activation_score": round(crop["activation_score"], 3),
+            }
+        )
+    return results
+
+
 async def upload_heatmap_to_supabase(
     overlay_image: Image.Image,
     image_id: str,

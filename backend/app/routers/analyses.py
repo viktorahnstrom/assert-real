@@ -4,15 +4,20 @@ Runs deepfake detection, generates VLM explanations, and stores results in datab
 """
 
 import io
+import logging
 import os
 import time
 
 import httpx
+import torch
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
+from PIL import Image
 from pydantic import BaseModel
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/analyses", tags=["Analyses"])
 
@@ -40,6 +45,12 @@ class ExplanationData(BaseModel):
     estimated_cost_usd: float
 
 
+class EvidenceRegion(BaseModel):
+    url: str
+    label: str
+    activation_score: float
+
+
 class AnalysisResponse(BaseModel):
     id: str
     image_id: str
@@ -54,6 +65,8 @@ class AnalysisResponse(BaseModel):
     created_at: str
     completed_at: str | None = None
     explanation: ExplanationData | None = None
+    gradcam_heatmap_url: str | None = None
+    evidence_regions: list[EvidenceRegion] = []
 
 
 class AnalysisListResponse(BaseModel):
@@ -64,7 +77,7 @@ class AnalysisListResponse(BaseModel):
 # ============================================
 # Helper functions
 # ============================================
-def get_db_headers():
+def get_db_headers() -> dict:
     """Headers for Supabase Database API."""
     return {
         "apikey": SUPABASE_ANON_KEY,
@@ -74,7 +87,7 @@ def get_db_headers():
     }
 
 
-def get_storage_headers():
+def get_storage_headers() -> dict:
     """Headers for Supabase Storage API."""
     return {
         "apikey": SUPABASE_ANON_KEY,
@@ -82,32 +95,60 @@ def get_storage_headers():
     }
 
 
-def _generate_placeholder_heatmap(image):
-    """Generate a placeholder heatmap. TODO: Replace with real GradCAM."""
-    import numpy as np
-    from PIL import Image as PILImage
+def _run_gradcam(
+    image: Image.Image,
+    image_tensor: torch.Tensor,
+    target_class: int,
+) -> tuple[bytes, str | None, list[dict]]:
+    """
+    Run GradCAM on the image and return heatmap bytes for VLM, a local URL
+    for the frontend, and a list of cropped evidence regions.
 
-    width, height = image.size
-    heatmap = np.zeros((height, width, 3), dtype=np.uint8)
+    Returns:
+        Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions)
+    """
+    try:
+        from app.api.detect import model
+        from app.services.gradcam_service import GradCAMGenerator
+        from app.services.gradcam_storage import (
+            get_local_heatmap_url,
+            save_evidence_crops,
+            save_heatmap_locally,
+        )
 
-    for y in range(height):
-        for x in range(width):
-            cx, cy = width // 2, height // 2
-            dist = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
-            max_dist = (cx**2 + cy**2) ** 0.5
-            intensity = max(0, 1.0 - dist / max_dist)
-            heatmap[y, x] = [int(255 * intensity), int(100 * intensity), 0]
+        generator = GradCAMGenerator(model)
+        heatmap = generator.generate(image_tensor, target_class=target_class)
+        overlay = generator.create_overlay(image, heatmap)
 
-    heatmap_img = PILImage.fromarray(heatmap, "RGB")
-    blended = PILImage.blend(image.resize((width, height)), heatmap_img, alpha=0.4)
+        filepath = save_heatmap_locally(overlay)
+        gradcam_heatmap_url = get_local_heatmap_url(filepath)
 
+        buffer = io.BytesIO()
+        overlay.save(buffer, format="PNG")
+        heatmap_bytes = buffer.getvalue()
+
+        crops = generator.extract_evidence_regions(image, heatmap)
+        evidence_regions = save_evidence_crops(crops)
+
+        return heatmap_bytes, gradcam_heatmap_url, evidence_regions
+
+    except Exception as exc:
+        logger.warning("GradCAM generation failed in analyses flow (non-fatal): %s", exc)
+        return _fallback_heatmap_bytes(image), None, []
+
+
+def _fallback_heatmap_bytes(image: Image.Image) -> bytes:
+    """Return a plain copy of the image as bytes if GradCAM fails."""
     buffer = io.BytesIO()
-    blended.save(buffer, format="PNG")
+    image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 
 def _build_analysis_response(
-    a: dict, explanation: ExplanationData | None = None
+    a: dict,
+    explanation: ExplanationData | None = None,
+    gradcam_heatmap_url: str | None = None,
+    evidence_regions: list[dict] | None = None,
 ) -> AnalysisResponse:
     """Build AnalysisResponse from database row."""
     return AnalysisResponse(
@@ -124,6 +165,8 @@ def _build_analysis_response(
         created_at=a["created_at"],
         completed_at=a.get("completed_at"),
         explanation=explanation,
+        gradcam_heatmap_url=gradcam_heatmap_url,
+        evidence_regions=[EvidenceRegion(**r) for r in (evidence_regions or [])],
     )
 
 
@@ -137,12 +180,10 @@ async def create_analysis(request: AnalysisRequest):
     1. Creates analysis record with 'processing' status
     2. Fetches the image from storage
     3. Runs detection model
-    4. Generates VLM explanation (if factory available)
-    5. Updates analysis with results
+    4. Generates GradCAM heatmap and evidence region crops
+    5. Generates VLM explanation grounded in heatmap (if factory available)
+    6. Updates analysis with results
     """
-    import torch
-    from PIL import Image
-
     from app.api.detect import class_names, device, model, transform, vlm_factory
     from app.services.vlm import DetectionContext
 
@@ -150,7 +191,6 @@ async def create_analysis(request: AnalysisRequest):
         raise HTTPException(status_code=503, detail="Detection model not loaded")
 
     async with httpx.AsyncClient() as client:
-        # Get image metadata from database
         img_response = await client.get(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{request.image_id}&select=*",
             headers=get_db_headers(),
@@ -166,7 +206,6 @@ async def create_analysis(request: AnalysisRequest):
         image_data = images[0]
         storage_path = image_data["storage_path"]
 
-        # Create analysis record with processing status
         analysis_data = {
             "image_id": request.image_id,
             "user_id": request.user_id,
@@ -190,7 +229,6 @@ async def create_analysis(request: AnalysisRequest):
         analysis = create_response.json()[0]
         analysis_id = analysis["id"]
 
-        # Download image from storage
         start_time = time.time()
 
         img_download = await client.get(
@@ -206,7 +244,6 @@ async def create_analysis(request: AnalysisRequest):
             )
             raise HTTPException(status_code=500, detail="Failed to download image from storage")
 
-        # Run detection
         try:
             image = Image.open(io.BytesIO(img_download.content)).convert("RGB")
             image_bytes = img_download.content
@@ -221,17 +258,15 @@ async def create_analysis(request: AnalysisRequest):
             confidence_value = float(confidence.item())
             fake_prob = float(probabilities[0][0].cpu().numpy())
             real_prob = float(probabilities[0][1].cpu().numpy())
+            target_class = int(predicted.item())
 
             processing_time = int((time.time() - start_time) * 1000)
+            classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-            if prediction == "fake":
-                classification = "fake"
-            elif prediction == "real":
-                classification = "real"
-            else:
-                classification = "uncertain"
+            heatmap_bytes, gradcam_heatmap_url, evidence_regions = _run_gradcam(
+                image, image_tensor, target_class
+            )
 
-            # Generate VLM explanation
             explanation_data = None
             vlm_explanation_text = None
             vlm_model_used = None
@@ -245,8 +280,6 @@ async def create_analysis(request: AnalysisRequest):
                         probabilities={"fake": fake_prob, "real": real_prob},
                     )
 
-                    heatmap_bytes = _generate_placeholder_heatmap(image)
-
                     vlm_explanation = await vlm_factory.generate_explanation(
                         provider_id=request.vlm_provider,
                         image_bytes=image_bytes,
@@ -254,7 +287,6 @@ async def create_analysis(request: AnalysisRequest):
                         detection=detection_context,
                     )
 
-                    # Build structured explanation for API response
                     explanation_data = ExplanationData(
                         summary=vlm_explanation.summary,
                         detailed_analysis=vlm_explanation.detailed_analysis,
@@ -265,7 +297,6 @@ async def create_analysis(request: AnalysisRequest):
                         estimated_cost_usd=vlm_explanation.estimated_cost_usd,
                     )
 
-                    # Store combined explanation text for the database
                     vlm_explanation_text = (
                         f"[SUMMARY]\n{vlm_explanation.summary}\n\n"
                         f"[DETAILED]\n{vlm_explanation.detailed_analysis}"
@@ -278,12 +309,8 @@ async def create_analysis(request: AnalysisRequest):
                     vlm_model_used = f"{vlm_explanation.provider}/{vlm_explanation.model}"
 
                 except Exception as e:
-                    # VLM failure should not fail the analysis
-                    import logging
+                    logger.warning("VLM explanation failed: %s", e)
 
-                    logging.getLogger(__name__).warning(f"VLM explanation failed: {e}")
-
-            # Update analysis with results
             update_data = {
                 "status": "completed",
                 "deepfake_score": round(fake_prob, 4),
@@ -306,14 +333,18 @@ async def create_analysis(request: AnalysisRequest):
             if update_response.status_code != 200:
                 raise HTTPException(status_code=500, detail="Failed to update analysis")
 
-            # Fetch the completed analysis
             final_response = await client.get(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}&select=*",
                 headers=get_db_headers(),
             )
 
             final_analysis = final_response.json()[0]
-            return _build_analysis_response(final_analysis, explanation=explanation_data)
+            return _build_analysis_response(
+                final_analysis,
+                explanation=explanation_data,
+                gradcam_heatmap_url=gradcam_heatmap_url,
+                evidence_regions=evidence_regions,
+            )
 
         except HTTPException:
             raise
