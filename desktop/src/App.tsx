@@ -632,9 +632,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                       }}
                     />
                   </div>
-                  <p className="mt-1.5 text-xs font-medium text-xade-charcoal/70">
-                    {region.label}
-                  </p>
+                  <p className="mt-1.5 text-xs font-medium text-xade-charcoal/70">{region.label}</p>
                   <p className="text-xs text-xade-charcoal/30">
                     Activation strength: {Math.round(region.activation_score * 100)}%
                   </p>
