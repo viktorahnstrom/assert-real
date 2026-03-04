@@ -14,6 +14,12 @@ export interface ExplanationResult {
   estimated_cost_usd: number;
 }
 
+export interface EvidenceRegion {
+  url: string;
+  label: string;
+  activation_score: number;
+}
+
 export interface DetectionResult {
   prediction: 'fake' | 'real';
   confidence: number;
@@ -25,6 +31,7 @@ export interface DetectionResult {
   accuracy: string;
   gradcam_heatmap_url: string | null;
   explanation: ExplanationResult | null;
+  evidence_regions: EvidenceRegion[];
 }
 
 export interface AnalysisResult {
@@ -41,6 +48,8 @@ export interface AnalysisResult {
   created_at: string;
   completed_at: string | null;
   explanation: ExplanationResult | null;
+  gradcam_heatmap_url?: string | null;
+  evidence_regions?: EvidenceRegion[];
 }
 
 export interface VLMProvider {
@@ -110,7 +119,11 @@ export async function detectDeepfake(
     throw error;
   }
 
-  return response.json() as Promise<DetectionResult>;
+  const data = await response.json();
+  return {
+    ...data,
+    evidence_regions: data.evidence_regions ?? [],
+  } as DetectionResult;
 }
 
 // ============================================
@@ -194,8 +207,9 @@ export async function analyzeImage(
       },
       model: analysis.model_used ?? 'EfficientNet-B4',
       accuracy: '98.48%',
-      gradcam_heatmap_url: null,
+      gradcam_heatmap_url: analysis.gradcam_heatmap_url ?? null,
       explanation: analysis.explanation ?? null,
+      evidence_regions: analysis.evidence_regions ?? [],
     };
   } catch (err) {
     throw err as ApiError;
