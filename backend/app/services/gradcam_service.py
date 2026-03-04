@@ -199,11 +199,11 @@ class GradCAMGenerator:
         )
 
     def extract_evidence_regions(
-    self,
-    original_image: Image.Image,
-    heatmap: np.ndarray,
-    top_n: int = 3,
-    min_region_size: float = 0.01,
+        self,
+        original_image: Image.Image,
+        heatmap: np.ndarray,
+        top_n: int = 3,
+        min_region_size: float = 0.01,
     ) -> list[dict]:
         """
         Extract the top-N highest activation regions from the heatmap as cropped images.
