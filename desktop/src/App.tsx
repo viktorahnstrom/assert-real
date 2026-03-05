@@ -5,10 +5,10 @@ import {
   History,
   Upload,
   User,
-  MoreVertical,
   X,
   ChevronLeft,
   Settings,
+  LogOut,
 } from 'lucide-react';
 import {
   Button,
@@ -30,6 +30,8 @@ import {
   type ApiError,
   type ApiMode,
 } from '@/lib/api';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import AuthPage from '@/components/auth/AuthPage';
 
 // ============================================
 // Dev toolbar for endpoint / VLM switching
@@ -151,16 +153,35 @@ function SidebarLogo() {
 
 function UserProfile() {
   const { isCollapsed } = useSidebar();
+  const { user, signOut } = useAuth();
+
+  const displayName =
+    user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email || 'User';
+
   return (
     <div className="flex items-center gap-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-xade-charcoal/10">
-        <User className="h-4 w-4 text-xade-charcoal/70" />
+        {user?.user_metadata?.avatar_url ? (
+          <img
+            src={user.user_metadata.avatar_url}
+            alt=""
+            className="h-8 w-8 rounded-full object-cover"
+          />
+        ) : (
+          <User className="h-4 w-4 text-xade-charcoal/70" />
+        )}
       </div>
       {!isCollapsed && (
         <>
-          <span className="flex-1 text-sm font-medium text-xade-charcoal">John Doe</span>
-          <button className="text-xade-charcoal/50 hover:text-xade-charcoal">
-            <MoreVertical className="h-4 w-4" />
+          <span className="flex-1 truncate text-sm font-medium text-xade-charcoal">
+            {displayName}
+          </span>
+          <button
+            onClick={signOut}
+            title="Sign out"
+            className="text-xade-charcoal/40 hover:text-xade-charcoal"
+          >
+            <LogOut className="h-4 w-4" />
           </button>
         </>
       )}
@@ -693,12 +714,37 @@ function MainContent() {
   );
 }
 
-function App() {
+function AuthenticatedApp() {
   return (
     <SidebarProvider>
       <AppSidebar />
       <MainContent />
     </SidebarProvider>
+  );
+}
+
+function AppRouter() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-xade-cream">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-xade-blue">XADE</h1>
+          <p className="mt-2 text-sm text-xade-charcoal/40">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return user ? <AuthenticatedApp /> : <AuthPage />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
 }
 
