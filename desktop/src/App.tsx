@@ -156,10 +156,7 @@ function UserProfile() {
   const { user, signOut } = useAuth();
 
   const displayName =
-    user?.user_metadata?.display_name ||
-    user?.user_metadata?.full_name ||
-    user?.email ||
-    'User';
+    user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email || 'User';
 
   return (
     <div className="flex items-center gap-3">
