@@ -74,24 +74,33 @@ export type ApiMode = 'detect' | 'analyses';
 // Direct detect endpoint (development/testing)
 // ============================================
 
-export async function detectDeepfake(
-  file: File,
-  vlmProvider: string = 'openai'
-): Promise<DetectionResult> {
+import { supabase } from './supabase';
+
+export async function detectDeepfake(file: File, _vlmProvider?: string): Promise<DetectionResult> {
+  // Get the active session token from Supabase
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    const error: ApiError = {
+      type: 'network',
+      message: 'Not authenticated. Please log in.',
+    };
+    throw error;
+  }
+
   const formData = new FormData();
   formData.append('file', file);
-
-  const params = new URLSearchParams({
-    vlm_provider: vlmProvider,
-    explain: 'true',
-    include_gradcam: 'true',
-  });
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/detect?${params}`, {
+    response = await fetch(`${API_BASE_URL}/api/detect`, {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`, // ← add this
+      },
       body: formData,
     });
   } catch {
@@ -110,6 +119,10 @@ export async function detectDeepfake(
       const error: ApiError = { type: 'invalid_file', message };
       throw error;
     }
+    if (response.status === 401) {
+      const error: ApiError = { type: 'network', message: 'Session expired. Please log in again.' };
+      throw error;
+    }
     if (response.status === 503) {
       const error: ApiError = { type: 'model_unavailable', message };
       throw error;
@@ -119,11 +132,7 @@ export async function detectDeepfake(
     throw error;
   }
 
-  const data = await response.json();
-  return {
-    ...data,
-    evidence_regions: data.evidence_regions ?? [],
-  } as DetectionResult;
+  return response.json() as Promise<DetectionResult>;
 }
 
 // ============================================

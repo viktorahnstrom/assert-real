@@ -3,19 +3,26 @@ Authentication routes for XADE.
 Uses Supabase Auth via HTTP.
 """
 
+import logging
 import os
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
+
+from app.dependencies.auth import require_auth
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+_security = HTTPBearer()
 
 
 # ============================================
@@ -44,7 +51,7 @@ class AuthResponse(BaseModel):
 
 
 # ============================================
-# Helper function
+# Helper
 # ============================================
 def get_auth_headers():
     return {
@@ -76,7 +83,8 @@ async def sign_up(request: SignUpRequest):
                 message="Account created successfully. Please check your email to verify.",
                 user_id=data.get("user", {}).get("id"),
                 email=data.get("user", {}).get("email"),
-                access_token=data.get("access_token"),
+                # Do NOT return access_token — require email verification before login
+                access_token=None,
             )
         else:
             error = response.json()
@@ -116,9 +124,29 @@ async def login(request: LoginRequest):
 
 
 @router.post("/logout")
-async def logout():
-    """Logout - client should discard the token."""
-    return {"message": "Logged out successfully. Please discard your access token."}
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(_security),
+):
+    """
+    Invalidates the session server-side via Supabase.
+    The client should also discard the token locally.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{SUPABASE_URL}/auth/v1/logout",
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {credentials.credentials}",
+                "Content-Type": "application/json",
+            },
+        )
+
+    # Supabase returns 204 No Content on success
+    if response.status_code not in (200, 204):
+        logger.warning("Supabase logout returned unexpected status: %s", response.status_code)
+        # Still return success to the client — the token may already be expired
+
+    return {"message": "Logged out successfully."}
 
 
 @router.post("/forgot-password")
@@ -142,10 +170,14 @@ async def forgot_password(request: ForgotPasswordRequest):
 
 
 @router.get("/me")
-async def get_current_user(authorization: str | None = None):
-    """Get the currently logged in user. Pass token in Authorization header."""
-    # For now, return a message explaining how to use this endpoint
+async def get_current_user(current_user: dict = Depends(require_auth)):
+    """
+    Returns the authenticated user's profile.
+    Requires a valid Bearer token — returns 401 otherwise.
+    """
     return {
-        "message": "Pass your access_token in the Authorization header as 'Bearer <token>'",
-        "example": "Authorization: Bearer eyJhbGciOiJIUzI1NiIs...",
+        "user_id": current_user.get("id"),
+        "email": current_user.get("email"),
+        "display_name": current_user.get("user_metadata", {}).get("display_name"),
+        "email_confirmed": current_user.get("email_confirmed_at") is not None,
     }

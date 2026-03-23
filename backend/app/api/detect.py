@@ -1,40 +1,39 @@
+# backend/app/api/detect.py
 """
-Detection API endpoints for XADE deepfake detection framework.
-
-Provides image-based deepfake detection using EfficientNet-B4,
-with optional GradCAM heatmap generation.
+Deepfake detection endpoint
+Loads EfficientNet-B4 model and provides inference API
 """
 
-from __future__ import annotations
-
-# stdlib
 import io
 import logging
 from pathlib import Path
 from typing import Optional
 
-# third-party
 import torch
 import torch.nn as nn
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 from torchvision import transforms
 from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
 
+from app.dependencies.auth import require_auth
+from app.utils.model_loader import load_model_checkpoint
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# Model definition
-# ---------------------------------------------------------------------------
+model: Optional[nn.Module] = None
+device: Optional[torch.device] = None
+transform: Optional[transforms.Compose] = None
+class_names = ["fake", "real"]
 
 
 class DeepfakeDetector(nn.Module):
-    """EfficientNet-B4 deepfake detector (matches training architecture)."""
+    """EfficientNet-B4 deepfake detector (matches training architecture)"""
 
-    def __init__(self, num_classes: int = 2) -> None:
+    def __init__(self, num_classes=2):
         super().__init__()
 
         weights = EfficientNet_B4_Weights.IMAGENET1K_V1
@@ -58,90 +57,73 @@ class DeepfakeDetector(nn.Module):
             nn.Linear(512, num_classes),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         return self.model(x)
-
-
-# ---------------------------------------------------------------------------
-# Module-level state (set by main.py lifespan)
-# ---------------------------------------------------------------------------
-
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-)
-class_names = ["fake", "real"]
-model: Optional[DeepfakeDetector] = None
-vlm_factory = None  # Set by main.py lifespan after VLM init
-
-transform = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ]
-)
-
-
-# ---------------------------------------------------------------------------
-# Model loading — called by main.py lifespan
-# ---------------------------------------------------------------------------
-
-
-def load_detection_model() -> None:
-    """Load the EfficientNet-B4 checkpoint. Called once at startup by main.py."""
-    global model
-    try:
-        from app.utils.model_loader import download_model_from_hf
-
-        model_path = download_model_from_hf()
-        detector = DeepfakeDetector()
-        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-        detector.load_state_dict(checkpoint["model_state_dict"])
-        detector.to(device)
-        detector.eval()
-        logger.info("Model loaded successfully on %s", device)
-        print(f"✓ Detection model loaded on {device}")
-        model = detector
-    except Exception as exc:
-        logger.warning("Could not load model checkpoint: %s", exc)
-        print(f"✗ Could not load model checkpoint: {exc}")
-        model = None
-
-
-# ---------------------------------------------------------------------------
-# Response schemas
-# ---------------------------------------------------------------------------
 
 
 class DetectionResponse(BaseModel):
     prediction: str
     confidence: float
     probabilities: dict[str, float]
-    gradcam_heatmap_url: Optional[str] = None
+    model: str = "EfficientNet-B4"
+    accuracy: str = "98.48%"
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
+def load_detection_model():
+    """Load the trained deepfake detection model (called on startup)"""
+    global model, device, transform, class_names
+
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"🔧 Using GPU: {torch.cuda.get_device_name(0)}")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+        print("🔧 Using Apple Silicon GPU (MPS)")
+    else:
+        device = torch.device("cpu")
+        print("🔧 Using CPU")
+
+    print("🔧 Loading detection model...")
+
+    try:
+        checkpoint = load_model_checkpoint()
+
+        model = DeepfakeDetector().to(device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.eval()
+
+        class_names = checkpoint.get("class_names", ["fake", "real"])
+
+        transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
+
+        print("✅ Detection model loaded successfully")
+        print(f"   Validation accuracy: {checkpoint.get('val_acc', 0):.2f}%")
+        print(f"   Classes: {class_names}")
+        print(f"   Device: {device}")
+
+    except Exception as e:
+        print(f"❌ Failed to load detection model: {e}")
+        print("   Detection endpoints will not be available")
+        model = None
+        device = None
+        transform = None
+        class_names = None
 
 
 @router.post("/detect", response_model=DetectionResponse)
 async def detect_deepfake(
     file: UploadFile = File(...),
-    include_gradcam: bool = Query(default=True, description="Generate GradCAM heatmap overlay"),
-) -> DetectionResponse:
+    current_user: dict = Depends(require_auth),  # 🔒 requires valid JWT
+):
     """
-    Detect whether an uploaded image is a deepfake.
-
-    Args:
-        file: Image file (JPEG, PNG, WEBP, etc.)
-        include_gradcam: If True, generate and return a GradCAM heatmap URL.
-
-    Returns:
-        - prediction: "fake" or "real"
-        - confidence: Model confidence (0-1)
-        - probabilities: Per-class probabilities
-        - gradcam_heatmap_url: Local file URL to overlay image (if requested)
+    Detect if an uploaded image is a deepfake.
+    Requires a valid Bearer token in the Authorization header.
     """
     if model is None:
         raise HTTPException(
@@ -151,8 +133,7 @@ async def detect_deepfake(
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(
-            status_code=400,
-            detail=f"File must be an image, got: {file.content_type}",
+            status_code=400, detail=f"File must be an image, got: {file.content_type}"
         )
 
     try:
@@ -160,7 +141,6 @@ async def detect_deepfake(
         image = Image.open(io.BytesIO(contents)).convert("RGB")
         image_tensor = transform(image).unsqueeze(0).to(device)
 
-        # Inference — no_grad is fine here, GradCAM runs a separate pass below
         with torch.no_grad():
             outputs = model(image_tensor)
             probabilities = torch.softmax(outputs, dim=1)
@@ -169,60 +149,37 @@ async def detect_deepfake(
         prediction = class_names[predicted.item()]
         confidence_value = float(confidence.item())
         probs = probabilities[0].cpu().numpy()
-        target_class = int(predicted.item())
-
-        gradcam_heatmap_url: Optional[str] = None
-
-        if include_gradcam:
-            try:
-                from app.services.gradcam_service import GradCAMGenerator
-                from app.services.gradcam_storage import (
-                    get_local_heatmap_url,
-                    save_heatmap_locally,
-                )
-
-                generator = GradCAMGenerator(model)
-                heatmap = generator.generate(image_tensor, target_class=target_class)
-                overlay = generator.create_overlay(image, heatmap)
-
-                filepath = save_heatmap_locally(overlay)
-                gradcam_heatmap_url = get_local_heatmap_url(filepath)
-
-            except Exception as gradcam_exc:
-                import traceback
-
-                traceback.print_exc()
-                logger.warning("GradCAM generation failed (non-fatal): %s", gradcam_exc)
-                gradcam_heatmap_url = None
 
         return DetectionResponse(
             prediction=prediction,
             confidence=confidence_value,
             probabilities={"fake": float(probs[0]), "real": float(probs[1])},
-            gradcam_heatmap_url=gradcam_heatmap_url,
         )
 
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error processing image: {str(exc)}") from exc
+    except Exception as e:
+        logger.exception("Unhandled error during deepfake detection")
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred during detection. Please try again.",
+        ) from e
 
 
 @router.get("/model-info")
-async def get_model_info() -> dict:
+async def get_model_info(current_user: dict = Depends(require_auth)):  # 🔒 also protected
     """Get information about the loaded detection model."""
     if model is None:
-        return {"status": "not_loaded", "message": "Detection model not available"}
+        return {
+            "status": "not_loaded",
+            "message": "Detection model not available",
+        }
 
     model_path = Path(__file__).parent.parent.parent / "checkpoints" / "best_model.pt"
-    checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
+    checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
 
     return {
         "status": "loaded",
         "architecture": "EfficientNet-B4",
         "validation_accuracy": f"{checkpoint['val_acc']:.2f}%",
-        "training_samples": checkpoint["train_samples"],
         "classes": checkpoint["class_names"],
         "device": str(device),
-        "parameters": f"{sum(p.numel() for p in model.parameters()):,}",
     }
