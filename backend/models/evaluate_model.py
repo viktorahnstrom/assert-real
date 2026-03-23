@@ -45,7 +45,7 @@ def evaluate_model(model_path: str, test_data_dir: str, device: str = "cuda"):
 
     # Load model
     print(f"Loading model from {model_path}...")
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
 
     model = DeepfakeDetector().to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
