@@ -78,7 +78,9 @@ import { supabase } from './supabase';
 
 export async function detectDeepfake(file: File): Promise<DetectionResult> {
   // Get the active session token from Supabase
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session?.access_token) {
     const error: ApiError = {
@@ -97,7 +99,7 @@ export async function detectDeepfake(file: File): Promise<DetectionResult> {
     response = await fetch(`${API_BASE_URL}/api/detect`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${session.access_token}`,  // ← add this
+        Authorization: `Bearer ${session.access_token}`, // ← add this
       },
       body: formData,
     });
