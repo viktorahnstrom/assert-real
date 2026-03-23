@@ -145,7 +145,7 @@ async def logout(
     if response.status_code not in (200, 204):
         logger.warning("Supabase logout returned unexpected status: %s", response.status_code)
         # Still return success to the client — the token may already be expired
-    
+
     return {"message": "Logged out successfully."}
 
 
