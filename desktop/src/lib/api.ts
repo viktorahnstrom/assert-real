@@ -76,7 +76,7 @@ export type ApiMode = 'detect' | 'analyses';
 
 import { supabase } from './supabase';
 
-export async function detectDeepfake(file: File): Promise<DetectionResult> {
+export async function detectDeepfake(file: File, _vlmProvider?: string): Promise<DetectionResult> {
   // Get the active session token from Supabase
   const {
     data: { session },
