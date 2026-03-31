@@ -49,6 +49,7 @@ class EvidenceRegion(BaseModel):
     url: str
     label: str
     activation_score: float
+    explanation: str | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -99,13 +100,14 @@ def _run_gradcam(
     image: Image.Image,
     image_tensor: torch.Tensor,
     target_class: int,
-) -> tuple[bytes, str | None, list[dict]]:
+) -> tuple[bytes | None, str | None, list[dict]]:
     """
     Run GradCAM on the image and return heatmap bytes for VLM, a local URL
     for the frontend, and a list of cropped evidence regions.
 
     Returns:
         Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions)
+        heatmap_bytes and gradcam_heatmap_url will be None if GradCAM failed.
     """
     try:
         from app.api.detect import model
@@ -133,15 +135,28 @@ def _run_gradcam(
         return heatmap_bytes, gradcam_heatmap_url, evidence_regions
 
     except Exception as exc:
-        logger.warning("GradCAM generation failed in analyses flow (non-fatal): %s", exc)
-        return _fallback_heatmap_bytes(image), None, []
+        logger.warning("GradCAM generation failed (non-fatal): %s", exc)
+        return None, None, []
 
 
-def _fallback_heatmap_bytes(image: Image.Image) -> bytes:
-    """Return a plain copy of the image as bytes if GradCAM fails."""
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+def _attach_region_comments(
+    evidence_regions: list[dict],
+    region_comments: dict,
+) -> list[dict]:
+    """
+    Attach VLM region comments to evidence region dicts by matching label.
+
+    Args:
+        evidence_regions: List of dicts with url, label, activation_score.
+        region_comments: Dict mapping label -> one-sentence explanation.
+
+    Returns:
+        Evidence regions with explanation field populated where available.
+    """
+    for region in evidence_regions:
+        label = region.get("label", "")
+        region["explanation"] = region_comments.get(label, None)
+    return evidence_regions
 
 
 def _build_analysis_response(
@@ -165,7 +180,7 @@ def _build_analysis_response(
         created_at=a["created_at"],
         completed_at=a.get("completed_at"),
         explanation=explanation,
-        gradcam_heatmap_url=gradcam_heatmap_url,
+        gradcam_heatmap_url=gradcam_heatmap_url or a.get("gradcam_path"),
         evidence_regions=[EvidenceRegion(**r) for r in (evidence_regions or [])],
     )
 
@@ -181,8 +196,9 @@ async def create_analysis(request: AnalysisRequest):
     2. Fetches the image from storage
     3. Runs detection model
     4. Generates GradCAM heatmap and evidence region crops
-    5. Generates VLM explanation grounded in heatmap (if factory available)
-    6. Updates analysis with results
+    5. Generates VLM explanation grounded in heatmap and region labels
+    6. Attaches per-region VLM comments to evidence crops
+    7. Updates analysis record with all results
     """
     from app.api.detect import class_names, device, model, transform, vlm_factory
     from app.services.vlm import DetectionContext
@@ -191,6 +207,7 @@ async def create_analysis(request: AnalysisRequest):
         raise HTTPException(status_code=503, detail="Detection model not loaded")
 
     async with httpx.AsyncClient() as client:
+        # Fetch image metadata
         img_response = await client.get(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{request.image_id}&select=*",
             headers=get_db_headers(),
@@ -206,6 +223,7 @@ async def create_analysis(request: AnalysisRequest):
         image_data = images[0]
         storage_path = image_data["storage_path"]
 
+        # Create analysis record
         analysis_data = {
             "image_id": request.image_id,
             "user_id": request.user_id,
@@ -231,6 +249,7 @@ async def create_analysis(request: AnalysisRequest):
 
         start_time = time.time()
 
+        # Download image from storage
         img_download = await client.get(
             f"{SUPABASE_URL}/storage/v1/object/images/{storage_path}",
             headers=get_storage_headers(),
@@ -249,6 +268,7 @@ async def create_analysis(request: AnalysisRequest):
             image_bytes = img_download.content
             image_tensor = transform(image).unsqueeze(0).to(device)
 
+            # Run detection
             with torch.no_grad():
                 outputs = model(image_tensor)
                 probabilities = torch.softmax(outputs, dim=1)
@@ -263,9 +283,17 @@ async def create_analysis(request: AnalysisRequest):
             processing_time = int((time.time() - start_time) * 1000)
             classification = prediction if prediction in ("fake", "real") else "uncertain"
 
+            # Run GradCAM — returns None heatmap_bytes if it failed
             heatmap_bytes, gradcam_heatmap_url, evidence_regions = _run_gradcam(
                 image, image_tensor, target_class
             )
+
+            # gradcam_available drives both the VLM prompt and whether
+            # the heatmap image is sent to the VLM at all
+            gradcam_available = gradcam_heatmap_url is not None
+
+            # Extract region labels to pass to VLM for per-region comments
+            region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
 
             explanation_data = None
             vlm_explanation_text = None
@@ -278,14 +306,26 @@ async def create_analysis(request: AnalysisRequest):
                         confidence=confidence_value,
                         model_used="EfficientNet-B4",
                         probabilities={"fake": fake_prob, "real": real_prob},
+                        region_labels=region_labels,
                     )
 
                     vlm_explanation = await vlm_factory.generate_explanation(
                         provider_id=request.vlm_provider,
                         image_bytes=image_bytes,
-                        heatmap_bytes=heatmap_bytes,
+                        heatmap_bytes=heatmap_bytes if gradcam_available else image_bytes,
                         detection=detection_context,
+                        gradcam_available=gradcam_available,
                     )
+
+                    print("VLM raw response:", vlm_explanation.raw_response)
+                    print("Region comments parsed:", vlm_explanation.region_comments)
+
+                    # Attach per-region comments to evidence crops
+                    if vlm_explanation.region_comments and evidence_regions:
+                        evidence_regions = _attach_region_comments(
+                            evidence_regions,
+                            vlm_explanation.region_comments,
+                        )
 
                     explanation_data = ExplanationData(
                         summary=vlm_explanation.summary,
@@ -311,6 +351,7 @@ async def create_analysis(request: AnalysisRequest):
                 except Exception as e:
                     logger.warning("VLM explanation failed: %s", e)
 
+            # Persist results to database
             update_data = {
                 "status": "completed",
                 "deepfake_score": round(fake_prob, 4),
@@ -319,6 +360,8 @@ async def create_analysis(request: AnalysisRequest):
                 "completed_at": "now()",
             }
 
+            if gradcam_heatmap_url:
+                update_data["gradcam_path"] = gradcam_heatmap_url
             if vlm_explanation_text:
                 update_data["vlm_explanation"] = vlm_explanation_text
             if vlm_model_used:

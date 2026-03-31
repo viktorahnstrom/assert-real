@@ -18,6 +18,7 @@ export interface EvidenceRegion {
   url: string;
   label: string;
   activation_score: number;
+  explanation: string | null;
 }
 
 export interface DetectionResult {
@@ -77,7 +78,6 @@ export type ApiMode = 'detect' | 'analyses';
 import { supabase } from './supabase';
 
 export async function detectDeepfake(file: File, _vlmProvider?: string): Promise<DetectionResult> {
-  // Get the active session token from Supabase
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -99,7 +99,7 @@ export async function detectDeepfake(file: File, _vlmProvider?: string): Promise
     response = await fetch(`${API_BASE_URL}/api/detect`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${session.access_token}`, // ← add this
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: formData,
     });
@@ -115,21 +115,12 @@ export async function detectDeepfake(file: File, _vlmProvider?: string): Promise
     const body = await response.json().catch(() => ({ detail: 'Unknown error' }));
     const message = body.detail ?? 'Unknown error';
 
-    if (response.status === 400) {
-      const error: ApiError = { type: 'invalid_file', message };
-      throw error;
-    }
-    if (response.status === 401) {
-      const error: ApiError = { type: 'network', message: 'Session expired. Please log in again.' };
-      throw error;
-    }
-    if (response.status === 503) {
-      const error: ApiError = { type: 'model_unavailable', message };
-      throw error;
-    }
+    if (response.status === 400) throw { type: 'invalid_file', message } as ApiError;
+    if (response.status === 401)
+      throw { type: 'network', message: 'Session expired. Please log in again.' } as ApiError;
+    if (response.status === 503) throw { type: 'model_unavailable', message } as ApiError;
 
-    const error: ApiError = { type: 'unknown', message };
-    throw error;
+    throw { type: 'unknown', message } as ApiError;
   }
 
   return response.json() as Promise<DetectionResult>;
@@ -193,36 +184,31 @@ export async function analyzeImage(
   try {
     imageId = await uploadImage(file, userId);
   } catch {
-    const error: ApiError = {
+    throw {
       type: 'network',
       message: 'Failed to upload image. Make sure backend and Supabase are running.',
-    };
-    throw error;
+    } as ApiError;
   }
 
-  try {
-    const analysis = await createAnalysis(imageId, userId, vlmProvider);
+  const analysis = await createAnalysis(imageId, userId, vlmProvider);
 
-    const fakeScore = analysis.deepfake_score ?? 0;
-    const realScore = 1 - fakeScore;
-    const isFake = analysis.classification === 'fake';
+  const fakeScore = analysis.deepfake_score ?? 0;
+  const realScore = 1 - fakeScore;
+  const isFake = analysis.classification === 'fake';
 
-    return {
-      prediction: (analysis.classification as 'fake' | 'real') ?? 'real',
-      confidence: isFake ? fakeScore : realScore,
-      probabilities: {
-        fake: fakeScore,
-        real: realScore,
-      },
-      model: analysis.model_used ?? 'EfficientNet-B4',
-      accuracy: '98.48%',
-      gradcam_heatmap_url: analysis.gradcam_heatmap_url ?? null,
-      explanation: analysis.explanation ?? null,
-      evidence_regions: analysis.evidence_regions ?? [],
-    };
-  } catch (err) {
-    throw err as ApiError;
-  }
+  return {
+    prediction: (analysis.classification as 'fake' | 'real') ?? 'real',
+    confidence: isFake ? fakeScore : realScore,
+    probabilities: {
+      fake: fakeScore,
+      real: realScore,
+    },
+    model: analysis.model_used ?? 'EfficientNet-B4',
+    accuracy: '98.48%',
+    gradcam_heatmap_url: analysis.gradcam_heatmap_url ?? null,
+    explanation: analysis.explanation ?? null,
+    evidence_regions: analysis.evidence_regions ?? [],
+  };
 }
 
 // ============================================

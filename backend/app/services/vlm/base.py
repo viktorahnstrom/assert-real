@@ -2,7 +2,7 @@
 Base VLM Provider
 
 Abstract base class that all VLM providers must implement.
-Uses the stratergy so providers can be swapped wihout changing the rest of the codebase.
+Uses the strategy pattern so providers can be swapped without changing the rest of the codebase.
 """
 
 from abc import ABC, abstractmethod
@@ -14,22 +14,22 @@ from typing import Optional
 class VLMExplanation:
     """Structured explanation response from a VLM provider."""
 
-    # Explanation fields
     summary: str
     detailed_analysis: str
     technical_notes: Optional[str] = None
 
-    # Provider metadata
+    # Region-level comments keyed by region label
+    # e.g. {"Nose and mid-face region": "The bright red activation here..."}
+    region_comments: Optional[dict] = None
+
     provider: str = ""
     model: str = ""
     processing_time_ms: int = 0
 
-    # Cost tracking
     estimated_cost_usd: float = 0.0
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
 
-    # Raw response for debugging
     raw_response: Optional[str] = None
 
 
@@ -54,15 +54,19 @@ class DetectionContext:
     confidence: float
     model_used: str
     probabilities: dict = field(default_factory=dict)
+    # Labeled facial regions from GradCAM evidence crops
+    # e.g. ["Nose and mid-face region", "Left eye region"]
+    region_labels: list = field(default_factory=list)
 
 
 class BaseVLMProvider(ABC):
     """
-    Abstract base class for vlm providers.
+    Abstract base class for VLM providers.
 
     All providers must implement generate_explanation() which takes
     the original image, GradCAM heatmap, and detection results, then
-    returns a structured VLM Explanation with three tiers of detail.
+    returns a structured VLMExplanation with three tiers of detail
+    plus optional per-region comments.
     """
 
     @abstractmethod
@@ -71,41 +75,35 @@ class BaseVLMProvider(ABC):
         image_bytes: bytes,
         heatmap_bytes: bytes,
         detection: DetectionContext,
+        gradcam_available: bool = True,
     ) -> VLMExplanation:
         """
         Generate a structured explanation from the VLM provider.
+
         Args:
-            image_bytes (bytes): The original image in bytes.
-            heatmap_bytes (bytes): The GradCAM heatmap in bytes.
-            detection (DetectionContext): The detection results to ground the explanation.
+            image_bytes: The original image in bytes.
+            heatmap_bytes: The GradCAM heatmap in bytes. Only sent to the
+                           VLM when gradcam_available is True.
+            detection: The detection results to ground the explanation.
+                       Includes region_labels from GradCAM evidence crops.
+            gradcam_available: Whether heatmap_bytes contains a real heatmap.
 
         Returns:
-            VLMExplanation: A structured explanation with multiple tiers of detail.
+            VLMExplanation with summary, detailed analysis, technical notes,
+            and per-region comments.
         """
         ...
 
     @abstractmethod
     def get_provider_info(self) -> ProviderInfo:
-        """Return metdadata about this provider (name, model, availability, costs)"""
+        """Return metadata about this provider."""
         ...
 
     @abstractmethod
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
-        """
-        Estimate the cost of a request based on token usage.
-
-        Args:
-            input_tokens (int): Estimated number of input tokens.
-            output_tokens (int): Estimated number of output tokens.
-
-        Returns:
-            float: Estimated cost in USD.
-        """
+        """Estimate the cost of a request based on token usage."""
         ...
 
     async def health_check(self) -> bool:
-        """
-        Check if the provider is reachable and configured.
-        Default implementation returns True — override for API-based providers.
-        """
+        """Check if the provider is reachable and configured."""
         return True
