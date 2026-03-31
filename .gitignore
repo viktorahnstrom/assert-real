@@ -108,3 +108,5 @@ results/*.json
 
 # Accidental nested backend folder
 backend/backend/
+package-lock.json
+node_modules/.package-lock.json
