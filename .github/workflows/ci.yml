@@ -24,7 +24,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./desktop
 
       - name: Run ESLint
         run: npm run lint
