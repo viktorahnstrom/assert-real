@@ -26,8 +26,7 @@ jobs:
         run: npm install
 
       - name: Check Prettier formatting
-        run: npm run format:check
-        working-directory: ./desktop
+        run: npx --prefix desktop prettier --check "desktop/src/**/*.{ts,tsx,css}"
 
       - name: Run ESLint
         run: npm run lint
