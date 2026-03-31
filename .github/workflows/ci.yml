@@ -23,15 +23,16 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Check Prettier formatting
+        run: npm run format:check
 
       - name: Run ESLint
-        run: npm run lint
-        working-directory: ./desktop
+        run: npm run lint -w desktop
 
       - name: TypeScript type check
-        run: npm run typecheck
-        working-directory: ./desktop
+        run: npm run typecheck -w desktop
 
   # ==========================================
   # Python (Backend)
