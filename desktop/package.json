@@ -13,8 +13,8 @@
     "preview": "vite preview",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "node node_modules/.bin/prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "format": "node node_modules/.bin/prettier --write \"src/**/*.{ts,tsx,css}\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
