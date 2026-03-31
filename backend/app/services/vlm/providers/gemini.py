@@ -1,10 +1,5 @@
 """
 Google Gemini VLM Provider
-
-Implements the BaseVLMProvider for Google's Gemini models.
-Default model: gemini-2.0-flash (cheapest: $0.10/M input, $0.40/M output)
-
-Uses the new google-genai SDK (not the deprecated google-generativeai).
 """
 
 import logging
@@ -17,14 +12,14 @@ from google.genai.errors import APIError
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import ProviderConfig
 from app.services.vlm.prompt_builder import (
-    SYSTEM_PROMPT,
+    SYSTEM_PROMPT_WITH_GRADCAM,
+    SYSTEM_PROMPT_WITHOUT_GRADCAM,
     build_explanation_prompt,
     parse_explanation_response,
 )
 
 logger = logging.getLogger(__name__)
 
-# Pricing per 1M tokens (as of Feb 2026)
 GEMINI_PRICING = {
     "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
     "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
@@ -34,38 +29,39 @@ GEMINI_PRICING = {
 
 
 class GeminiProvider(BaseVLMProvider):
-    """Google Gemini VLM provider for generating deepfake explanations."""
-
     def __init__(self, config: ProviderConfig):
         self._config = config
         self._client = genai.Client(api_key=config.api_key)
-        self._model = config.model or "gemini-2.0-flash"
+        self._model = config.model or "gemini-2.5-flash"
 
     async def generate_explanation(
         self,
         image_bytes: bytes,
         heatmap_bytes: bytes,
         detection: DetectionContext,
+        gradcam_available: bool = True,
     ) -> VLMExplanation:
-        """Generate explanation using Gemini Vision API."""
-
         start_time = time.time()
-        user_prompt = build_explanation_prompt(detection)
+
+        system_prompt = (
+            SYSTEM_PROMPT_WITH_GRADCAM if gradcam_available else SYSTEM_PROMPT_WITHOUT_GRADCAM
+        )
+        user_prompt = build_explanation_prompt(detection, gradcam_available=gradcam_available)
 
         try:
-            # Build multimodal content: text + original image + heatmap image
             contents = [
                 user_prompt,
                 types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
-                types.Part.from_bytes(data=heatmap_bytes, mime_type="image/png"),
             ]
+            if gradcam_available:
+                contents.append(types.Part.from_bytes(data=heatmap_bytes, mime_type="image/png"))
 
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=contents,
                 config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    max_output_tokens=1000,
+                    system_instruction=system_prompt,
+                    max_output_tokens=2000,
                     temperature=0.3,
                 ),
             )
@@ -73,7 +69,6 @@ class GeminiProvider(BaseVLMProvider):
             raw_text = response.text or ""
             processing_time = int((time.time() - start_time) * 1000)
 
-            # Extract token counts from response metadata
             input_tokens = None
             output_tokens = None
             if response.usage_metadata:
@@ -81,14 +76,13 @@ class GeminiProvider(BaseVLMProvider):
                 output_tokens = response.usage_metadata.candidates_token_count
 
             estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
-
-            # Parse the three-tier response
             sections = parse_explanation_response(raw_text)
 
             return VLMExplanation(
                 summary=sections["summary"],
                 detailed_analysis=sections["detailed_analysis"],
                 technical_notes=sections["technical_notes"] or None,
+                region_comments=sections["region_comments"] or None,
                 provider="google",
                 model=self._model,
                 processing_time_ms=processing_time,
@@ -106,6 +100,7 @@ class GeminiProvider(BaseVLMProvider):
                 detailed_analysis="The explanation service encountered an error. "
                 "The detection result above is still valid.",
                 technical_notes=None,
+                region_comments=None,
                 provider="google",
                 model=self._model,
                 processing_time_ms=processing_time,
@@ -120,6 +115,7 @@ class GeminiProvider(BaseVLMProvider):
                 detailed_analysis="The explanation service encountered an error. "
                 "The detection result above is still valid.",
                 technical_notes=None,
+                region_comments=None,
                 provider="google",
                 model=self._model,
                 processing_time_ms=processing_time,
@@ -128,7 +124,7 @@ class GeminiProvider(BaseVLMProvider):
             )
 
     def get_provider_info(self) -> ProviderInfo:
-        pricing = GEMINI_PRICING.get(self._model, GEMINI_PRICING["gemini-2.0-flash"])
+        pricing = GEMINI_PRICING.get(self._model, GEMINI_PRICING["gemini-2.5-flash"])
         return ProviderInfo(
             id="google",
             name=f"Google {self._model}",
@@ -140,13 +136,12 @@ class GeminiProvider(BaseVLMProvider):
         )
 
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
-        pricing = GEMINI_PRICING.get(self._model, GEMINI_PRICING["gemini-2.0-flash"])
-        input_cost = (input_tokens / 1_000_000) * pricing["input"]
-        output_cost = (output_tokens / 1_000_000) * pricing["output"]
-        return input_cost + output_cost
+        pricing = GEMINI_PRICING.get(self._model, GEMINI_PRICING["gemini-2.5-flash"])
+        return (input_tokens / 1_000_000) * pricing["input"] + (
+            output_tokens / 1_000_000
+        ) * pricing["output"]
 
     async def health_check(self) -> bool:
-        """Check if Gemini API is reachable."""
         try:
             response = self._client.models.generate_content(
                 model=self._model,

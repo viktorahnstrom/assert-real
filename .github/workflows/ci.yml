@@ -29,10 +29,10 @@ jobs:
         run: npm run format:check
 
       - name: Run ESLint
-        run: npm run lint
+        run: npm run lint -w desktop
 
       - name: TypeScript type check
-        run: npm run typecheck
+        run: npm run typecheck -w desktop
 
   # ==========================================
   # Python (Backend)

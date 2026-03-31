@@ -253,7 +253,19 @@ class GradCAMGenerator:
                 }
             )
 
-        # Fallback: if no regions passed the filter, use the peak activation point
+        def _is_meaningful_crop(crop_dict: dict) -> bool:
+            img = crop_dict["image"].convert("RGB")
+            import numpy as np
+
+            arr = np.array(img).astype(np.float32)
+            mean_brightness = arr.mean()
+            std_dev = arr.std()
+            # Reject if too dark (background) or too uniform (featureless)
+            return mean_brightness > 40 and std_dev > 15
+
+        regions = [r for r in regions if _is_meaningful_crop(r)]
+
+        # Re-apply fallback if all regions were filtered out
         if not regions:
             peak_y, peak_x = np.unravel_index(np.argmax(heatmap_resized), heatmap_resized.shape)
             crop_size = int(min(width, height) * 0.35)
@@ -261,7 +273,6 @@ class GradCAMGenerator:
             y1 = max(0, peak_y - crop_size // 2)
             x2 = min(width, x1 + crop_size)
             y2 = min(height, y1 + crop_size)
-
             regions.append(
                 {
                     "image": original_image.crop((x1, y1, x2, y2)),
