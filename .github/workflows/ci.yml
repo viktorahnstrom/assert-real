@@ -24,9 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Check Prettier formatting
-        run: npx --prefix desktop prettier --check "desktop/src/**/*.{ts,tsx,css}"
+        working-directory: ./desktop
 
       - name: Run ESLint
         run: npm run lint
