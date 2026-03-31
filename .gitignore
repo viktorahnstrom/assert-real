@@ -97,3 +97,14 @@ mlruns/
 *.csv
 !**/requirements*.txt
 !**/requirements*.csv
+
+# ====================
+# Evaluation results
+# ====================
+
+# Generated result JSONs - do not commit, reproducible from scripts
+backend/results/*.json
+results/*.json
+
+# Accidental nested backend folder
+backend/backend/
