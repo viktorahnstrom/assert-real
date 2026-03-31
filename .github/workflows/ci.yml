@@ -31,9 +31,11 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+        working-directory: ./desktop
 
       - name: TypeScript type check
         run: npm run typecheck
+        working-directory: ./desktop
 
   # ==========================================
   # Python (Backend)
