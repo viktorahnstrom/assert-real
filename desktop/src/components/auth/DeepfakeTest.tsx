@@ -11,18 +11,18 @@ interface TestImage {
 }
 
 const TEST_IMAGES: TestImage[] = [
-  { id: 1, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+1', label: 'real' },
-  { id: 2, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+2', label: 'fake' },
-  { id: 3, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+3', label: 'real' },
-  { id: 4, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+4', label: 'fake' },
-  { id: 5, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+5', label: 'real' },
-  { id: 6, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+6', label: 'fake' },
-  { id: 7, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+7', label: 'real' },
-  { id: 8, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+8', label: 'fake' },
-  { id: 9, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+9', label: 'real' },
-  { id: 10, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+10', label: 'fake' },
-  { id: 11, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+11', label: 'real' },
-  { id: 12, url: 'https://placehold.co/600x600/e2e8f0/475569?text=Image+12', label: 'fake' },
+  { id: 1, url: '/quiz-images/Fake3.jpg', label: 'fake' },
+  { id: 2, url: '/quiz-images/Real1.jpg', label: 'real' },
+  { id: 3, url: '/quiz-images/Real4.jpg', label: 'real' },
+  { id: 4, url: '/quiz-images/Fake1.jpg', label: 'fake' },
+  { id: 5, url: '/quiz-images/Fake5.jpg', label: 'fake' },
+  { id: 6, url: '/quiz-images/Real2.jpg', label: 'real' },
+  { id: 7, url: '/quiz-images/Fake2.jpg', label: 'fake' },
+  { id: 8, url: '/quiz-images/Real6.jpg', label: 'real' },
+  { id: 9, url: '/quiz-images/Real3.jpg', label: 'real' },
+  { id: 10, url: '/quiz-images/Fake6.jpg', label: 'fake' },
+  { id: 11, url: '/quiz-images/Fake4.jpg', label: 'fake' },
+  { id: 12, url: '/quiz-images/Real5.jpg', label: 'real' },
 ];
 
 // ============================================
