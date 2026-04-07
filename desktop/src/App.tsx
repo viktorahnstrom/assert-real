@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   Settings,
   LogOut,
+  RotateCcw,
 } from 'lucide-react';
 import {
   Button,
@@ -32,6 +33,7 @@ import {
 } from '@/lib/api';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import AuthPage from '@/components/auth/AuthPage';
+import DeepfakeTest from '@/components/auth/DeepfakeTest';
 
 // ============================================
 // Dev toolbar for endpoint / VLM switching
@@ -120,6 +122,19 @@ function DevToolbar({
                 </button>
               ))}
             </div>
+          </div>
+          {/* Reset Quiz */}
+          <div className="mt-3 border-t border-xade-charcoal/10 pt-3">
+            <button
+              onClick={() => {
+                localStorage.removeItem('xade-test-completed');
+                window.location.reload();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-charcoal/5 px-3 py-1.5 text-xs font-medium text-xade-charcoal/60 hover:bg-xade-charcoal/10"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset Quiz
+            </button>
           </div>
         </div>
       )}
@@ -731,6 +746,9 @@ function AuthenticatedApp() {
 
 function AppRouter() {
   const { user, loading } = useAuth();
+  const [testCompleted, setTestCompleted] = useState(
+    () => localStorage.getItem('xade-test-completed') !== null
+  );
 
   if (loading) {
     return (
@@ -743,7 +761,25 @@ function AppRouter() {
     );
   }
 
-  return user ? <AuthenticatedApp /> : <AuthPage />;
+  if (!testCompleted) {
+    return (
+      <>
+        <DeepfakeTest onComplete={() => setTestCompleted(true)} />
+        <DevToolbar apiMode="detect" onApiModeChange={() => {}} vlmProvider="none" onVlmProviderChange={() => {}} />
+      </>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <AuthPage />
+        <DevToolbar apiMode="detect" onApiModeChange={() => {}} vlmProvider="none" onVlmProviderChange={() => {}} />
+      </>
+    );
+  }
+
+  return <AuthenticatedApp />;
 }
 
 function App() {
