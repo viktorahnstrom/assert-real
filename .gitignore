@@ -21,6 +21,9 @@ ios/
 *.swp
 *.swo
 
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
 # Environment variables
 .env
 .env.local
