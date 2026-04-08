@@ -53,6 +53,16 @@ export interface AnalysisResult {
   evidence_regions?: EvidenceRegion[];
 }
 
+export interface ImageRecord {
+  id: string;
+  filename: string;
+  storage_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+  url?: string; // Signed URL, populated client-side
+}
+
 export interface VLMProvider {
   id: string;
   name: string;
@@ -177,8 +187,11 @@ async function createAnalysis(
 export async function analyzeImage(
   file: File,
   vlmProvider: string = 'openai',
-  userId: string = '00000000-0000-0000-0000-000000000000'
+  userId?: string
 ): Promise<DetectionResult> {
+  if (!userId) {
+    throw { type: 'network', message: 'Not authenticated. Please log in.' } as ApiError;
+  }
   let imageId: string;
 
   try {
@@ -209,6 +222,78 @@ export async function analyzeImage(
     explanation: analysis.explanation ?? null,
     evidence_regions: analysis.evidence_regions ?? [],
   };
+}
+
+// ============================================
+// User history
+// ============================================
+
+export async function fetchUserAnalyses(userId: string): Promise<AnalysisResult[]> {
+  try {
+    const url = `${API_BASE_URL}/api/v1/analyses/?user_id=${encodeURIComponent(userId)}`;
+    console.log('[XADE] fetchUserAnalyses →', url);
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn('[XADE] fetchUserAnalyses failed:', response.status, response.statusText);
+      return [];
+    }
+    const data = await response.json();
+    console.log('[XADE] fetchUserAnalyses raw response:', data);
+    // Backend returns { analyses: [...], count: N }
+    const list = (
+      Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])
+    ) as AnalysisResult[];
+    console.log('[XADE] fetchUserAnalyses parsed:', list.length, 'items');
+    return list;
+  } catch (err) {
+    console.error('[XADE] fetchUserAnalyses error:', err);
+    return [];
+  }
+}
+
+export async function fetchUserImages(userId: string): Promise<ImageRecord[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/images/?user_id=${encodeURIComponent(userId)}`
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    // Backend returns { images: [...], count: N }
+    const images = (
+      Array.isArray(data) ? data : (data.images ?? data.items ?? [])
+    ) as ImageRecord[];
+
+    if (images.length === 0) return images;
+
+    // The Supabase images bucket is private — generate signed URLs (1h expiry)
+    const storagePaths = images.map((img) => img.storage_path);
+    const { data: signedUrls, error } = await supabase.storage
+      .from('images')
+      .createSignedUrls(storagePaths, 3600);
+
+    if (!error && signedUrls) {
+      return images.map((img, i) => ({
+        ...img,
+        url: signedUrls[i]?.signedUrl ?? undefined,
+      }));
+    }
+
+    console.warn('[XADE] fetchUserImages: could not generate signed URLs', error);
+    return images;
+  } catch (err) {
+    console.error('[XADE] fetchUserImages error:', err);
+    return [];
+  }
+}
+
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ detail: 'Delete failed' }));
+    throw { type: 'unknown', message: body.detail ?? 'Failed to delete analysis' } as ApiError;
+  }
 }
 
 // ============================================

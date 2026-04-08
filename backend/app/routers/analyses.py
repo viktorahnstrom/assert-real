@@ -4,9 +4,11 @@ Runs deepfake detection, generates VLM explanations, and stores results in datab
 """
 
 import io
+import json
 import logging
 import os
 import time
+import traceback
 
 import httpx
 import torch
@@ -135,7 +137,8 @@ def _run_gradcam(
         return heatmap_bytes, gradcam_heatmap_url, evidence_regions
 
     except Exception as exc:
-        logger.warning("GradCAM generation failed (non-fatal): %s", exc)
+        logger.error("GradCAM generation failed: %s\n%s", exc, traceback.format_exc())
+        print(f"[XADE] GradCAM FAILED: {exc}\n{traceback.format_exc()}")
         return None, None, []
 
 
@@ -166,6 +169,23 @@ def _build_analysis_response(
     evidence_regions: list[dict] | None = None,
 ) -> AnalysisResponse:
     """Build AnalysisResponse from database row."""
+    # Restore structured explanation from JSON if not provided fresh
+    if explanation is None and a.get("explanation_json"):
+        try:
+            raw = a["explanation_json"]
+            data = raw if isinstance(raw, dict) else json.loads(raw)
+            explanation = ExplanationData(**data)
+        except Exception:
+            pass
+
+    # Restore evidence regions from JSON if not provided fresh
+    if evidence_regions is None and a.get("evidence_regions_json"):
+        try:
+            raw = a["evidence_regions_json"]
+            evidence_regions = raw if isinstance(raw, list) else json.loads(raw)
+        except Exception:
+            evidence_regions = []
+
     return AnalysisResponse(
         id=a["id"],
         image_id=a["image_id"],
@@ -366,6 +386,10 @@ async def create_analysis(request: AnalysisRequest):
                 update_data["vlm_explanation"] = vlm_explanation_text
             if vlm_model_used:
                 update_data["vlm_model_used"] = vlm_model_used
+            if explanation_data:
+                update_data["explanation_json"] = explanation_data.model_dump()
+            if evidence_regions:
+                update_data["evidence_regions_json"] = evidence_regions
 
             update_response = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
@@ -435,6 +459,21 @@ async def get_analysis(analysis_id: str):
             raise HTTPException(status_code=404, detail="Analysis not found")
 
         return _build_analysis_response(analyses[0])
+
+
+@router.delete("/{analysis_id}")
+async def delete_analysis(analysis_id: str):
+    """Delete a specific analysis record."""
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
+            headers=get_db_headers(),
+        )
+        if response.status_code not in [200, 204]:
+            raise HTTPException(
+                status_code=response.status_code, detail="Failed to delete analysis"
+            )
+        return {"message": "Analysis deleted"}
 
 
 @router.get("/image/{image_id}", response_model=AnalysisListResponse)

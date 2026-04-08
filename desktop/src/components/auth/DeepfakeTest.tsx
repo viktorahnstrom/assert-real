@@ -38,13 +38,11 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         </p>
 
         <div className="mt-10 rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-8 shadow-lg shadow-xade-charcoal/4">
-          <h2 className="text-xl font-semibold text-xade-charcoal">
-            Can you spot a deepfake?
-          </h2>
+          <h2 className="text-xl font-semibold text-xade-charcoal">Can you spot a deepfake?</h2>
           <p className="mt-3 text-sm leading-relaxed text-xade-charcoal/60">
-            You&apos;ll be shown 12 images - some are real and some are AI-generated
-            deepfakes. For each one, decide if it&apos;s <strong>Real</strong> or{' '}
-            <strong>Fake</strong>. Let&apos;s see how well you do.
+            You&apos;ll be shown 12 images - some are real and some are AI-generated deepfakes. For
+            each one, decide if it&apos;s <strong>Real</strong> or <strong>Fake</strong>. Let&apos;s
+            see how well you do.
           </p>
 
           <button
@@ -142,11 +140,13 @@ function ResultsScreen({ answers, onContinue }: ResultsScreenProps) {
 
   let message: string;
   if (percentage >= 80) {
-    message = "Impressive! But AI-generated deepfakes are getting harder to detect every day.";
+    message = 'Impressive! But AI-generated deepfakes are getting harder to detect every day.';
   } else if (percentage >= 50) {
-    message = "Not bad - but as you can see, it's tricky. That's exactly why tools like XADE exist.";
+    message =
+      "Not bad - but as you can see, it's tricky. That's exactly why tools like XADE exist.";
   } else {
-    message = "Don't worry - most people struggle with this. Deepfakes are designed to fool the human eye. Let XADE help.";
+    message =
+      "Don't worry - most people struggle with this. Deepfakes are designed to fool the human eye. Let XADE help.";
   }
 
   return (
@@ -158,9 +158,7 @@ function ResultsScreen({ answers, onContinue }: ResultsScreenProps) {
             <p className="text-6xl font-bold text-xade-blue">
               {correct}/{total}
             </p>
-            <p className="mt-1 text-sm text-xade-charcoal/50">
-              {percentage}% correct
-            </p>
+            <p className="mt-1 text-sm text-xade-charcoal/50">{percentage}% correct</p>
           </div>
 
           <p className="mt-6 text-center text-sm leading-relaxed text-xade-charcoal/60">
