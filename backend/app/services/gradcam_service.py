@@ -202,97 +202,64 @@ class GradCAMGenerator:
         self,
         original_image: Image.Image,
         heatmap: np.ndarray,
-        top_n: int = 3,
-        min_region_size: float = 0.01,
     ) -> list[dict]:
         """
-        Extract the top-N highest activation regions from the heatmap as cropped images.
-        Always returns at least one region using the peak activation point as a fallback.
+        Extract a single crop centered on the peak activation zone of the heatmap.
+
+        Uses the centroid of all high-activation pixels (top 30% of activation)
+        to find the true center of the most suspicious area, then crops a region
+        around it. This guarantees the crop, label, and activation score all
+        refer to the same actual area in the image.
 
         Args:
             original_image: The original PIL image.
             heatmap: Normalized heatmap array (H x W) with values in [0, 1].
-            top_n: Number of regions to extract.
-            min_region_size: Minimum region size as fraction of image area.
 
         Returns:
-            List of dicts with keys: image (PIL), label (str), activation_score (float).
+            List containing exactly one dict with keys:
+              image (PIL), label (str), activation_score (float), bbox (tuple).
         """
         width, height = original_image.size
         heatmap_resized = cv2.resize(heatmap, (width, height))
 
-        # Threshold at 60% of max activation to find hot regions
-        threshold = heatmap_resized.max() * 0.4
-        binary = (heatmap_resized >= threshold).astype(np.uint8) * 255
+        # Find centroid of the top-30% activation zone
+        threshold = heatmap_resized.max() * 0.70
+        hot_mask = heatmap_resized >= threshold
 
-        # Find connected components
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary)
+        if hot_mask.sum() > 0:
+            ys, xs = np.where(hot_mask)
+            weights = heatmap_resized[ys, xs]
+            cx_px = int(np.average(xs, weights=weights))
+            cy_px = int(np.average(ys, weights=weights))
+            activation_score = float(heatmap_resized[ys, xs].mean())
+        else:
+            # Absolute fallback: peak pixel
+            cy_px, cx_px = np.unravel_index(np.argmax(heatmap_resized), heatmap_resized.shape)
+            cx_px, cy_px = int(cx_px), int(cy_px)
+            activation_score = float(heatmap_resized[cy_px, cx_px])
 
-        min_area = int(width * height * min_region_size)
-        regions = []
+        # Crop size: 40% of the shorter side, at least 80px
+        crop_half = max(80, int(min(width, height) * 0.20))
+        x1 = max(0, cx_px - crop_half)
+        y1 = max(0, cy_px - crop_half)
+        x2 = min(width, cx_px + crop_half)
+        y2 = min(height, cy_px + crop_half)
 
-        for i in range(1, num_labels):  # skip background (0)
-            x, y, w, h, area = stats[i]
-            if area < min_area:
-                continue
+        crop = original_image.crop((x1, y1, x2, y2))
 
-            pad = int(min(width, height) * 0.05)
-            x1 = max(0, x - pad)
-            y1 = max(0, y - pad)
-            x2 = min(width, x + w + pad)
-            y2 = min(height, y + h + pad)
+        # Label based on the weighted centroid — guaranteed to match the crop
+        cx_norm = cx_px / width
+        cy_norm = cy_px / height
+        label = _label_region(cx_norm, cy_norm)
 
-            crop = original_image.crop((x1, y1, x2, y2))
-            mean_activation = float(heatmap_resized[y : y + h, x : x + w].mean())
-
-            regions.append(
-                {
-                    "image": crop,
-                    "activation_score": mean_activation,
-                    "bbox": (x1, y1, x2, y2),
-                }
-            )
-
-        def _is_meaningful_crop(crop_dict: dict) -> bool:
-            img = crop_dict["image"].convert("RGB")
-            import numpy as np
-
-            arr = np.array(img).astype(np.float32)
-            mean_brightness = arr.mean()
-            std_dev = arr.std()
-            # Reject if too dark (background) or too uniform (featureless)
-            return mean_brightness > 40 and std_dev > 15
-
-        regions = [r for r in regions if _is_meaningful_crop(r)]
-
-        # Re-apply fallback if all regions were filtered out
-        if not regions:
-            peak_y, peak_x = np.unravel_index(np.argmax(heatmap_resized), heatmap_resized.shape)
-            crop_size = int(min(width, height) * 0.35)
-            x1 = max(0, peak_x - crop_size // 2)
-            y1 = max(0, peak_y - crop_size // 2)
-            x2 = min(width, x1 + crop_size)
-            y2 = min(height, y1 + crop_size)
-            regions.append(
-                {
-                    "image": original_image.crop((x1, y1, x2, y2)),
-                    "activation_score": float(heatmap_resized[peak_y, peak_x]),
-                    "bbox": (x1, y1, x2, y2),
-                }
-            )
-
-        # Sort by activation score, take top N
-        regions.sort(key=lambda r: r["activation_score"], reverse=True)
-        top_regions = regions[:top_n]
-
-        # Label each region by its position on the face
-        for region in top_regions:
-            x1, y1, x2, y2 = region["bbox"]
-            cx = (x1 + x2) / 2 / width
-            cy = (y1 + y2) / 2 / height
-            region["label"] = _label_region(cx, cy)
-
-        return top_regions
+        return [
+            {
+                "image": crop,
+                "label": label,
+                "activation_score": round(activation_score, 4),
+                "bbox": (x1, y1, x2, y2),
+            }
+        ]
 
 
 def _label_region(cx: float, cy: float) -> str:
