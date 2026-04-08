@@ -4,9 +4,11 @@ Runs deepfake detection, generates VLM explanations, and stores results in datab
 """
 
 import io
+import json
 import logging
 import os
 import time
+import traceback
 
 import httpx
 import torch
@@ -135,7 +137,6 @@ def _run_gradcam(
         return heatmap_bytes, gradcam_heatmap_url, evidence_regions
 
     except Exception as exc:
-        import traceback
         logger.error("GradCAM generation failed: %s\n%s", exc, traceback.format_exc())
         print(f"[XADE] GradCAM FAILED: {exc}\n{traceback.format_exc()}")
         return None, None, []
@@ -172,7 +173,7 @@ def _build_analysis_response(
     if explanation is None and a.get("explanation_json"):
         try:
             raw = a["explanation_json"]
-            data = raw if isinstance(raw, dict) else __import__("json").loads(raw)
+            data = raw if isinstance(raw, dict) else json.loads(raw)
             explanation = ExplanationData(**data)
         except Exception:
             pass
@@ -181,7 +182,7 @@ def _build_analysis_response(
     if evidence_regions is None and a.get("evidence_regions_json"):
         try:
             raw = a["evidence_regions_json"]
-            evidence_regions = raw if isinstance(raw, list) else __import__("json").loads(raw)
+            evidence_regions = raw if isinstance(raw, list) else json.loads(raw)
         except Exception:
             evidence_regions = []
 
@@ -469,7 +470,9 @@ async def delete_analysis(analysis_id: str):
             headers=get_db_headers(),
         )
         if response.status_code not in [200, 204]:
-            raise HTTPException(status_code=response.status_code, detail="Failed to delete analysis")
+            raise HTTPException(
+                status_code=response.status_code, detail="Failed to delete analysis"
+            )
         return {"message": "Analysis deleted"}
 
 

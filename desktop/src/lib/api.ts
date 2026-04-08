@@ -240,7 +240,9 @@ export async function fetchUserAnalyses(userId: string): Promise<AnalysisResult[
     const data = await response.json();
     console.log('[XADE] fetchUserAnalyses raw response:', data);
     // Backend returns { analyses: [...], count: N }
-    const list = (Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])) as AnalysisResult[];
+    const list = (
+      Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])
+    ) as AnalysisResult[];
     console.log('[XADE] fetchUserAnalyses parsed:', list.length, 'items');
     return list;
   } catch (err) {
@@ -257,7 +259,9 @@ export async function fetchUserImages(userId: string): Promise<ImageRecord[]> {
     if (!response.ok) return [];
     const data = await response.json();
     // Backend returns { images: [...], count: N }
-    const images = (Array.isArray(data) ? data : (data.images ?? data.items ?? [])) as ImageRecord[];
+    const images = (
+      Array.isArray(data) ? data : (data.images ?? data.items ?? [])
+    ) as ImageRecord[];
 
     if (images.length === 0) return images;
 

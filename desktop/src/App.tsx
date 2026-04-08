@@ -5,18 +5,12 @@ import {
   History,
   LogOut,
   Plus,
+  RotateCcw,
   Settings,
   Trash2,
   Upload,
   User,
   X,
-<<<<<<< Updated upstream
-  ChevronLeft,
-  Settings,
-  LogOut,
-  RotateCcw,
-=======
->>>>>>> Stashed changes
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -114,7 +108,10 @@ function analysisToDetectionResult(analysis: AnalysisResult): DetectionResult {
   };
 }
 
-function getAnalysisImageUrl(analysis: AnalysisResult, imageMap: Record<string, ImageRecord>): string | null {
+function getAnalysisImageUrl(
+  analysis: AnalysisResult,
+  imageMap: Record<string, ImageRecord>
+): string | null {
   const record = imageMap[analysis.image_id];
   if (record?.url) return record.url;
   if (analysis.gradcam_heatmap_url) return analysis.gradcam_heatmap_url;
@@ -300,9 +297,7 @@ function AnalysisSidebarItem({ analysis, imageUrl, isActive, onClick }: Analysis
   const isFake = analysis.classification === 'fake';
   const fakeScore = analysis.deepfake_score ?? 0;
   const confidence =
-    analysis.status === 'completed'
-      ? Math.round((isFake ? fakeScore : 1 - fakeScore) * 100)
-      : null;
+    analysis.status === 'completed' ? Math.round((isFake ? fakeScore : 1 - fakeScore) * 100) : null;
 
   return (
     <button
@@ -434,37 +429,35 @@ function AppSidebar({
 
       {/* Scrollable analysis history */}
       <SidebarContent>
-        {groups.length === 0 ? (
-          !isCollapsed && (
-            <div className="px-3 py-6 text-center">
-              <p className="text-xs text-xade-charcoal/30">No analyses yet</p>
-              <p className="mt-1 text-[10px] text-xade-charcoal/20">
-                Upload an image to get started
-              </p>
-            </div>
-          )
-        ) : (
-          groups.map((group) => (
-            <div key={group.label} className="mb-3">
-              {!isCollapsed && (
-                <p className="mb-1 px-2 text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/35">
-                  {group.label}
+        {groups.length === 0
+          ? !isCollapsed && (
+              <div className="px-3 py-6 text-center">
+                <p className="text-xs text-xade-charcoal/30">No analyses yet</p>
+                <p className="mt-1 text-[10px] text-xade-charcoal/20">
+                  Upload an image to get started
                 </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map((analysis) => (
-                  <AnalysisSidebarItem
-                    key={analysis.id}
-                    analysis={analysis}
-                    imageUrl={getAnalysisImageUrl(analysis, imageMap)}
-                    isActive={selectedAnalysisId === analysis.id}
-                    onClick={() => onSelectAnalysis(analysis)}
-                  />
-                ))}
               </div>
-            </div>
-          ))
-        )}
+            )
+          : groups.map((group) => (
+              <div key={group.label} className="mb-3">
+                {!isCollapsed && (
+                  <p className="mb-1 px-2 text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/35">
+                    {group.label}
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map((analysis) => (
+                    <AnalysisSidebarItem
+                      key={analysis.id}
+                      analysis={analysis}
+                      imageUrl={getAnalysisImageUrl(analysis, imageMap)}
+                      isActive={selectedAnalysisId === analysis.id}
+                      onClick={() => onSelectAnalysis(analysis)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
       </SidebarContent>
 
       {/* Bottom navigation */}
@@ -668,9 +661,7 @@ function HistoryCard({ analysis, imageUrl, onClick, onDelete }: HistoryCardProps
   const isFake = analysis.classification === 'fake';
   const fakeScore = analysis.deepfake_score ?? 0;
   const confidence =
-    analysis.status === 'completed'
-      ? Math.round((isFake ? fakeScore : 1 - fakeScore) * 100)
-      : null;
+    analysis.status === 'completed' ? Math.round((isFake ? fakeScore : 1 - fakeScore) * 100) : null;
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete(e: React.MouseEvent) {
@@ -720,7 +711,9 @@ function HistoryCard({ analysis, imageUrl, onClick, onDelete }: HistoryCardProps
                 {isFake ? 'Deepfake' : 'Authentic'}
               </span>
               {confidence !== null && (
-                <span className="text-xs font-semibold text-xade-charcoal">{confidence}% confidence</span>
+                <span className="text-xs font-semibold text-xade-charcoal">
+                  {confidence}% confidence
+                </span>
               )}
             </>
           ) : (
@@ -757,7 +750,14 @@ interface HistoryViewProps {
   onRefresh: () => void;
 }
 
-function HistoryView({ analyses, imageMap, loading, onNewAnalysis, onSelectAnalysis, onRefresh }: HistoryViewProps) {
+function HistoryView({
+  analyses,
+  imageMap,
+  loading,
+  onNewAnalysis,
+  onSelectAnalysis,
+  onRefresh,
+}: HistoryViewProps) {
   return (
     <div className="min-h-screen px-10 py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -827,11 +827,7 @@ function StatCard({
   color?: 'red' | 'green' | 'blue';
 }) {
   const valueColor =
-    color === 'red'
-      ? 'text-red-500'
-      : color === 'green'
-        ? 'text-green-500'
-        : 'text-xade-blue';
+    color === 'red' ? 'text-red-500' : color === 'green' ? 'text-green-500' : 'text-xade-blue';
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-md">
@@ -842,13 +838,7 @@ function StatCard({
   );
 }
 
-function StatisticsView({
-  analyses,
-  loading,
-}: {
-  analyses: AnalysisResult[];
-  loading: boolean;
-}) {
+function StatisticsView({ analyses, loading }: { analyses: AnalysisResult[]; loading: boolean }) {
   const completed = analyses.filter((a) => a.status === 'completed');
   const fakes = completed.filter((a) => a.classification === 'fake');
   const reals = completed.filter((a) => a.classification === 'real');
@@ -1178,42 +1168,47 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         {/* Supporting Evidence */}
         <div className="flex flex-1 flex-col rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-4 text-lg font-semibold text-xade-blue">Supporting Evidence</h2>
-          {result.evidence_regions && result.evidence_regions.length > 0 ? (() => {
-            const region = result.evidence_regions[0];
-            return (
-              <div className="flex flex-1 flex-col">
-                <div
-                  className="w-full cursor-zoom-in overflow-hidden rounded-xl"
-                  style={{ aspectRatio: '1 / 1' }}
-                  onClick={() => setLightboxSrc(region.url)}
-                >
-                  <img
-                    src={region.url}
-                    alt={region.label}
-                    className="h-full w-full object-cover transition-opacity hover:opacity-80"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-                <div className="mt-3 rounded-lg bg-xade-charcoal/5 p-4">
-                  <p className="mb-2 text-sm font-semibold text-xade-charcoal/80">{region.label}</p>
-                  <span className="mb-2 inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600">
-                    {Math.round(region.activation_score * 100)}% activation
-                  </span>
-                  {region.explanation ? (
-                    <p className="text-xs leading-relaxed text-xade-charcoal/60">
-                      {region.explanation}
+          {result.evidence_regions && result.evidence_regions.length > 0 ? (
+            (() => {
+              const region = result.evidence_regions[0];
+              return (
+                <div className="flex flex-1 flex-col">
+                  <div
+                    className="w-full cursor-zoom-in overflow-hidden rounded-xl"
+                    style={{ aspectRatio: '1 / 1' }}
+                    onClick={() => setLightboxSrc(region.url)}
+                  >
+                    <img
+                      src={region.url}
+                      alt={region.label}
+                      className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="mt-3 rounded-lg bg-xade-charcoal/5 p-4">
+                    <p className="mb-2 text-sm font-semibold text-xade-charcoal/80">
+                      {region.label}
                     </p>
-                  ) : (
-                    <p className="text-xs text-xade-charcoal/40">
-                      This area showed the highest model attention during detection. Click to zoom in.
-                    </p>
-                  )}
+                    <span className="mb-2 inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600">
+                      {Math.round(region.activation_score * 100)}% activation
+                    </span>
+                    {region.explanation ? (
+                      <p className="text-xs leading-relaxed text-xade-charcoal/60">
+                        {region.explanation}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-xade-charcoal/40">
+                        This area showed the highest model attention during detection. Click to zoom
+                        in.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })() : (
+              );
+            })()
+          ) : (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="rounded-lg bg-xade-charcoal/5 p-6">
                 <p className="text-sm text-xade-charcoal/40">
@@ -1364,7 +1359,12 @@ function AppRouter() {
     return (
       <>
         <DeepfakeTest onComplete={() => setTestCompleted(true)} />
-        <DevToolbar apiMode="detect" onApiModeChange={() => {}} vlmProvider="none" onVlmProviderChange={() => {}} />
+        <DevToolbar
+          apiMode="detect"
+          onApiModeChange={() => {}}
+          vlmProvider="none"
+          onVlmProviderChange={() => {}}
+        />
       </>
     );
   }
@@ -1373,7 +1373,12 @@ function AppRouter() {
     return (
       <>
         <AuthPage />
-        <DevToolbar apiMode="detect" onApiModeChange={() => {}} vlmProvider="none" onVlmProviderChange={() => {}} />
+        <DevToolbar
+          apiMode="detect"
+          onApiModeChange={() => {}}
+          vlmProvider="none"
+          onVlmProviderChange={() => {}}
+        />
       </>
     );
   }
