@@ -52,6 +52,9 @@ class EvidenceRegion(BaseModel):
     label: str
     activation_score: float
     explanation: str | None = None
+    category_id: str | None = None
+    category_label: str | None = None
+    common_artifacts: list[str] | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -102,13 +105,15 @@ def _run_gradcam(
     image: Image.Image,
     image_tensor: torch.Tensor,
     target_class: int,
-) -> tuple[bytes | None, str | None, list[dict]]:
+) -> tuple[bytes | None, str | None, list[dict], list[dict]]:
     """
     Run GradCAM on the image and return heatmap bytes for VLM, a local URL
-    for the frontend, and a list of cropped evidence regions.
+    for the frontend, a list of saved evidence regions, and the raw crops.
 
     Returns:
-        Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions)
+        Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops)
+        where evidence_regions has URL/label/activation_score for the response
+        and crops retains the PIL image and bbox needed by FaceCategoryMapper.
         heatmap_bytes and gradcam_heatmap_url will be None if GradCAM failed.
     """
     try:
@@ -134,12 +139,12 @@ def _run_gradcam(
         crops = generator.extract_evidence_regions(image, heatmap)
         evidence_regions = save_evidence_crops(crops)
 
-        return heatmap_bytes, gradcam_heatmap_url, evidence_regions
+        return heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops
 
     except Exception as exc:
         logger.error("GradCAM generation failed: %s\n%s", exc, traceback.format_exc())
         print(f"[XADE] GradCAM FAILED: {exc}\n{traceback.format_exc()}")
-        return None, None, []
+        return None, None, [], []
 
 
 def _attach_region_comments(
@@ -228,6 +233,7 @@ async def create_analysis(request: AnalysisRequest):
         transform,
         vlm_factory,
     )
+    from app.services.categories import FACE_CATEGORIES
     from app.services.vlm import DetectionContext
 
     if model is None:
@@ -310,8 +316,10 @@ async def create_analysis(request: AnalysisRequest):
             processing_time = int((time.time() - start_time) * 1000)
             classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-            # Run GradCAM — returns None heatmap_bytes if it failed
-            heatmap_bytes, gradcam_heatmap_url, evidence_regions = _run_gradcam(
+            # Run GradCAM — returns None heatmap_bytes if it failed.
+            # crops retains PIL image + bbox needed by the mapper;
+            # evidence_regions has the saved URLs for the API response.
+            heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops = _run_gradcam(
                 image, image_tensor, target_class
             )
 
@@ -323,12 +331,20 @@ async def create_analysis(request: AnalysisRequest):
             region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
 
             # Map evidence regions to face categories via MediaPipe landmarks.
-            # Falls back to label-based mapping when the mapper is unavailable.
+            # Uses raw crops (which retain bbox) rather than saved evidence_regions.
+            # Merges category data into evidence_regions for storage and API response.
             region_categories = []
-            if face_category_mapper is not None and evidence_regions:
+            if face_category_mapper is not None and crops:
                 try:
-                    categorized = face_category_mapper.map_regions(image, evidence_regions)
+                    categorized = face_category_mapper.map_regions(image, crops)
                     region_categories = [r.to_region_with_category() for r in categorized]
+                    for ev_region, cat in zip(evidence_regions, categorized, strict=True):
+                        ev_region["category_id"] = cat.category_id
+                        ev_region["category_label"] = cat.category_label
+                        face_cat = FACE_CATEGORIES.get(cat.category_id)
+                        ev_region["common_artifacts"] = (
+                            list(face_cat.common_artifacts[:3]) if face_cat else []
+                        )
                 except Exception as e:
                     logger.warning("Face category mapping failed: %s", e)
 
