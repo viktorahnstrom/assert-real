@@ -34,3 +34,6 @@ anthropic>=0.18.0
 
 # Huggingface
 huggingface-hub>=0.14.0
+
+# Testing
+pytest>=7.0.0
