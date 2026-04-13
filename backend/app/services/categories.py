@@ -250,3 +250,39 @@ FACE_CATEGORIES: dict[str, FaceCategory] = {
         ),
     ),
 }
+
+# ---------------------------------------------------------------------------
+# GradCAM label → category mapping
+# ---------------------------------------------------------------------------
+
+# Maps the free-text region labels produced by gradcam_service._label_region()
+# to the corresponding FACE_CATEGORIES key.  Any label not present here is
+# treated as uncategorised (get_category_for_label returns None).
+GRADCAM_LABEL_TO_CATEGORY_ID: dict[str, str] = {
+    "Forehead and hairline region": "hairline_ears",
+    "Left eye region": "eyes_pupils",
+    "Right eye region": "eyes_pupils",
+    "Eye and nose bridge region": "eyes_pupils",
+    "Left cheek region": "skin_texture",
+    "Right cheek region": "skin_texture",
+    "Nose and mid-face region": "facial_boundaries",
+    "Left jaw region": "facial_boundaries",
+    "Right jaw region": "facial_boundaries",
+    "Chin and jawline region": "facial_boundaries",
+}
+
+
+def get_category_for_label(label: str) -> FaceCategory | None:
+    """Return the FaceCategory for a GradCAM region label, or None if unmapped.
+
+    Args:
+        label: Free-text label produced by gradcam_service._label_region().
+
+    Returns:
+        Matching FaceCategory instance, or None when the label is not in
+        GRADCAM_LABEL_TO_CATEGORY_ID.
+    """
+    category_id = GRADCAM_LABEL_TO_CATEGORY_ID.get(label)
+    if category_id is None:
+        return None
+    return FACE_CATEGORIES.get(category_id)

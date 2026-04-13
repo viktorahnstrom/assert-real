@@ -36,6 +36,8 @@ inconsistent lighting, texture anomalies, or color artifacts
 - Do not use long dashes. Use commas or short sentences instead
 - Be specific and concrete
 - If region labels are provided, write a one-sentence comment for each in the [REGIONS] section
+- When artifact hints are listed for a region, use them to direct your observation — do not repeat \
+them verbatim, but let them focus what you look for in that area
 
 Here are three examples of the tone and style you should follow:
 
@@ -119,8 +121,17 @@ def build_explanation_prompt(
     """
     Build the user-facing prompt with detection context and region labels.
 
+    When detection.region_categories is populated, each region entry is enriched
+    with its category label and the top three artifact hints from that category.
+    This gives the VLM targeted vocabulary for what to look for in each zone
+    rather than just a spatial description.
+
+    Falls back to plain region_labels when region_categories is empty, so
+    existing callers that have not yet been updated remain fully compatible.
+
     Args:
-        detection: Detection results including region_labels from GradCAM crops.
+        detection: Detection results including region_labels and, when available,
+            region_categories enriched with FaceCategory metadata.
         gradcam_available: Whether a valid GradCAM heatmap was generated.
 
     Returns:
@@ -144,9 +155,25 @@ def build_explanation_prompt(
             "you can directly observe that support or contradict this classification."
         )
 
-    # Add region labels if available so VLM can comment on each crop
     regions_instruction = ""
-    if detection.region_labels:
+
+    if detection.region_categories:
+        # Enriched path: include category label + top-3 artifact hints per region
+        lines = []
+        for rc in detection.region_categories:
+            hints = ", ".join(rc.common_artifacts[:3])
+            lines.append(f"- {rc.label} [Category: {rc.category_label} | Look for: {hints}]")
+        labels_list = "\n".join(lines)
+        regions_instruction = (
+            f"\n\nThe following facial regions were highlighted by the model. "
+            f"Each entry includes a semantic category and known artifact types as guidance. "
+            f"In the [REGIONS] section, write one sentence for each explaining what you "
+            f"observe there — use the artifact hints to direct your eye, but describe what "
+            f"you actually see rather than repeating the hints verbatim:\n"
+            f"{labels_list}"
+        )
+    elif detection.region_labels:
+        # Fallback path: plain labels with no category context
         labels_list = "\n".join(f"- {label}" for label in detection.region_labels)
         regions_instruction = (
             f"\n\nThe following facial regions were highlighted by the model. "
