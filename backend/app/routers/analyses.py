@@ -220,7 +220,14 @@ async def create_analysis(request: AnalysisRequest):
     6. Attaches per-region VLM comments to evidence crops
     7. Updates analysis record with all results
     """
-    from app.api.detect import class_names, device, model, transform, vlm_factory
+    from app.api.detect import (
+        class_names,
+        device,
+        face_category_mapper,
+        model,
+        transform,
+        vlm_factory,
+    )
     from app.services.vlm import DetectionContext
 
     if model is None:
@@ -315,6 +322,16 @@ async def create_analysis(request: AnalysisRequest):
             # Extract region labels to pass to VLM for per-region comments
             region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
 
+            # Map evidence regions to face categories via MediaPipe landmarks.
+            # Falls back to label-based mapping when the mapper is unavailable.
+            region_categories = []
+            if face_category_mapper is not None and evidence_regions:
+                try:
+                    categorized = face_category_mapper.map_regions(image, evidence_regions)
+                    region_categories = [r.to_region_with_category() for r in categorized]
+                except Exception as e:
+                    logger.warning("Face category mapping failed: %s", e)
+
             explanation_data = None
             vlm_explanation_text = None
             vlm_model_used = None
@@ -327,6 +344,7 @@ async def create_analysis(request: AnalysisRequest):
                         model_used="EfficientNet-B4",
                         probabilities={"fake": fake_prob, "real": real_prob},
                         region_labels=region_labels,
+                        region_categories=region_categories,
                     )
 
                     vlm_explanation = await vlm_factory.generate_explanation(
