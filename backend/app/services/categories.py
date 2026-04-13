@@ -37,7 +37,7 @@ References:
     Cite as: \\parencite{kamali2024distinguish}
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -76,12 +76,92 @@ _RIGHT_EYEBROW = (46, 53, 52, 65, 55, 70, 63, 105, 66, 107)
 _LEFT_EYEBROW = (276, 283, 282, 295, 285, 300, 293, 334, 296, 336)
 
 # Mouth & Teeth — outer lip contour followed by inner lip contour
-_OUTER_LIP = (61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146)
-_INNER_LIP = (78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95)
+_OUTER_LIP = (
+    61,
+    185,
+    40,
+    39,
+    37,
+    0,
+    267,
+    269,
+    270,
+    409,
+    291,
+    375,
+    321,
+    405,
+    314,
+    17,
+    84,
+    181,
+    91,
+    146,
+)
+_INNER_LIP = (
+    78,
+    191,
+    80,
+    81,
+    82,
+    13,
+    312,
+    311,
+    310,
+    415,
+    308,
+    324,
+    318,
+    402,
+    317,
+    14,
+    87,
+    178,
+    88,
+    95,
+)
 
 # Skin Texture — cheek and mid-face interior points, excluding face boundary
-_RIGHT_CHEEK = (36, 100, 101, 50, 205, 206, 207, 187, 116, 117, 118, 119, 120, 121, 126, 142, 203, 192)
-_LEFT_CHEEK = (266, 329, 330, 280, 425, 426, 427, 411, 345, 346, 347, 348, 349, 350, 355, 371, 423, 416)
+_RIGHT_CHEEK = (
+    36,
+    100,
+    101,
+    50,
+    205,
+    206,
+    207,
+    187,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    126,
+    142,
+    203,
+    192,
+)
+_LEFT_CHEEK = (
+    266,
+    329,
+    330,
+    280,
+    425,
+    426,
+    427,
+    411,
+    345,
+    346,
+    347,
+    348,
+    349,
+    350,
+    355,
+    371,
+    423,
+    416,
+)
 
 # Hairline & Ears — upper face oval and ear-adjacent (preauricular) landmarks
 _HAIRLINE = (10, 338, 297, 332, 284, 251, 389, 21, 54, 103, 67, 109)

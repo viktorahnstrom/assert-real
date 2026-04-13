@@ -5,8 +5,6 @@ Validates structural invariants of FACE_CATEGORIES that are required for the
 MediaPipe mapper, VLM prompt builder, and frontend display to work correctly.
 """
 
-import pytest
-
 from app.services.categories import FACE_CATEGORIES, FaceCategory
 
 
@@ -46,9 +44,7 @@ class TestFaceCategoryStructure:
         for key, cat in FACE_CATEGORIES.items():
             seen = set()
             for idx in cat.landmark_indices:
-                assert idx not in seen, (
-                    f"{key!r} contains duplicate landmark index {idx}"
-                )
+                assert idx not in seen, f"{key!r} contains duplicate landmark index {idx}"
                 seen.add(idx)
 
 
