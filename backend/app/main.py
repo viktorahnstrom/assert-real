@@ -33,6 +33,16 @@ async def lifespan(app: FastAPI):
     # Load detection model
     detect.load_detection_model()
 
+    # Initialize face category mapper (MediaPipe Face Mesh)
+    try:
+        from app.services.face_category_mapper import FaceCategoryMapper
+
+        detect.face_category_mapper = FaceCategoryMapper()
+        print("✓ Face category mapper initialised (MediaPipe Face Mesh)")
+    except Exception as e:
+        print(f"✗ Face category mapper failed to initialise: {e}")
+        print("  (Region-to-category mapping will use label fallback)")
+
     # Initialize VLM provider factory
     try:
         vlm_config = get_vlm_config()
@@ -60,7 +70,10 @@ async def lifespan(app: FastAPI):
         print("  (Explanations will not be available)")
 
     yield
+
     print("👋 Shutting down XADE backend...")
+    if detect.face_category_mapper is not None:
+        detect.face_category_mapper.close()
 
 
 app = FastAPI(

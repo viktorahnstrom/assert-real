@@ -35,5 +35,8 @@ anthropic>=0.18.0
 # Huggingface
 huggingface-hub>=0.14.0
 
+# MediaPipe (face landmark detection for region-to-category mapping)
+mediapipe>=0.10.0
+
 # Testing
 pytest>=7.0.0

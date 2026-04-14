@@ -47,6 +47,27 @@ class ProviderInfo:
 
 
 @dataclass
+class RegionWithCategory:
+    """A GradCAM region label enriched with face category metadata.
+
+    Produced by pairing a raw region label from gradcam_service with its
+    matching FaceCategory via categories.get_category_for_label().
+
+    Attributes:
+        label: Original free-text label from GradCAM (e.g. "Left eye region").
+        category_id: Stable snake_case category key (e.g. "eyes_pupils").
+        category_label: Human-readable display label (e.g. "Eyes & Pupils").
+        common_artifacts: First N artifact descriptions from the FaceCategory,
+            used as guidance hints in VLM prompts.
+    """
+
+    label: str
+    category_id: str
+    category_label: str
+    common_artifacts: tuple[str, ...]
+
+
+@dataclass
 class DetectionContext:
     """Detection results passed to VLM for grounded explanations."""
 
@@ -57,6 +78,10 @@ class DetectionContext:
     # Labeled facial regions from GradCAM evidence crops
     # e.g. ["Nose and mid-face region", "Left eye region"]
     region_labels: list = field(default_factory=list)
+    # Category-enriched versions of region_labels — populated when
+    # categories.get_category_for_label() resolves a label successfully.
+    # Providers and prompt_builder prefer this over plain region_labels.
+    region_categories: list[RegionWithCategory] = field(default_factory=list)
 
 
 class BaseVLMProvider(ABC):
