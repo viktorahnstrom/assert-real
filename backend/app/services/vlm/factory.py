@@ -53,12 +53,22 @@ class VLMProviderFactory:
 
             return OpenAIProvider(self._config.openai)
 
+        elif provider_id == "anthropic":
+            if not self._config.anthropic.enabled:
+                raise ValueError(
+                    "Anthropic provider is not configured. "
+                    "Set ANTHROPIC_API_KEY environment variable."
+                )
+            from app.services.vlm.providers.anthropic import AnthropicProvider
+
+            return AnthropicProvider(self._config.anthropic)
+
         elif provider_id == "mock":
             return MockProvider()
 
         else:
             raise ValueError(
-                f"Unknown VLM provider: '{provider_id}'. Available: google, openai, mock"
+                f"Unknown VLM provider: '{provider_id}'. Available: google, openai, anthropic, mock"
             )
 
     async def generate_explanation(
@@ -126,6 +136,12 @@ class VLMProviderFactory:
         if self._config.openai.enabled:
             try:
                 providers.append(self.get_provider("openai").get_provider_info())
+            except ValueError:
+                pass
+
+        if self._config.anthropic.enabled:
+            try:
+                providers.append(self.get_provider("anthropic").get_provider_info())
             except ValueError:
                 pass
 
