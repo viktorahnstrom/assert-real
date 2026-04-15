@@ -19,6 +19,9 @@ export interface EvidenceRegion {
   label: string;
   activation_score: number;
   explanation: string | null;
+  category_id: string | null;
+  category_label: string | null;
+  common_artifacts: string[] | null;
 }
 
 export interface DetectionResult {
