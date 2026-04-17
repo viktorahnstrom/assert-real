@@ -49,7 +49,7 @@ def get_vlm_config() -> VLMConfig:
     google_key = os.getenv("GOOGLE_GEMINI_API_KEY")
     config.google = ProviderConfig(
         api_key=google_key,
-        model=os.getenv("GOOGLE_GEMINI_MODEL", "gemini-2.0-flash"),
+        model=os.getenv("GOOGLE_GEMINI_MODEL", "gemini-2.5-flash"),
         enabled=google_key is not None,
         timeout_seconds=int(os.getenv("GOOGLE_GEMINI_TIMEOUT_SECONDS", "30")),
     )

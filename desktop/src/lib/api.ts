@@ -300,6 +300,88 @@ export async function deleteAnalysis(analysisId: string): Promise<void> {
 }
 
 // ============================================
+// User study
+// ============================================
+
+export interface StudyExplanation {
+  provider: string;
+  model: string;
+  summary: string;
+  detailed_analysis: string;
+  technical_notes: string | null;
+  processing_time_ms: number;
+  error: string | null;
+}
+
+export interface StudyAnalysisResult {
+  deepfake_score: number;
+  classification: string;
+  confidence: number;
+  gradcam_url: string | null;
+  explanations: Record<string, StudyExplanation>;
+}
+
+export interface StudyResultsPayload {
+  participant_id: string;
+  self_confidence_rating: number;
+  baseline_accuracy: number;
+  total_images: number;
+  correct_count: number;
+  incorrect_count: number;
+  explanation_answers: object[];
+  trust_rating: number;
+  willingness_to_use: string;
+  comments: string;
+  completed_at: string;
+}
+
+export async function studyAnalyzeImage(imageUrl: string): Promise<StudyAnalysisResult> {
+  const imgResponse = await fetch(imageUrl);
+  if (!imgResponse.ok) throw new Error(`Failed to fetch quiz image: ${imageUrl}`);
+  const blob = await imgResponse.blob();
+  const filename = imageUrl.split('/').pop() ?? 'image.jpg';
+  const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/study/analyze`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ detail: 'Study analysis failed' }));
+    throw new Error(body.detail ?? 'Study analysis failed');
+  }
+
+  return response.json() as Promise<StudyAnalysisResult>;
+}
+
+export async function saveStudyResults(payload: StudyResultsPayload): Promise<void> {
+  // Store directly in Supabase using the anon key (no login required).
+  // The study_results table must have RLS allowing anon inserts — see README.
+  try {
+    const { error } = await supabase.from('study_results').insert({
+      participant_id: payload.participant_id,
+      self_confidence_rating: payload.self_confidence_rating,
+      baseline_accuracy: payload.baseline_accuracy,
+      total_images: payload.total_images,
+      correct_count: payload.correct_count,
+      incorrect_count: payload.incorrect_count,
+      explanation_answers: payload.explanation_answers,
+      trust_rating: payload.trust_rating,
+      willingness_to_use: payload.willingness_to_use,
+      comments: payload.comments,
+      completed_at: payload.completed_at,
+    });
+    if (error) console.warn('[XADE study] Supabase insert failed:', error.message);
+  } catch (err) {
+    console.warn('[XADE study] saveStudyResults failed:', err);
+  }
+}
+
+// ============================================
 // VLM providers
 // ============================================
 

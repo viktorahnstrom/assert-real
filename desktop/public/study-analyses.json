@@ -1,0 +1,425 @@
+{
+  "generated_at": "2026-04-16T21:55:28.259012+00:00",
+  "analyses": {
+    "1": {
+      "deepfake_score": 1.0,
+      "classification": "fake",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_1.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies in the nose and mid-face region, supporting the classification as a deepfake.",
+          "detailed_analysis": "The heatmap shows bright red and orange areas concentrated around the nose and mid-face, suggesting that the model detected unusual features there. In the original image, the nose appears unnaturally smooth and lacks the typical texture and detail found in real skin. The transition between the nose and surrounding skin looks overly blended, creating an artificial appearance. Additionally, the lighting on the mid-face seems inconsistent, with shadows that don't align naturally with the light source, further indicating manipulation. The model's 100% confidence in this classification is backed by these clear visual discrepancies.",
+          "technical_notes": "The activation map reveals strong focus on the nose and mid-face, which are critical areas for assessing authenticity. The high intensity in these regions suggests that the model identified significant blending issues and texture anomalies, common in deepfake images. The consistent pattern of activation indicates that the model is detecting features that deviate from natural human facial characteristics.",
+          "processing_time_ms": 7423,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "Explanation unavailable: Gemini API error (503)",
+          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
+          "technical_notes": null,
+          "processing_time_ms": 7050,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals intense activation concentrated around the mouth and lower face region, indicating the model detected significant anomalies in how the facial features blend together.",
+          "detailed_analysis": "The heatmap is lighting up intensely in bright red and orange across the lower half of the face, particularly around the mouth, chin, and cheeks. Looking at those regions in the original image, you can see why the model flagged this area so strongly. The mouth region shows an unnatural color transition, where the lips appear to have a slightly artificial quality with edges that don't quite blend smoothly into the surrounding skin. The smile itself looks somewhat stiff, and there is a visible color discontinuity around the mouth area where warm skin tones meet the lips in a way that seems slightly off. The cheeks also show an unusual texture quality in the highlighted zones, with a smoothness that doesn't quite match the natural variation you would expect in real skin. The model is 100% confident this is a deepfake, and the concentrated heatmap activation in these lower facial regions explains why it reached that conclusion with such certainty.",
+          "technical_notes": "The strongest activations form a concentrated band across the lower face, with peak intensity around the mouth and lower cheek regions. This pattern is highly characteristic of face synthesis or face swap artifacts, where the generative model struggles most with natural blending in the mouth area due to its complexity and the difficulty in maintaining consistent lighting and texture. The asymmetric activation pattern, with heavier weighting on the lower face, suggests the synthetic generation focused computational resources on creating a convincing smile while potentially neglecting seamless integration with the surrounding facial structure. The 100% confidence score combined with this localized activation pattern indicates the model detected clear boundary artifacts rather than subtle inconsistencies.",
+          "processing_time_ms": 7047,
+          "error": null
+        }
+      }
+    },
+    "2": {
+      "deepfake_score": 1.0,
+      "classification": "fake",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_2.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies in the nose and mid-face region, suggesting areas where the AI model detected inconsistencies typical of deepfakes.",
+          "detailed_analysis": "The heatmap shows bright red and orange areas concentrated around the nose and mid-face, indicating where the model focused its analysis. In the original image, the nose appears overly smooth and lacks the natural texture typically found in real skin. There are also noticeable inconsistencies in the lighting and shadows around the nose, which seem too uniform compared to the rest of the face. Additionally, the blending between the nose and surrounding skin looks unnatural, with edges that appear too sharp and defined. These visual cues strongly support the classification of this image as a deepfake.",
+          "technical_notes": "The model's activations are particularly strong in the mid-face area, where deepfake algorithms often struggle with realistic texture and lighting. The high confidence level of 100% indicates that the model identified clear signs of manipulation, especially in regions where natural skin texture and shadowing should be present. The uniformity of the highlighted areas suggests that the AI-generated face did not adequately replicate the organic variations found in real human features.",
+          "processing_time_ms": 7444,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "Explanation unavailable: Gemini API error (503)",
+          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
+          "technical_notes": null,
+          "processing_time_ms": 5997,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals intense focus on the central face region, particularly around the nose and mouth, where the blending between a synthetic face and the original shows clear signs of artificial generation.",
+          "detailed_analysis": "The heatmap is lighting up intensely in bright red and orange across the nose, mouth, and central face region. Looking at those areas in the original image, you can see the skin has an unnaturally smooth, almost plastic quality that does not match real human skin texture. The nose in particular appears overly refined and lacks the natural pore detail and subtle irregularities you would expect to see in a genuine photograph. The mouth area shows a suspiciously uniform color and texture, as if it has been digitally smoothed or blended in. The transition between the synthetic face and the surrounding areas is not quite seamless, with a subtle but visible difference in how the lighting and skin texture behave in the highlighted zones compared to the edges of the face. The model is 100% confident this is a deepfake, and the heatmap clearly shows why it focused so heavily on these central facial features where the artificial generation is most detectable.",
+          "technical_notes": "The activation pattern shows extremely high intensity concentrated in the mid-face region, particularly around the nose and mouth. This distribution is characteristic of face generation models that struggle most with the central facial features, where fine details like skin texture, pore structure, and natural color variation are difficult to replicate convincingly. The 100% confidence score combined with this focused activation pattern indicates the model detected clear synthetic artifacts rather than ambiguous signals. The intensity of the heatmap in these regions suggests multiple artifact types are present, possibly including texture inconsistency, unnatural smoothing, and color bleeding at feature boundaries.",
+          "processing_time_ms": 5996,
+          "error": null
+        }
+      }
+    },
+    "3": {
+      "deepfake_score": 1.0,
+      "classification": "fake",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_3.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies around the left jaw region, supporting the classification as a deepfake.",
+          "detailed_analysis": "The heatmap shows a strong focus on the left jaw area, highlighted in bright red. In the original image, this region exhibits unnatural blending and a lack of consistent skin texture. The jawline appears overly smooth, almost plastic, which is not typical of natural skin. Additionally, the transition between the jaw and neck looks too sharp, suggesting that the face may have been artificially inserted. The model's 100% confidence in this classification aligns with these visual inconsistencies.",
+          "technical_notes": "The activation pattern is concentrated around the jawline, which is a common area where deepfake algorithms struggle to achieve realistic blending. The high intensity of the heatmap in this region indicates that the model detected significant discrepancies in texture and lighting, which are often telltale signs of manipulation. The model's absolute confidence suggests that the artifacts present are pronounced enough to be easily identified.",
+          "processing_time_ms": 5675,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This image has been digitally manipulated. The heatmap reveals significant inconsistencies around the left side of the face, particularly the jawline and mouth, which are characteristic of a deepfake.",
+          "detailed_analysis": "As you can see in the heatmap, the model focused very heavily on the area around the left corner of the mouth and extending down the left jawline, shown in bright red and orange. If you look closely at those regions in the original image, the skin texture appears unusually smooth and almost waxy, lacking the natural pores and fine lines you'd expect to see. The contour of the jaw where it meets the neck also looks a bit blurred and indistinct, creating an unnatural transition. The teeth visible in this area also appear somewhat too uniform and perfect, which is a common tell in AI-generated faces. There's also some green and yellow highlighting around the left ear and temple, where the earlobe looks slightly misshapen and the hair texture seems a bit inconsistent. The model is 100% confident this is a deepfake, and the visual evidence in these highlighted areas strongly supports that conclusion.",
+          "technical_notes": "The strongest activations are concentrated around the left perioral region and extending inferiorly along the mandibular line. This pattern is highly indicative of blending artifacts and textural inconsistencies commonly found in deepfake generation, particularly where the synthetic face is merged with the original background or body. The high confidence score suggests robust detection of these anomalies.",
+          "processing_time_ms": 9639,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals a concentrated area of concern around the lower left face where the model detected unnatural blending and inconsistencies typical of a deepfake.",
+          "detailed_analysis": "The heatmap shows intense red and orange activation concentrated around the left jaw and lower cheek area. Looking at that region in the original photo, you can see where the skin texture becomes noticeably smoother and more uniform compared to the rest of the face. The jawline in that highlighted zone has a slightly artificial quality, as if the edges have been softened or blended in a way that does not match the natural skin texture visible on the right side of the face. The transition between the chin and neck on the left side also appears subtly blurred, which is a classic indicator of where a synthetic face has been grafted onto or blended with an original image. The model is 100% confident this is a deepfake, and the concentrated heatmap activation in this specific region suggests the AI detected a localized anomaly rather than a globally manipulated image, which is consistent with a targeted face swap or partial face generation technique.",
+          "technical_notes": "The activation pattern is highly asymmetric and localized to the left mandibular region, which is a strong indicator of blending artifacts from face manipulation. This type of concentrated activation in a single anatomical zone rather than diffuse across the entire face is typical of face swap operations where the synthetic region does not perfectly match the surrounding authentic tissue. The 100% confidence score combined with this focused spatial pattern suggests the model detected clear boundary artifacts or texture discontinuities in that area. One important note is that this level of certainty warrants careful verification, as some legitimate photos with unusual lighting or shadows in that region could theoretically produce similar activation patterns, though the intensity here is quite diagnostic.",
+          "processing_time_ms": 6589,
+          "error": null
+        }
+      }
+    },
+    "4": {
+      "deepfake_score": 1.0,
+      "classification": "fake",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_4.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies around the left jaw region, supporting the classification as a deepfake.",
+          "detailed_analysis": "The heatmap shows a bright red area concentrated around the left jaw, which suggests that the model identified this region as problematic. Upon examining the original image, the jawline appears unnaturally smooth and lacks the typical texture and detail found in real skin. The transition between the jaw and neck looks overly blended, creating an artificial appearance. Additionally, the lighting on the jaw does not match the natural shadows and highlights seen elsewhere on the face, further indicating manipulation. The model's confidence level of 100% reflects these clear visual discrepancies.",
+          "technical_notes": "The model's activations are primarily focused on the left jaw region, where deepfake technology often struggles with realistic blending. The intense heatmap activation suggests that the model detected significant inconsistencies in texture and lighting, which are common indicators of synthetic images. The absence of natural skin features in this area reinforces the classification as a deepfake.",
+          "processing_time_ms": 4852,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "Explanation unavailable: Gemini API error (503)",
+          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
+          "technical_notes": null,
+          "processing_time_ms": 7580,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals intense concentration on the lower face and jaw area, where the model detected unnatural blending and texture inconsistencies characteristic of a deepfake.",
+          "detailed_analysis": "The heatmap is dominated by a bright red and orange zone covering the lower half of the face, particularly concentrated around the mouth, chin, and left jaw area. Looking at those regions in the original image, you can see the skin has an unusually smooth, almost airbrushed quality that does not match the texture visible on the forehead and upper cheeks. The smile appears artificially wide and the mouth region has a slightly plastic sheen to it. The jawline itself shows an odd blending where the synthetic face transitions to the neck, with the skin tone and texture becoming inconsistent at that boundary. The left side of the jaw, where the heatmap shows the most intense red activation, has a suspiciously uniform smoothness that real skin simply does not have, especially in a candid smile where natural wrinkles and skin variations would be visible. The model is 100% confident this is a fake, and the concentrated heatmap pattern on the lower face strongly supports that assessment, as this is exactly where face generation models tend to struggle most with creating convincing skin texture and natural expression blending.",
+          "technical_notes": "The activation pattern shows extremely high intensity concentrated in the lower facial region, particularly around the mouth and jaw. This distribution is highly asymmetric and localized, which is a strong indicator of synthetic manipulation rather than natural variation. The lower face is typically one of the most challenging regions for deepfake generators to render convincingly because it involves complex muscle movements, natural skin texture variation, and subtle shadow transitions. The 100% confidence score combined with this focused activation pattern suggests the model detected clear artifact signatures in the blending zone between the synthetic lower face and the rest of the image. One limitation is that this analysis is based on the current resolution, though the clear concentration of activations suggests the artifacts are robust enough to be visible even with compression.",
+          "processing_time_ms": 7580,
+          "error": null
+        }
+      }
+    },
+    "5": {
+      "deepfake_score": 1.0,
+      "classification": "fake",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_5.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies around the forehead and hairline, suggesting inconsistencies typical of a deepfake.",
+          "detailed_analysis": "The heatmap shows bright red and orange areas concentrated around the forehead and hairline. In the original image, the transition between the hair and skin looks unnaturally smooth and overly uniform, which is not typical of natural hair growth. Additionally, the texture of the skin in this region appears overly polished, lacking the subtle imperfections and variations that real skin usually has. The model's 100% confidence in this being a fake aligns with these visual cues, as they point to a lack of authenticity.",
+          "technical_notes": "The activations are strongest along the hairline, indicating that the model detected significant blending issues in this area. This is a common challenge for AI-generated images, where the hair-to-skin transition can often appear too clean or artificial. The high confidence level suggests that the model found clear evidence of manipulation, particularly in regions where natural texture and lighting should be present.",
+          "processing_time_ms": 4276,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This image has been digitally manipulated. The heatmap reveals several strong indicators of generation artifacts, particularly around the mouth and in the background, which are inconsistent with a real photograph.",
+          "detailed_analysis": "As you can see in the heatmap, the model focused heavily on the area around the mouth and teeth, shown in bright yellow and orange. If you look closely at those regions in the original image, the teeth appear unnaturally uniform and perfectly aligned, lacking the subtle imperfections and individual character you'd expect in a real person's smile. There's also a slight blur or smudging around the lips and gums, making the area look less defined.\n\nEven more striking is the bright red and orange area in the upper right corner of the heatmap, which corresponds to a highly anomalous region in the background of the original image. This area is a blurry, undefined blob of color that doesn't represent any discernible object or natural background element, a classic sign of an AI-generated image struggling to create coherent details outside the main subject.\n\nAdditionally, the yellow and orange activations near the temples and hairline on both sides of the face highlight areas where the hair texture appears somewhat artificial, lacking the fine detail of individual strands and blending a bit too smoothly with the skin. The model is 100% confident this is a deepfake, and these strong visual artifacts, especially the background anomaly and the unnatural mouth, clearly support that assessment.",
+          "technical_notes": "The strongest activations are concentrated in three key areas: the oral region, the background in the upper right, and the bilateral temple/hairline regions. The high intensity activation around the mouth suggests the model detected inconsistencies in texture, symmetry, or anatomical realism often present in GAN-generated faces. The extremely high activation in the background artifact is a strong signal, indicating a clear failure in coherent scene generation. The activations along the hairline suggest issues with hair texture generation and blending with the facial region. The 100% fake probability indicates a very high confidence based on multiple strong, distinct artifact signatures.",
+          "processing_time_ms": 12447,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals intense activation across the entire face, with particularly strong signals in the forehead and hairline region, indicating the AI model detected synthetic generation artifacts throughout.",
+          "detailed_analysis": "The heatmap is lighting up almost the entire face in bright yellow, orange, and red, with the most intense activation concentrated on the forehead and hairline area. Looking at the original image in those highlighted zones, you can see the skin has an unnaturally smooth, almost plastic quality that lacks the natural texture and pore detail you would expect in a real photograph. The forehead in particular appears almost airbrushed, with a uniform tone and texture that looks artificially polished. The hairline shows an unusually clean, almost too-perfect transition between the hair and skin, without the natural wisps, stray hairs, or subtle color variation that real hair growth produces. The overall facial structure also has a slightly generic quality, as if it was generated from an average rather than capturing the unique imperfections of an actual person. The model is 100% confident this is a deepfake, and the widespread activation pattern across the entire face suggests the AI detected consistent signs of synthetic generation rather than isolated manipulation in one region.",
+          "technical_notes": "The activation pattern is remarkably uniform and intense across the entire facial region, with no areas of low activation that would suggest natural, unmanipulated zones. This diffuse high-confidence pattern is characteristic of fully synthetic faces generated by AI models rather than face swaps or localized edits. The concentration of activation on the forehead and upper face is typical for detection models examining skin texture consistency and the hairline boundary, which are particularly diagnostic for spotting AI-generated faces. The 100% confidence score with no competing probability for authenticity indicates the model found no ambiguous regions that might suggest a real photograph.",
+          "processing_time_ms": 6676,
+          "error": null
+        }
+      }
+    },
+    "6": {
+      "deepfake_score": 0.9998,
+      "classification": "fake",
+      "confidence": 0.9998,
+      "gradcam_url": "/quiz-heatmaps/heatmap_6.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image has been digitally manipulated. The heatmap indicates significant anomalies in the nose and mid-face region, supporting the classification as a deepfake.",
+          "detailed_analysis": "The heatmap shows intense focus on the nose and mid-face area, highlighted in bright red and orange. Observing this region in the original image, the nose appears unnaturally smooth and lacks the fine texture typically found in human skin. Additionally, the transition between the nose and surrounding skin looks overly blended, creating an artificial appearance. There are also signs of color inconsistencies, where the skin tone around the nose does not match the rest of the face, further suggesting manipulation. The model's 100% confidence in this classification aligns with these evident visual discrepancies.",
+          "technical_notes": "The model's activations are concentrated around the nose and mid-face, which are critical areas for assessing authenticity. The strong activation in these regions indicates that the model detected significant inconsistencies in texture and color that are characteristic of deepfake generation. Such pronounced anomalies often arise from poor blending techniques used in synthetic image creation.",
+          "processing_time_ms": 4385,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This image has been digitally manipulated. The heatmap reveals unnatural smoothing and texture inconsistencies around the nose and mid-face, as well as an artificial-looking background element.",
+          "detailed_analysis": "As you can see in the heatmap, the model focused intensely on the area around the right side of the nose and the adjacent cheek, shown in bright red and orange. If you look closely at those regions in the original image, the skin texture appears unusually smooth and somewhat blurred, almost like a waxy finish, lacking the natural pores and subtle imperfections of real skin. The transition from light to shadow around the right nostril and the upper lip also looks a bit too uniform, lacking natural depth. Additionally, the bright yellow area on the far right highlights a background element that has an artificial, almost painted texture, which is inconsistent with a natural photograph. The model is 100% confident this is a deepfake, and the visual evidence in these highlighted zones strongly supports that conclusion.",
+          "technical_notes": "The strongest activations are concentrated on the right mid-face, specifically around the nasal ala, philtrum, and malar region, indicating anomalies in skin texture and shading. A significant activation also appears on the background element to the right, suggesting inconsistencies in its generative quality or blending with the foreground. This pattern is characteristic of generative adversarial networks (GANs) where facial features, particularly skin details, and background elements often exhibit tell-tale artifacts. The high confidence level suggests a strong presence of these synthetic cues.",
+          "processing_time_ms": 13304,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image has been digitally manipulated. The heatmap reveals intense focus on the nose and mid-face region, where there are clear signs of artificial blending and unnatural texture inconsistencies.",
+          "detailed_analysis": "The heatmap is lighting up intensely in bright red and orange across the nose, cheeks, and mouth area. Looking at those regions in the original image, you can see the skin has an unusually smooth, almost plastic quality that does not match the natural texture visible on the forehead and chin. The nose in particular shows a subtle blurriness around its edges, as if it was grafted onto the face rather than being part of the original photograph. The skin tone in the highlighted areas also appears slightly disconnected from the surrounding face, with a faint color shift that suggests digital blending. The mouth region shows an artificial smoothness that real skin simply does not have, especially when you compare it to the more textured appearance of the rest of the face. The model is 100% confident this is a deepfake, and the concentrated heatmap activation in the central face region makes it clear why, these are the zones where the synthetic face meets the original.",
+          "technical_notes": "The activation pattern shows extremely high intensity concentrated in the mid-face region, particularly around the nose, cheeks, and mouth. This distribution is characteristic of face swap or face replacement operations, where the synthetic region is typically centered on these anatomical landmarks. The sharp boundary between the high activation zone and the lower activation areas on the forehead and chin suggests a clear demarcation line between the manipulated and original regions. The 100% confidence score combined with this focused activation pattern indicates the model detected strong artifact signatures typical of generative or replacement-based deepfakes. The intensity of the heatmap response in this central region is notably higher than what would typically appear in authentic photographs, where activation tends to be more diffuse and lower in magnitude.",
+          "processing_time_ms": 6904,
+          "error": null
+        }
+      }
+    },
+    "7": {
+      "deepfake_score": 0.0,
+      "classification": "real",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_7.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be authentic. The heatmap indicates consistent and natural features, particularly around the forehead and hairline, with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap shows strong attention in the forehead and hairline region, highlighted in warm colors. In the original image, the hairline transitions smoothly into the skin, with natural texture and no visible artifacts. The skin tone is consistent, and the lighting appears even, which are all indicators of a genuine photograph. The model's confidence level of 100% reinforces the idea that there are no signs of tampering.",
+          "technical_notes": "The heatmap reveals concentrated activations around the hairline, which is typically a critical area for detecting authenticity. The absence of sharp edges or unnatural blending suggests that the image maintains a coherent and realistic appearance. The model's high confidence indicates that the features in this region align well with what is expected in a natural photograph.",
+          "processing_time_ms": 5608,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This appears to be an authentic photograph. The heatmap highlights naturally consistent facial features, particularly on the forehead, with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap shows a bright yellow and orange spot right in the center of the girl's forehead. When I look at that area in the original photo, I can see very natural, subtle skin texture, consistent lighting across the forehead, and tiny, individual hair follicles along the hairline that look completely organic. There's no blurring, smudging, or unnatural smoothness that you often see in generated images. The light reflects naturally, and the skin tone is uniform. The model is 100% confident this is a real image, and the clear, natural details in the highlighted areas strongly support that.",
+          "technical_notes": "The primary activation is a concentrated, high-intensity spot on the central forehead, with a rapid fall-off in intensity across the rest of the face. This localized activation, rather than diffuse or boundary-focused patterns, suggests the model is identifying consistent, natural features rather than anomalies. The absence of strong activations along facial boundaries or texture inconsistencies further supports the genuine classification. The 100% confidence indicates a very strong signal for authenticity.",
+          "processing_time_ms": 5625,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This is an authentic photograph. The heatmap shows the model examining natural facial features with no signs of digital manipulation or synthetic generation.",
+          "detailed_analysis": "The heatmap is lighting up primarily around the forehead and hairline area, shown in warm yellow and orange tones. Looking at those regions in the original image, you can see completely natural skin texture with the kind of subtle variation and minor imperfections that real skin has. The hairline shows a natural, organic transition into the hair with individual strands visible and irregular edges, exactly what you would expect in a genuine photograph. The skin tone is consistent across the forehead without any artificial smoothing or plastic-like quality. The model is 100% confident this is real, and the heatmap pattern supports that because there are no suspicious boundaries, blurring, or color artifacts in the highlighted areas. The natural asymmetry of the face and the way light falls across the forehead all look authentic.",
+          "technical_notes": "The activation pattern centers on the forehead and upper facial region, which are common focus areas for authenticity verification since they are relatively featureless and therefore easier to analyze for consistency. The low overall intensity of the heatmap combined with the 100% real classification suggests the model found no anomalous patterns that would trigger deepfake detection. The distributed, natural-looking activation across the forehead region is consistent with genuine photographs where no single area exhibits the blending artifacts or texture discontinuities typical of synthetic faces.",
+          "processing_time_ms": 5364,
+          "error": null
+        }
+      }
+    },
+    "8": {
+      "deepfake_score": 0.0,
+      "classification": "real",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_8.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be authentic. The heatmap indicates consistent facial features with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap shows strong focus on the forehead and hairline region, highlighted in warm colors. In the original image, this area displays natural skin texture and a realistic hairline. The transition between the hair and skin looks organic, with no visible seams or blurring that often indicate manipulation. The lighting across the forehead is even, further supporting the authenticity of the image. The model's confidence level of 100% reinforces the observation that this is a genuine photograph.",
+          "technical_notes": "The activation is concentrated in the forehead and hairline area, which are critical regions for assessing authenticity. The diffuse pattern suggests that there are no significant anomalies present, indicating that the image likely has not been altered. High confidence in the real classification typically corresponds with consistent textures and lighting across the face.",
+          "processing_time_ms": 6989,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This appears to be an authentic photograph. The heatmap shows very low attention across the face, indicating no suspicious areas, and the highlighted regions display natural, consistent features.",
+          "detailed_analysis": "As you can see in the heatmap, the model shows very little activation across the subject's face, with most of the facial area appearing in cool blue and purple tones. This means the AI model didn't find any specific areas on the face that stood out as potentially manipulated or unnatural. Instead, it seems to be confirming the consistency of the natural features.\n\nLooking at the original photo, especially in the forehead and hairline region, which is faintly highlighted in blue on the heatmap, you can observe natural skin texture, consistent lighting, and a realistic transition where the hair meets the skin. There are no signs of blurring, unnatural edges, or color inconsistencies that would suggest digital alteration. The model is 100% confident this is a real image, and the heatmap supports this by showing no \"hot spots\" of concern on the face itself. There is a small bright red spot in the upper right corner of the heatmap, but this is in the background and not on the subject's face, so it doesn't impact the assessment of facial authenticity.",
+          "technical_notes": "The GradCAM heatmap exhibits a predominantly diffuse, low-intensity activation pattern across the facial region, characterized by cool blue and purple hues. This indicates a lack of specific anomaly detection signals within the face, which is highly correlated with genuine images. The high confidence score of 100% for \"real\" further supports this interpretation. A localized high activation is present in the upper right background, but this is outside the facial area and is likely a non-diagnostic background element or a minor artifact that did not influence the facial authenticity assessment.",
+          "processing_time_ms": 9931,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This is an authentic photograph. The heatmap shows the model examining natural facial features with no signs of digital manipulation or synthetic generation.",
+          "detailed_analysis": "The heatmap is lighting up primarily around the forehead and hairline region, shown in warm rainbow colors that peak in intensity across the upper face. Looking at those areas in the original image, you can see exactly what the model is keying in on: the natural texture of the skin on the forehead, the organic way the hairline meets the skin, and the realistic variation in lighting across the upper face. The hair itself shows natural density and growth pattern, not the uniform or slightly blurred appearance you often see in AI generated faces. The skin texture in the highlighted zone is consistent and shows the subtle imperfections and pores that real human skin has. There are no visible seams, blurring, or color bleeding where the forehead meets the hairline. The model is 100% confident this is real, and the heatmap pattern supports that since it is examining the most diagnostic areas and finding nothing suspicious.",
+          "technical_notes": "The activation pattern concentrates on the upper facial region, particularly the forehead and hairline boundary, which are high diagnostic areas for authenticity assessment. The intensity distribution is relatively smooth and diffuse rather than showing sharp localized spikes, which typically correlates with genuine images. The model shows maximum confidence at 100%, and the activation map does not reveal any of the characteristic boundary artifacts, texture discontinuities, or asymmetries that would suggest synthetic generation. The rainbow coloring in the heatmap reflects the intensity of attention, with warmer colors indicating regions of focus, but the overall pattern is consistent with natural feature verification rather than anomaly detection.",
+          "processing_time_ms": 5437,
+          "error": null
+        }
+      }
+    },
+    "9": {
+      "deepfake_score": 0.491,
+      "classification": "real",
+      "confidence": 0.509,
+      "gradcam_url": "/quiz-heatmaps/heatmap_9.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be authentic, but there are some subtle inconsistencies that raise questions. The heatmap indicates areas of focus that suggest the model detected potential anomalies, particularly around the hairline.",
+          "detailed_analysis": "The heatmap shows a concentration of attention around the forehead and hairline, highlighted in light orange and yellow. When examining this area in the original image, the transition between the hair and skin looks unusually sharp. The hair appears to have a defined boundary that doesn't blend seamlessly with the forehead, which can sometimes indicate manipulation. However, the overall facial features and skin texture look consistent and natural, which supports the classification as real. The model's confidence is quite close to a 50/50 split, suggesting that while there are some concerns, the image still holds up well overall.",
+          "technical_notes": "The activation pattern is relatively diffuse, with the highest intensity near the hairline. This suggests the model is detecting potential blending issues, which can occur in deepfake images. The 50.9% confidence level indicates that while the model sees some signs of authenticity, it also recognizes elements that could be indicative of manipulation, particularly in the hairline area.",
+          "processing_time_ms": 6738,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This image shows very mixed signals, and the model is barely confident in its assessment. While it leans slightly towards real, the evidence is not strong enough for a definitive conclusion.",
+          "detailed_analysis": "The heatmap shows very localized areas of attention, with a small bright red spot in the top right corner, corresponding to the wispy hair and hairline, and a green-yellow area on the lower right cheek. Looking at the top right, the individual strands of hair appear natural and blend smoothly with the light background, without any obvious blurring or sharp, artificial edges. Similarly, the lower right cheek shows natural skin texture and consistent lighting. However, the model's confidence is extremely low, at just 50.9% real, meaning it's almost a toss-up. This suggests that while it didn't find strong \"fake\" signals in the highlighted areas, it also didn't find overwhelmingly strong \"real\" signals either, leading to high uncertainty.",
+          "technical_notes": "The model exhibits a very low confidence score (50.9% real), indicating significant uncertainty. Activation is sparse and localized, with a small, intense activation in the upper right hairline region and a diffuse, lower intensity activation on the lower right cheek. This pattern, combined with near-50% probability, suggests that the model is struggling to find clear diagnostic features for either authenticity or manipulation, possibly due to high image quality, effective blending, or a lack of strong artifacts.",
+          "processing_time_ms": 17498,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This image is borderline and essentially a coin flip. The model is only slightly more confident it is real than fake, at 50.9% confidence. The heatmap shows the model focusing on the hairline and forehead area, which displays some subtle inconsistencies but nothing definitive enough to make a clear call.",
+          "detailed_analysis": "Looking at the heatmap in Image 2, you can see a bright rainbow gradient effect concentrated around the upper portion of the face, particularly along the hairline and forehead region shown in yellow, orange, and pink tones. When you examine those same areas in the original photo, the hairline does look somewhat unusually clean and uniform. The transition between the hair and skin at the forehead appears almost too sharp and well-defined, lacking the natural irregularity and stray hairs you would typically see in a real photograph. However, this could easily be explained by good lighting, careful grooming, or even a simple photo touch-up rather than full face synthesis. The rest of the facial features, including the eyes, nose, and mouth, appear natural and consistent with authentic photography. The model's near-equal split between real and fake suggests this image sits right on the boundary, and without stronger evidence in other regions, it is difficult to make a confident determination either way.",
+          "technical_notes": "The activation pattern is concentrated in the upper facial region with a diffuse, low to moderate intensity heatmap. This kind of borderline activation, particularly focused on the hairline boundary, is common in images where either minor retouching has occurred or where the generator quality is high enough to avoid obvious artifacts in the lower facial regions. The 50.9% real confidence is essentially at the decision threshold, indicating the model found competing signals. At this resolution and confidence level, the result should be treated with significant caution, as the image could plausibly be either authentic or a high quality synthetic creation.",
+          "processing_time_ms": 6453,
+          "error": null
+        }
+      }
+    },
+    "10": {
+      "deepfake_score": 0.0041,
+      "classification": "real",
+      "confidence": 0.9959,
+      "gradcam_url": "/quiz-heatmaps/heatmap_10.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be a genuine photograph. The heatmap indicates consistent facial features with no signs of digital manipulation, supporting a high confidence in its authenticity.",
+          "detailed_analysis": "The heatmap shows strong activation around the forehead and hairline, highlighted in bright colors. Looking closely at those areas in the original image, the skin texture appears natural and well-defined, with no blurring or unnatural edges. The hairline blends seamlessly into the skin, and the light reflects realistically off the hair, indicating a natural interaction with the light source. This consistency across the highlighted regions reinforces the model's high confidence that this is a real image.",
+          "technical_notes": "The model concentrated its attention on the forehead and hairline, which are critical areas for assessing authenticity. The activation pattern is diffuse but strong, suggesting that the model found no significant anomalies in these regions. The high confidence score of 99.6% indicates that the features present are typical of a genuine photograph, with no signs of manipulation or blending issues.",
+          "processing_time_ms": 5875,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This appears to be an authentic photograph. The heatmap highlights naturally consistent facial features, particularly around the forehead and hairline, with no signs of digital manipulation.",
+          "detailed_analysis": "As you can see in the heatmap, the model focused heavily on the upper left side of the forehead and the hairline, shown in bright yellow and green. Looking at those regions in the original photo, you can observe very natural skin texture, with visible pores and realistic light reflections on the forehead. The hair strands at the hairline also appear natural, with individual hairs growing organically from the scalp, rather than looking like a smooth, artificial blend. The lighting across the forehead is consistent with the rest of the face and the outdoor setting, showing natural highlights and shadows that are often difficult for AI-generated images to replicate perfectly. The model is 99.6% confident this is a real image, and the heatmap supports this by highlighting these authentic, detailed features.",
+          "technical_notes": "The primary activations are concentrated on the upper left forehead and hairline, with a more diffuse, lower intensity activation extending to the right side of the head. This pattern suggests the model is validating the natural texture, hair-to-skin transition, and consistent lighting in these areas, which are common diagnostic features for authenticity. The overall diffuse nature of the heatmap, combined with high confidence, is characteristic of genuine images where no specific anomalies trigger strong localized responses.",
+          "processing_time_ms": 11817,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This is an authentic photograph. The heatmap shows the model examining natural facial features with no signs of digital manipulation or synthetic generation.",
+          "detailed_analysis": "The heatmap is lighting up primarily around the forehead and hairline region, shown in bright purple and blue tones. Looking at those areas in the original image, you can see completely natural skin texture with realistic pores and subtle variations in tone. The hairline itself has that organic, slightly irregular quality that real human hair naturally has, with individual strands visible and an uneven edge rather than a perfectly clean boundary. The skin around the forehead shows natural perspiration and shine that is consistent with how a real face appears in natural lighting. There are no signs of blurring, smoothing, or artificial blending that you would typically see in a manipulated image. The model is 99.6% confident this is real, and the heatmap pattern supports that because the model is simply confirming the authenticity of these key diagnostic areas rather than flagging suspicious anomalies.",
+          "technical_notes": "The activation pattern centers on the forehead and upper facial region, which are standard areas for authenticity verification since they contain fine detail and texture information that synthetic generation often struggles to replicate convincingly. The heatmap shows a relatively natural distribution of attention without concentrated hotspots at suspicious boundaries or transition zones. The extremely high confidence score of 99.6% combined with this diffuse, low-intensity activation pattern is typical of genuine photographs where the model finds no anomalies worth highlighting. Note that this analysis assumes standard lighting and resolution conditions, so heavily filtered or compressed versions of the image might show different results.",
+          "processing_time_ms": 5764,
+          "error": null
+        }
+      }
+    },
+    "11": {
+      "deepfake_score": 0.0,
+      "classification": "real",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_11.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be an authentic photograph. The heatmap indicates natural consistency in facial features, particularly around the forehead and hairline, with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap highlights the forehead and hairline region in warm colors, suggesting that the model focused on these areas for analysis. In the original image, the hairline transitions smoothly into the skin, showing natural growth patterns and texture. The skin on the forehead displays a realistic texture with subtle variations in tone and light reflection, which is typical of genuine photographs. There are no signs of blurring or unnatural edges, reinforcing the model's confidence in its authenticity.",
+          "technical_notes": "The model's activations are concentrated around the forehead and hairline, which are critical areas for assessing authenticity. The activation pattern is diffuse and consistent, indicating that there are no anomalies or synthetic artifacts present. The high confidence level of 100% suggests that the image does not exhibit any characteristics commonly associated with deepfakes.",
+          "processing_time_ms": 6222,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This appears to be an authentic photograph. The heatmap shows very low attention across the face, indicating the model found no suspicious areas or signs of digital manipulation.",
+          "detailed_analysis": "The heatmap for this image is almost entirely blue and purple, which means the AI model found very little to focus on, and certainly no strong indicators of manipulation. There's a very faint, diffuse yellow and orange glow in the top right corner, which is in the background, not on the person's face. This suggests the model is highly confident that the image is real because it doesn't see any of the tell-tale signs of a deepfake, like unnatural blending, blurring, or inconsistent textures that would typically show up as bright red or yellow areas on the face. The face itself, including the forehead and hairline, looks completely natural with consistent skin texture and realistic hair, which supports the model's 100% confidence that this is a real image.",
+          "technical_notes": "The GradCAM heatmap displays extremely low activation intensity across the entire facial region, predominantly showing cool colors (blue and purple). A very faint, diffuse activation is observed in the upper right background, which is not a diagnostic region for facial manipulation. This pattern of minimal and diffuse activation is highly characteristic of genuine images, as the model does not detect any strong anomaly signals or inconsistencies that would trigger higher attention. The 100% real probability reflects this lack of detectable synthetic artifacts.",
+          "processing_time_ms": 7607,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This appears to be an authentic photograph. The heatmap highlights naturally consistent facial features with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap shows the model paying close attention to the forehead and hairline region, with a concentration of warm colors (orange and yellow) across the upper face. Looking at those areas in the original photo, you can see natural skin texture with realistic pore detail and consistent lighting across the forehead. The hairline itself shows the kind of organic, slightly irregular pattern you would expect from real hair, with individual strands visible and natural variation in how the hair meets the skin. There is no artificial smoothing or blurring at the hair-to-skin boundary, and the transition looks completely genuine. The glasses frames also sit naturally on the bridge of the nose with realistic light reflection, which is another indicator of authenticity. The model is 100% confident this is a real image, and the heatmap supports that since the highlighted regions show no suspicious boundaries, no plastic-looking smoothing, and no color bleeding or artifacts that would suggest digital manipulation.",
+          "technical_notes": "Primary activations center on the forehead and upper facial region, which are typically diagnostic areas for authenticity assessment. The activation pattern shows moderate intensity distributed naturally across the skin surface rather than concentrating on suspicious boundary zones. This diffuse, moderate activation pattern is characteristic of genuine photographs where the model finds consistent natural features rather than anomalies. The absence of high intensity hotspots at facial edges or transition zones further supports the real classification. Note that this analysis is based on visual artifacts detectable at this resolution, so the confidence level reflects the consistency of natural features observed throughout the highlighted regions.",
+          "processing_time_ms": 5245,
+          "error": null
+        }
+      }
+    },
+    "12": {
+      "deepfake_score": 0.0,
+      "classification": "real",
+      "confidence": 1.0,
+      "gradcam_url": "/quiz-heatmaps/heatmap_12.jpg",
+      "explanations": {
+        "openai": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "summary": "This image appears to be authentic. The heatmap indicates consistent facial features with no signs of digital manipulation.",
+          "detailed_analysis": "The heatmap shows strong attention in the forehead and hairline region, highlighted in warm colors like yellow and orange. When examining the original photo, the skin texture on the forehead looks natural, with fine lines and pores visible, which is typical of real skin. The hairline blends seamlessly with the skin, showing a natural transition rather than any abrupt edges or artifacts. The lighting across the forehead is consistent, adding to the overall authenticity of the image. The model's confidence level of 100% in its classification as real is supported by the absence of any suspicious features in these highlighted areas.",
+          "technical_notes": "The model's activations are concentrated in the forehead and hairline, which are critical areas for detecting authenticity. The high confidence level indicates that the model found no significant anomalies in these regions, suggesting that the image likely originates from a genuine source. The lack of high-intensity activations in any suspicious areas further reinforces the classification.",
+          "processing_time_ms": 6371,
+          "error": null
+        },
+        "google": {
+          "provider": "google",
+          "model": "gemini-2.5-flash",
+          "summary": "This appears to be an authentic photograph. The heatmap highlights natural elements in the background and shows no suspicious activity on the face, supporting its authenticity.",
+          "detailed_analysis": "As you can see in the heatmap, the model paid most attention to the bright red and yellow area in the top right corner of the image. Looking at that spot in the original photo, you can see natural sand texture and a subtle glow from what looks like sunlight, all consistent with a real outdoor setting. The face itself, including the forehead and hairline, shows very little heatmap activity, appearing mostly in cool blue and purple tones. This indicates the model found no anomalies or inconsistencies in these facial areas. The skin texture looks natural, the lighting is consistent across the face, and the hair strands appear organic. The model is 100% confident this is a real image, and the heatmap supports this by not highlighting any areas with signs of digital manipulation.",
+          "technical_notes": "The strongest activations are concentrated in the top right corner of the image, corresponding to the background sand and ambient lighting, rather than the subject's face. The facial region itself exhibits very diffuse and low-intensity activations, predominantly in the blue spectrum. This pattern, where the model does not identify specific high-attention anomaly regions on the face, is highly indicative of an authentic image. The strong background activation may suggest the model is also validating the naturalness of the environmental context. Note that this analysis is based on visual artifacts detectable at this resolution, so highly compressed or low resolution images may reduce detection reliability.",
+          "processing_time_ms": 11413,
+          "error": null
+        },
+        "anthropic": {
+          "provider": "anthropic",
+          "model": "claude-haiku-4-5-20251001",
+          "summary": "This appears to be an authentic photograph. The heatmap shows the model examining natural facial features with no signs of digital manipulation or synthetic generation.",
+          "detailed_analysis": "The heatmap concentrates its attention on the forehead and upper face region, shown in blue and purple tones. Looking at those areas in the original image, you can see completely natural skin texture with realistic pores and subtle variations in tone. The hairline shows a natural, organic transition where individual hairs meet the skin, not the artificially sharp or blended edge you would typically see in a deepfake. The lighting across the forehead is consistent and natural, with soft shadows that follow the contours of real facial anatomy. There are no signs of smoothing, blurring, or the plastic-like quality that often appears in AI generated faces. The model's 100% confidence in authenticity is well supported by the heatmap, since the areas it focused on show all the hallmarks of a genuine photograph.",
+          "technical_notes": "The activation pattern is concentrated in the upper facial region, particularly around the forehead and hairline boundary. This is a typical area of focus for authenticity verification since it contains both fine hair detail and skin texture that are difficult for generative models to render convincingly. The relatively low intensity and focused nature of the activations, rather than scattered high intensity spots, correlates with genuine images. The absence of suspicious boundary artifacts or localized anomalies in the highlighted regions supports the real classification.",
+          "processing_time_ms": 5716,
+          "error": null
+        }
+      }
+    }
+  }
+}
