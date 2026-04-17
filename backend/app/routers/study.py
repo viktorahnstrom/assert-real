@@ -25,15 +25,15 @@ _FRONTEND_PUBLIC = Path(__file__).parent.parent.parent.parent / "desktop" / "pub
 
 # Fixed image list — must match ALL_IMAGES in DeepfakeTest.tsx
 _STUDY_IMAGES = [
-    {"id": 1,  "filename": "Fake1.jpg", "label": "fake"},
-    {"id": 2,  "filename": "Fake2.jpg", "label": "fake"},
-    {"id": 3,  "filename": "Fake3.jpg", "label": "fake"},
-    {"id": 4,  "filename": "Fake4.jpg", "label": "fake"},
-    {"id": 5,  "filename": "Fake5.jpg", "label": "fake"},
-    {"id": 6,  "filename": "Fake6.jpg", "label": "fake"},
-    {"id": 7,  "filename": "Real1.jpg", "label": "real"},
-    {"id": 8,  "filename": "Real2.jpg", "label": "real"},
-    {"id": 9,  "filename": "Real3.jpg", "label": "real"},
+    {"id": 1, "filename": "Fake1.jpg", "label": "fake"},
+    {"id": 2, "filename": "Fake2.jpg", "label": "fake"},
+    {"id": 3, "filename": "Fake3.jpg", "label": "fake"},
+    {"id": 4, "filename": "Fake4.jpg", "label": "fake"},
+    {"id": 5, "filename": "Fake5.jpg", "label": "fake"},
+    {"id": 6, "filename": "Fake6.jpg", "label": "fake"},
+    {"id": 7, "filename": "Real1.jpg", "label": "real"},
+    {"id": 8, "filename": "Real2.jpg", "label": "real"},
+    {"id": 9, "filename": "Real3.jpg", "label": "real"},
     {"id": 10, "filename": "Real4.jpg", "label": "real"},
     {"id": 11, "filename": "Real5.jpg", "label": "real"},
     {"id": 12, "filename": "Real6.jpg", "label": "real"},
@@ -42,6 +42,7 @@ _STUDY_IMAGES = [
 # ============================================
 # Models
 # ============================================
+
 
 class StudyExplanation(BaseModel):
     provider: str
@@ -70,7 +71,7 @@ class StudyResults(BaseModel):
     incorrect_count: int
     explanation_answers: list[dict]
     trust_rating: int
-    willingness_to_use: str   # "yes" | "no" | "maybe"
+    willingness_to_use: str  # "yes" | "no" | "maybe"
     comments: str
     completed_at: str
 
@@ -78,6 +79,7 @@ class StudyResults(BaseModel):
 # ============================================
 # Helpers
 # ============================================
+
 
 def _results_file() -> Path:
     results_dir = Path(tempfile.gettempdir()) / "xade_study_results"
@@ -88,6 +90,7 @@ def _results_file() -> Path:
 # ============================================
 # Routes
 # ============================================
+
 
 @router.post("/analyze", response_model=StudyAnalysisResponse)
 async def analyze_for_study(file: UploadFile = File(...)):
@@ -367,10 +370,13 @@ async def precompute_study_analyses():
             else:
                 explanations = {
                     p: {
-                        "provider": p, "model": "mock",
+                        "provider": p,
+                        "model": "mock",
                         "summary": "VLM not configured.",
                         "detailed_analysis": "No API keys set.",
-                        "technical_notes": None, "processing_time_ms": 0, "error": None,
+                        "technical_notes": None,
+                        "processing_time_ms": 0,
+                        "error": None,
                     }
                     for p in providers
                 }

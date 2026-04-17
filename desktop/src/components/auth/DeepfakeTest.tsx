@@ -13,15 +13,15 @@ interface StudyImage {
 }
 
 const ALL_IMAGES: StudyImage[] = [
-  { id: 1,  url: '/quiz-images/Fake1.jpg', label: 'fake' },
-  { id: 2,  url: '/quiz-images/Fake2.jpg', label: 'fake' },
-  { id: 3,  url: '/quiz-images/Fake3.jpg', label: 'fake' },
-  { id: 4,  url: '/quiz-images/Fake4.jpg', label: 'fake' },
-  { id: 5,  url: '/quiz-images/Fake5.jpg', label: 'fake' },
-  { id: 6,  url: '/quiz-images/Fake6.jpg', label: 'fake' },
-  { id: 7,  url: '/quiz-images/Real1.jpg', label: 'real' },
-  { id: 8,  url: '/quiz-images/Real2.jpg', label: 'real' },
-  { id: 9,  url: '/quiz-images/Real3.jpg', label: 'real' },
+  { id: 1, url: '/quiz-images/Fake1.jpg', label: 'fake' },
+  { id: 2, url: '/quiz-images/Fake2.jpg', label: 'fake' },
+  { id: 3, url: '/quiz-images/Fake3.jpg', label: 'fake' },
+  { id: 4, url: '/quiz-images/Fake4.jpg', label: 'fake' },
+  { id: 5, url: '/quiz-images/Fake5.jpg', label: 'fake' },
+  { id: 6, url: '/quiz-images/Fake6.jpg', label: 'fake' },
+  { id: 7, url: '/quiz-images/Real1.jpg', label: 'real' },
+  { id: 8, url: '/quiz-images/Real2.jpg', label: 'real' },
+  { id: 9, url: '/quiz-images/Real3.jpg', label: 'real' },
   { id: 10, url: '/quiz-images/Real4.jpg', label: 'real' },
   { id: 11, url: '/quiz-images/Real5.jpg', label: 'real' },
   { id: 12, url: '/quiz-images/Real6.jpg', label: 'real' },
@@ -393,7 +393,9 @@ function ExplanationScreen({
               Was:{' '}
               <span
                 className={
-                  item.image.label === 'fake' ? 'font-semibold text-red-500' : 'font-semibold text-green-600'
+                  item.image.label === 'fake'
+                    ? 'font-semibold text-red-500'
+                    : 'font-semibold text-green-600'
                 }
               >
                 {item.image.label}
@@ -582,11 +584,7 @@ function ExplanationScreen({
 function SurveyScreen({
   onSubmit,
 }: {
-  onSubmit: (answers: {
-    trustRating: number;
-    willingnessToUse: string;
-    comments: string;
-  }) => void;
+  onSubmit: (answers: { trustRating: number; willingnessToUse: string; comments: string }) => void;
 }) {
   const [trust, setTrust] = useState<number | null>(null);
   const [willingness, setWillingness] = useState<string | null>(null);
@@ -612,7 +610,11 @@ function SurveyScreen({
               1. How much do you trust the XADE system&apos;s ability to detect deepfakes?
             </p>
             <div className="mt-3">
-              <RatingButtons value={trust} onChange={setTrust} labels={['No trust', 'Full trust']} />
+              <RatingButtons
+                value={trust}
+                onChange={setTrust}
+                labels={['No trust', 'Full trust']}
+              />
             </div>
           </div>
 
@@ -691,9 +693,11 @@ function CompleteScreen({
   if (pct >= 80) {
     message = 'Impressive! But AI-generated deepfakes are getting harder to spot every day.';
   } else if (pct >= 50) {
-    message = "Not bad — but as you can see, it's tricky. That's exactly why tools like XADE exist.";
+    message =
+      "Not bad — but as you can see, it's tricky. That's exactly why tools like XADE exist.";
   } else {
-    message = "Don't worry — most people struggle with this. Deepfakes are designed to fool the human eye.";
+    message =
+      "Don't worry — most people struggle with this. Deepfakes are designed to fool the human eye.";
   }
 
   return (
@@ -779,7 +783,9 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 });
 
   // Precomputed analyses — loaded at mount, null means not yet checked
-  const [precomputed, setPrecomputed] = useState<PrecomputedData | null | 'unavailable'>('unavailable');
+  const [precomputed, setPrecomputed] = useState<PrecomputedData | null | 'unavailable'>(
+    'unavailable'
+  );
 
   useEffect(() => {
     fetch('/study-analyses.json')
@@ -886,9 +892,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     const payload = {
       participant_id: participantId.current,
       self_confidence_rating: selfConfidence ?? 0,
-      baseline_accuracy: classificationRecords.length
-        ? correct / classificationRecords.length
-        : 0,
+      baseline_accuracy: classificationRecords.length ? correct / classificationRecords.length : 0,
       total_images: classificationRecords.length,
       correct_count: correct,
       incorrect_count: classificationRecords.length - correct,
