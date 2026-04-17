@@ -9,9 +9,9 @@ import asyncio
 import io
 import json
 import logging
-from datetime import datetime, timezone
-from pathlib import Path
 import tempfile
+from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -87,6 +87,46 @@ def _results_file() -> Path:
     return results_dir / "study_results.jsonl"
 
 
+async def _run_vlm_provider(
+    provider_id: str,
+    vlm_factory,
+    image_bytes: bytes,
+    heatmap_bytes: bytes | None,
+    heatmap_available: bool,
+    detection_context,
+    img_id: str,
+) -> tuple[str, dict]:
+    """Run a single VLM provider and return (provider_id, result_dict)."""
+    try:
+        vlm_result = await vlm_factory.generate_explanation(
+            provider_id=provider_id,
+            image_bytes=image_bytes,
+            heatmap_bytes=heatmap_bytes if heatmap_available else image_bytes,
+            detection=detection_context,
+            gradcam_available=heatmap_available,
+        )
+        return provider_id, {
+            "provider": vlm_result.provider,
+            "model": vlm_result.model,
+            "summary": vlm_result.summary,
+            "detailed_analysis": vlm_result.detailed_analysis,
+            "technical_notes": vlm_result.technical_notes,
+            "processing_time_ms": vlm_result.processing_time_ms,
+            "error": None,
+        }
+    except Exception as exc:
+        logger.warning("VLM %s failed for image %s: %s", provider_id, img_id, exc)
+        return provider_id, {
+            "provider": provider_id,
+            "model": "unavailable",
+            "summary": "Explanation unavailable for this provider.",
+            "detailed_analysis": "This provider could not generate an explanation.",
+            "technical_notes": None,
+            "processing_time_ms": 0,
+            "error": str(exc),
+        }
+
+
 # ============================================
 # Routes
 # ============================================
@@ -98,8 +138,8 @@ async def analyze_for_study(file: UploadFile = File(...)):
     Run deepfake detection + GradCAM + all VLM providers in parallel.
     Used by the user study Phase 2 to generate the three anonymised explanations.
     """
-    from PIL import Image
     import torch
+    from PIL import Image
 
     from app.api.detect import (
         class_names,
@@ -120,7 +160,6 @@ async def analyze_for_study(file: UploadFile = File(...)):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image_tensor = transform(image).unsqueeze(0).to(device)
 
-    # Detection
     with torch.no_grad():
         outputs = model(image_tensor)
         probabilities = torch.softmax(outputs, dim=1)
@@ -133,12 +172,10 @@ async def analyze_for_study(file: UploadFile = File(...)):
     target_class = int(predicted.item())
     classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-    # GradCAM
     heatmap_bytes, gradcam_url, evidence_regions, crops = _run_gradcam(
         image, image_tensor, target_class
     )
 
-    # Face category mapping
     region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
     region_categories = []
     if face_category_mapper is not None and crops:
@@ -164,44 +201,27 @@ async def analyze_for_study(file: UploadFile = File(...)):
         region_categories=region_categories,
     )
 
-    # Run all three VLM providers in parallel
     explanations: dict[str, StudyExplanation] = {}
 
     if vlm_factory is not None:
         providers = ["openai", "google", "anthropic"]
-
-        async def run_provider(provider_id: str) -> tuple[str, StudyExplanation]:
-            try:
-                vlm_result = await vlm_factory.generate_explanation(
-                    provider_id=provider_id,
-                    image_bytes=image_bytes,
-                    heatmap_bytes=heatmap_bytes if gradcam_url else image_bytes,
-                    detection=detection_context,
-                    gradcam_available=gradcam_url is not None,
+        raw_results = await asyncio.gather(
+            *[
+                _run_vlm_provider(
+                    p,
+                    vlm_factory,
+                    image_bytes,
+                    heatmap_bytes,
+                    gradcam_url is not None,
+                    detection_context,
+                    "live",
                 )
-                return provider_id, StudyExplanation(
-                    provider=vlm_result.provider,
-                    model=vlm_result.model,
-                    summary=vlm_result.summary,
-                    detailed_analysis=vlm_result.detailed_analysis,
-                    technical_notes=vlm_result.technical_notes,
-                    processing_time_ms=vlm_result.processing_time_ms,
-                )
-            except Exception as exc:
-                logger.warning("VLM provider %s failed in study: %s", provider_id, exc)
-                return provider_id, StudyExplanation(
-                    provider=provider_id,
-                    model="unavailable",
-                    summary="Explanation unavailable for this provider.",
-                    detailed_analysis="This provider could not generate an explanation for this image.",
-                    processing_time_ms=0,
-                    error=str(exc),
-                )
-
-        results = await asyncio.gather(*[run_provider(p) for p in providers])
-        explanations = dict(results)
+                for p in providers
+            ]
+        )
+        for pid, data in raw_results:
+            explanations[pid] = StudyExplanation(**data)
     else:
-        # No VLM factory — return mock placeholders so the study UI still works
         for pid in ["openai", "google", "anthropic"]:
             explanations[pid] = StudyExplanation(
                 provider=pid,
@@ -222,11 +242,9 @@ async def analyze_for_study(file: UploadFile = File(...)):
 
 @router.post("/results")
 async def save_study_results(results: StudyResults):
-    """
-    Append one participant's anonymised results to the JSONL log file.
-    """
+    """Append one participant's anonymised results to the JSONL log file."""
     entry = results.model_dump()
-    entry["saved_at"] = datetime.now(timezone.utc).isoformat()
+    entry["saved_at"] = datetime.now(datetime.UTC).isoformat()
 
     with open(_results_file(), "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
@@ -243,12 +261,10 @@ async def precompute_study_analyses():
     Heatmap images are saved to desktop/public/quiz-heatmaps/ so they are served
     by the Vite dev server as static assets.
 
-    Run this once before starting participant sessions. Participants will then
-    load the precomputed JSON instantly instead of waiting for live inference.
+    Run once before participant sessions start.
     """
-    from PIL import Image
-    import shutil
     import torch
+    from PIL import Image
 
     from app.api.detect import (
         class_names,
@@ -282,7 +298,6 @@ async def precompute_study_analyses():
             image_bytes = img_path.read_bytes()
             image_tensor = transform(image).unsqueeze(0).to(device)
 
-            # Detection
             with torch.no_grad():
                 outputs = model(image_tensor)
                 probabilities = torch.softmax(outputs, dim=1)
@@ -295,7 +310,6 @@ async def precompute_study_analyses():
             target_class = int(predicted.item())
             classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-            # GradCAM — save to permanent location in frontend public dir
             heatmap_bytes, _, evidence_regions, crops = _run_gradcam(
                 image, image_tensor, target_class
             )
@@ -303,11 +317,9 @@ async def precompute_study_analyses():
             heatmap_public_url: str | None = None
             if heatmap_bytes:
                 heatmap_filename = f"heatmap_{img_id}.jpg"
-                heatmap_path = heatmaps_dir / heatmap_filename
-                heatmap_path.write_bytes(heatmap_bytes)
+                (heatmaps_dir / heatmap_filename).write_bytes(heatmap_bytes)
                 heatmap_public_url = f"/quiz-heatmaps/{heatmap_filename}"
 
-            # Face category mapping
             region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
             region_categories = []
             if face_category_mapper is not None and crops:
@@ -333,40 +345,22 @@ async def precompute_study_analyses():
                 region_categories=region_categories,
             )
 
-            # All VLM providers in parallel
-            async def run_provider(provider_id: str) -> tuple[str, dict]:
-                try:
-                    vlm_result = await vlm_factory.generate_explanation(
-                        provider_id=provider_id,
-                        image_bytes=image_bytes,
-                        heatmap_bytes=heatmap_bytes if heatmap_public_url else image_bytes,
-                        detection=detection_context,
-                        gradcam_available=heatmap_public_url is not None,
-                    )
-                    return provider_id, {
-                        "provider": vlm_result.provider,
-                        "model": vlm_result.model,
-                        "summary": vlm_result.summary,
-                        "detailed_analysis": vlm_result.detailed_analysis,
-                        "technical_notes": vlm_result.technical_notes,
-                        "processing_time_ms": vlm_result.processing_time_ms,
-                        "error": None,
-                    }
-                except Exception as exc:
-                    logger.warning("VLM %s failed for image %s: %s", provider_id, img_id, exc)
-                    return provider_id, {
-                        "provider": provider_id,
-                        "model": "unavailable",
-                        "summary": "Explanation unavailable for this provider.",
-                        "detailed_analysis": "This provider could not generate an explanation.",
-                        "technical_notes": None,
-                        "processing_time_ms": 0,
-                        "error": str(exc),
-                    }
-
             if vlm_factory is not None:
-                results = await asyncio.gather(*[run_provider(p) for p in providers])
-                explanations = dict(results)
+                raw_results = await asyncio.gather(
+                    *[
+                        _run_vlm_provider(
+                            p,
+                            vlm_factory,
+                            image_bytes,
+                            heatmap_bytes,
+                            heatmap_public_url is not None,
+                            detection_context,
+                            img_id,
+                        )
+                        for p in providers
+                    ]
+                )
+                explanations = dict(raw_results)
             else:
                 explanations = {
                     p: {
@@ -394,7 +388,7 @@ async def precompute_study_analyses():
             analyses[img_id] = {"error": str(exc)}
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(datetime.UTC).isoformat(),
         "analyses": analyses,
     }
 
@@ -411,15 +405,13 @@ async def precompute_study_analyses():
 
 @router.get("/results")
 async def list_study_results():
-    """
-    Retrieve all saved participant results (researcher endpoint).
-    """
+    """Retrieve all saved participant results (researcher endpoint)."""
     path = _results_file()
     if not path.exists():
         return {"results": [], "count": 0}
 
     results = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
