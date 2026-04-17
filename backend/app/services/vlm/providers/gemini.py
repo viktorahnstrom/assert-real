@@ -21,7 +21,7 @@ from app.services.vlm.prompt_builder import (
 logger = logging.getLogger(__name__)
 
 GEMINI_PRICING = {
-    "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+    "gemini-2.5-flash": {"input": 0.10, "output": 0.40},
     "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
     "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
     "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
@@ -41,6 +41,8 @@ class GeminiProvider(BaseVLMProvider):
         detection: DetectionContext,
         gradcam_available: bool = True,
     ) -> VLMExplanation:
+        import asyncio
+
         start_time = time.time()
 
         system_prompt = (
@@ -56,7 +58,10 @@ class GeminiProvider(BaseVLMProvider):
             if gradcam_available:
                 contents.append(types.Part.from_bytes(data=heatmap_bytes, mime_type="image/png"))
 
-            response = self._client.models.generate_content(
+            # Run the synchronous SDK call in a thread so it doesn't block the event loop
+            # (important when called in parallel with other providers via asyncio.gather)
+            response = await asyncio.to_thread(
+                self._client.models.generate_content,
                 model=self._model,
                 contents=contents,
                 config=types.GenerateContentConfig(

@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import detect, vlm
 from app.db import get_postgrest_client
-from app.routers import analyses, auth, images
+from app.routers import analyses, auth, images, study
 from app.services.vlm import VLMProviderFactory, get_vlm_config
 
 
@@ -105,6 +105,7 @@ app.include_router(auth.router)
 app.include_router(images.router)
 app.include_router(detect.router, prefix="/api", tags=["detection"])
 app.include_router(analyses.router)
+app.include_router(study.router)
 app.include_router(vlm.router, prefix="/api", tags=["vlm"])
 
 

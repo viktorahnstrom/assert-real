@@ -1,0 +1,425 @@
+"""
+Study routes for XADE user study.
+
+Runs deepfake detection + all three VLM providers in parallel for Phase 2
+explanation comparison. Also persists anonymised participant results.
+"""
+
+import asyncio
+import io
+import json
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+import tempfile
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/study", tags=["Study"])
+
+# Path to the Vite public directory where precomputed assets are served
+_FRONTEND_PUBLIC = Path(__file__).parent.parent.parent.parent / "desktop" / "public"
+
+# Fixed image list — must match ALL_IMAGES in DeepfakeTest.tsx
+_STUDY_IMAGES = [
+    {"id": 1,  "filename": "Fake1.jpg", "label": "fake"},
+    {"id": 2,  "filename": "Fake2.jpg", "label": "fake"},
+    {"id": 3,  "filename": "Fake3.jpg", "label": "fake"},
+    {"id": 4,  "filename": "Fake4.jpg", "label": "fake"},
+    {"id": 5,  "filename": "Fake5.jpg", "label": "fake"},
+    {"id": 6,  "filename": "Fake6.jpg", "label": "fake"},
+    {"id": 7,  "filename": "Real1.jpg", "label": "real"},
+    {"id": 8,  "filename": "Real2.jpg", "label": "real"},
+    {"id": 9,  "filename": "Real3.jpg", "label": "real"},
+    {"id": 10, "filename": "Real4.jpg", "label": "real"},
+    {"id": 11, "filename": "Real5.jpg", "label": "real"},
+    {"id": 12, "filename": "Real6.jpg", "label": "real"},
+]
+
+# ============================================
+# Models
+# ============================================
+
+class StudyExplanation(BaseModel):
+    provider: str
+    model: str
+    summary: str
+    detailed_analysis: str
+    technical_notes: str | None = None
+    processing_time_ms: int
+    error: str | None = None
+
+
+class StudyAnalysisResponse(BaseModel):
+    deepfake_score: float
+    classification: str
+    confidence: float
+    gradcam_url: str | None = None
+    explanations: dict[str, StudyExplanation]
+
+
+class StudyResults(BaseModel):
+    participant_id: str
+    self_confidence_rating: int
+    baseline_accuracy: float
+    total_images: int
+    correct_count: int
+    incorrect_count: int
+    explanation_answers: list[dict]
+    trust_rating: int
+    willingness_to_use: str   # "yes" | "no" | "maybe"
+    comments: str
+    completed_at: str
+
+
+# ============================================
+# Helpers
+# ============================================
+
+def _results_file() -> Path:
+    results_dir = Path(tempfile.gettempdir()) / "xade_study_results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    return results_dir / "study_results.jsonl"
+
+
+# ============================================
+# Routes
+# ============================================
+
+@router.post("/analyze", response_model=StudyAnalysisResponse)
+async def analyze_for_study(file: UploadFile = File(...)):
+    """
+    Run deepfake detection + GradCAM + all VLM providers in parallel.
+    Used by the user study Phase 2 to generate the three anonymised explanations.
+    """
+    from PIL import Image
+    import torch
+
+    from app.api.detect import (
+        class_names,
+        device,
+        face_category_mapper,
+        model,
+        transform,
+        vlm_factory,
+    )
+    from app.routers.analyses import _run_gradcam
+    from app.services.categories import FACE_CATEGORIES
+    from app.services.vlm import DetectionContext
+
+    if model is None:
+        raise HTTPException(status_code=503, detail="Detection model not loaded")
+
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image_tensor = transform(image).unsqueeze(0).to(device)
+
+    # Detection
+    with torch.no_grad():
+        outputs = model(image_tensor)
+        probabilities = torch.softmax(outputs, dim=1)
+        confidence, predicted = probabilities.max(1)
+
+    prediction = class_names[predicted.item()]
+    confidence_value = float(confidence.item())
+    fake_prob = float(probabilities[0][0].cpu().numpy())
+    real_prob = float(probabilities[0][1].cpu().numpy())
+    target_class = int(predicted.item())
+    classification = prediction if prediction in ("fake", "real") else "uncertain"
+
+    # GradCAM
+    heatmap_bytes, gradcam_url, evidence_regions, crops = _run_gradcam(
+        image, image_tensor, target_class
+    )
+
+    # Face category mapping
+    region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
+    region_categories = []
+    if face_category_mapper is not None and crops:
+        try:
+            categorized = face_category_mapper.map_regions(image, crops)
+            region_categories = [r.to_region_with_category() for r in categorized]
+            for ev_region, cat in zip(evidence_regions, categorized, strict=True):
+                ev_region["category_id"] = cat.category_id
+                ev_region["category_label"] = cat.category_label
+                face_cat = FACE_CATEGORIES.get(cat.category_id)
+                ev_region["common_artifacts"] = (
+                    list(face_cat.common_artifacts[:3]) if face_cat else []
+                )
+        except Exception as exc:
+            logger.warning("Face category mapping failed in study: %s", exc)
+
+    detection_context = DetectionContext(
+        classification=prediction,
+        confidence=confidence_value,
+        model_used="EfficientNet-B4",
+        probabilities={"fake": fake_prob, "real": real_prob},
+        region_labels=region_labels,
+        region_categories=region_categories,
+    )
+
+    # Run all three VLM providers in parallel
+    explanations: dict[str, StudyExplanation] = {}
+
+    if vlm_factory is not None:
+        providers = ["openai", "google", "anthropic"]
+
+        async def run_provider(provider_id: str) -> tuple[str, StudyExplanation]:
+            try:
+                vlm_result = await vlm_factory.generate_explanation(
+                    provider_id=provider_id,
+                    image_bytes=image_bytes,
+                    heatmap_bytes=heatmap_bytes if gradcam_url else image_bytes,
+                    detection=detection_context,
+                    gradcam_available=gradcam_url is not None,
+                )
+                return provider_id, StudyExplanation(
+                    provider=vlm_result.provider,
+                    model=vlm_result.model,
+                    summary=vlm_result.summary,
+                    detailed_analysis=vlm_result.detailed_analysis,
+                    technical_notes=vlm_result.technical_notes,
+                    processing_time_ms=vlm_result.processing_time_ms,
+                )
+            except Exception as exc:
+                logger.warning("VLM provider %s failed in study: %s", provider_id, exc)
+                return provider_id, StudyExplanation(
+                    provider=provider_id,
+                    model="unavailable",
+                    summary="Explanation unavailable for this provider.",
+                    detailed_analysis="This provider could not generate an explanation for this image.",
+                    processing_time_ms=0,
+                    error=str(exc),
+                )
+
+        results = await asyncio.gather(*[run_provider(p) for p in providers])
+        explanations = dict(results)
+    else:
+        # No VLM factory — return mock placeholders so the study UI still works
+        for pid in ["openai", "google", "anthropic"]:
+            explanations[pid] = StudyExplanation(
+                provider=pid,
+                model="mock",
+                summary="VLM service is not configured on this instance.",
+                detailed_analysis="No explanation could be generated because no VLM API keys are set.",
+                processing_time_ms=0,
+            )
+
+    return StudyAnalysisResponse(
+        deepfake_score=round(fake_prob, 4),
+        classification=classification,
+        confidence=confidence_value,
+        gradcam_url=gradcam_url,
+        explanations=explanations,
+    )
+
+
+@router.post("/results")
+async def save_study_results(results: StudyResults):
+    """
+    Append one participant's anonymised results to the JSONL log file.
+    """
+    entry = results.model_dump()
+    entry["saved_at"] = datetime.now(timezone.utc).isoformat()
+
+    with open(_results_file(), "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+
+    logger.info("Study result saved for participant %s", results.participant_id)
+    return {"status": "saved", "participant_id": results.participant_id}
+
+
+@router.post("/precompute")
+async def precompute_study_analyses():
+    """
+    One-time researcher endpoint: run detection + GradCAM + all VLM providers
+    for every study image and save results to desktop/public/study-analyses.json.
+    Heatmap images are saved to desktop/public/quiz-heatmaps/ so they are served
+    by the Vite dev server as static assets.
+
+    Run this once before starting participant sessions. Participants will then
+    load the precomputed JSON instantly instead of waiting for live inference.
+    """
+    from PIL import Image
+    import shutil
+    import torch
+
+    from app.api.detect import (
+        class_names,
+        device,
+        face_category_mapper,
+        model,
+        transform,
+        vlm_factory,
+    )
+    from app.routers.analyses import _run_gradcam
+    from app.services.categories import FACE_CATEGORIES
+    from app.services.vlm import DetectionContext
+
+    if model is None:
+        raise HTTPException(status_code=503, detail="Detection model not loaded")
+
+    heatmaps_dir = _FRONTEND_PUBLIC / "quiz-heatmaps"
+    heatmaps_dir.mkdir(parents=True, exist_ok=True)
+
+    analyses: dict[str, dict] = {}
+    providers = ["openai", "google", "anthropic"]
+
+    for img_meta in _STUDY_IMAGES:
+        img_id = str(img_meta["id"])
+        img_path = _FRONTEND_PUBLIC / "quiz-images" / img_meta["filename"]
+
+        logger.info("Precomputing image %s (%s)", img_id, img_meta["filename"])
+
+        try:
+            image = Image.open(img_path).convert("RGB")
+            image_bytes = img_path.read_bytes()
+            image_tensor = transform(image).unsqueeze(0).to(device)
+
+            # Detection
+            with torch.no_grad():
+                outputs = model(image_tensor)
+                probabilities = torch.softmax(outputs, dim=1)
+                confidence, predicted = probabilities.max(1)
+
+            prediction = class_names[predicted.item()]
+            confidence_value = float(confidence.item())
+            fake_prob = float(probabilities[0][0].cpu().numpy())
+            real_prob = float(probabilities[0][1].cpu().numpy())
+            target_class = int(predicted.item())
+            classification = prediction if prediction in ("fake", "real") else "uncertain"
+
+            # GradCAM — save to permanent location in frontend public dir
+            heatmap_bytes, _, evidence_regions, crops = _run_gradcam(
+                image, image_tensor, target_class
+            )
+
+            heatmap_public_url: str | None = None
+            if heatmap_bytes:
+                heatmap_filename = f"heatmap_{img_id}.jpg"
+                heatmap_path = heatmaps_dir / heatmap_filename
+                heatmap_path.write_bytes(heatmap_bytes)
+                heatmap_public_url = f"/quiz-heatmaps/{heatmap_filename}"
+
+            # Face category mapping
+            region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
+            region_categories = []
+            if face_category_mapper is not None and crops:
+                try:
+                    categorized = face_category_mapper.map_regions(image, crops)
+                    region_categories = [r.to_region_with_category() for r in categorized]
+                    for ev_region, cat in zip(evidence_regions, categorized, strict=True):
+                        ev_region["category_id"] = cat.category_id
+                        ev_region["category_label"] = cat.category_label
+                        face_cat = FACE_CATEGORIES.get(cat.category_id)
+                        ev_region["common_artifacts"] = (
+                            list(face_cat.common_artifacts[:3]) if face_cat else []
+                        )
+                except Exception as exc:
+                    logger.warning("Face category mapping failed for %s: %s", img_id, exc)
+
+            detection_context = DetectionContext(
+                classification=prediction,
+                confidence=confidence_value,
+                model_used="EfficientNet-B4",
+                probabilities={"fake": fake_prob, "real": real_prob},
+                region_labels=region_labels,
+                region_categories=region_categories,
+            )
+
+            # All VLM providers in parallel
+            async def run_provider(provider_id: str) -> tuple[str, dict]:
+                try:
+                    vlm_result = await vlm_factory.generate_explanation(
+                        provider_id=provider_id,
+                        image_bytes=image_bytes,
+                        heatmap_bytes=heatmap_bytes if heatmap_public_url else image_bytes,
+                        detection=detection_context,
+                        gradcam_available=heatmap_public_url is not None,
+                    )
+                    return provider_id, {
+                        "provider": vlm_result.provider,
+                        "model": vlm_result.model,
+                        "summary": vlm_result.summary,
+                        "detailed_analysis": vlm_result.detailed_analysis,
+                        "technical_notes": vlm_result.technical_notes,
+                        "processing_time_ms": vlm_result.processing_time_ms,
+                        "error": None,
+                    }
+                except Exception as exc:
+                    logger.warning("VLM %s failed for image %s: %s", provider_id, img_id, exc)
+                    return provider_id, {
+                        "provider": provider_id,
+                        "model": "unavailable",
+                        "summary": "Explanation unavailable for this provider.",
+                        "detailed_analysis": "This provider could not generate an explanation.",
+                        "technical_notes": None,
+                        "processing_time_ms": 0,
+                        "error": str(exc),
+                    }
+
+            if vlm_factory is not None:
+                results = await asyncio.gather(*[run_provider(p) for p in providers])
+                explanations = dict(results)
+            else:
+                explanations = {
+                    p: {
+                        "provider": p, "model": "mock",
+                        "summary": "VLM not configured.",
+                        "detailed_analysis": "No API keys set.",
+                        "technical_notes": None, "processing_time_ms": 0, "error": None,
+                    }
+                    for p in providers
+                }
+
+            analyses[img_id] = {
+                "deepfake_score": round(fake_prob, 4),
+                "classification": classification,
+                "confidence": round(confidence_value, 4),
+                "gradcam_url": heatmap_public_url,
+                "explanations": explanations,
+            }
+
+        except Exception as exc:
+            logger.error("Failed to precompute image %s: %s", img_id, exc)
+            analyses[img_id] = {"error": str(exc)}
+
+    output = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "analyses": analyses,
+    }
+
+    output_path = _FRONTEND_PUBLIC / "study-analyses.json"
+    output_path.write_text(json.dumps(output, indent=2), encoding="utf-8")
+    logger.info("Precomputed analyses saved to %s", output_path)
+
+    return {
+        "status": "done",
+        "images_processed": len(analyses),
+        "output_path": str(output_path),
+    }
+
+
+@router.get("/results")
+async def list_study_results():
+    """
+    Retrieve all saved participant results (researcher endpoint).
+    """
+    path = _results_file()
+    if not path.exists():
+        return {"results": [], "count": 0}
+
+    results = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    results.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+
+    return {"results": results, "count": len(results)}
