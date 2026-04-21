@@ -20,13 +20,20 @@ overlap_confidence 0.0.
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import mediapipe as mp
 import numpy as np
+from mediapipe.tasks import python as mp_python
+from mediapipe.tasks.python import vision as mp_vision
 from PIL import Image
 
 from app.services.categories import FACE_CATEGORIES, get_category_for_label
 from app.services.vlm.base import RegionWithCategory
+
+# Resolve model path relative to this file so it works both locally
+# (backend/models/) and inside Docker (/app/models/).
+_MODEL_PATH = Path(__file__).parent.parent.parent / "models" / "face_landmarker.task"
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +103,21 @@ class FaceCategoryMapper:
     """
 
     def __init__(self) -> None:
-        self._face_mesh = mp.solutions.face_mesh.FaceMesh(
-            static_image_mode=True,
-            max_num_faces=1,
-            refine_landmarks=False,
-            min_detection_confidence=0.5,
+        if not _MODEL_PATH.exists():
+            raise FileNotFoundError(
+                f"MediaPipe face landmarker model not found at {_MODEL_PATH}. "
+                "Download it with: curl -L -o backend/models/face_landmarker.task "
+                "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+            )
+        options = mp_vision.FaceLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=str(_MODEL_PATH)),
+            running_mode=mp_vision.RunningMode.IMAGE,
+            num_faces=1,
+            min_face_detection_confidence=0.5,
+            output_face_blendshapes=False,
+            output_facial_transformation_matrixes=False,
         )
+        self._landmarker = mp_vision.FaceLandmarker.create_from_options(options)
         self._landmark_to_category_id: dict[int, str] = self._build_landmark_map()
         logger.info(
             "FaceCategoryMapper initialised (%d landmark mappings)",
@@ -120,6 +136,40 @@ class FaceCategoryMapper:
             for idx in cat.landmark_indices:
                 mapping[idx] = cat_id
         return mapping
+
+    def detect_face_bbox(
+        self,
+        image: Image.Image,
+        padding_pct: float = 0.05,
+    ) -> tuple[int, int, int, int] | None:
+        """Return a padded bounding box around the detected face.
+
+        Args:
+            image: PIL image to run landmark detection on.
+            padding_pct: Fraction of image dimensions to pad outward from the
+                tight landmark bbox (default 5%).
+
+        Returns:
+            (x1, y1, x2, y2) in pixel coordinates, clipped to image bounds,
+            or None if no face was detected.
+        """
+        landmarks_px = self._detect_landmarks(image)
+        if landmarks_px is None:
+            return None
+
+        width, height = image.size
+        xs = [lm[0] for lm in landmarks_px]
+        ys = [lm[1] for lm in landmarks_px]
+
+        pad_x = int(width * padding_pct)
+        pad_y = int(height * padding_pct)
+
+        x1 = max(0, min(xs) - pad_x)
+        y1 = max(0, min(ys) - pad_y)
+        x2 = min(width, max(xs) + pad_x)
+        y2 = min(height, max(ys) + pad_y)
+
+        return (x1, y1, x2, y2)
 
     def map_regions(
         self,
@@ -151,7 +201,7 @@ class FaceCategoryMapper:
         self,
         image: Image.Image,
     ) -> list[tuple[int, int]] | None:
-        """Run MediaPipe Face Mesh and return pixel-space landmark coordinates.
+        """Run MediaPipe Face Landmarker and return pixel-space landmark coordinates.
 
         Args:
             image: Input PIL image (any mode; converted to RGB internally).
@@ -161,14 +211,15 @@ class FaceCategoryMapper:
             when no face is detected.
         """
         rgb = np.array(image.convert("RGB"))
-        result = self._face_mesh.process(rgb)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        result = self._landmarker.detect(mp_image)
 
-        if not result.multi_face_landmarks:
+        if not result.face_landmarks:
             return None
 
         width, height = image.size
-        face = result.multi_face_landmarks[0]
-        return [(int(lm.x * width), int(lm.y * height)) for lm in face.landmark]
+        face = result.face_landmarks[0]
+        return [(int(lm.x * width), int(lm.y * height)) for lm in face]
 
     def _categorize_region(
         self,
@@ -250,8 +301,8 @@ class FaceCategoryMapper:
         )
 
     def close(self) -> None:
-        """Release MediaPipe Face Mesh resources."""
-        self._face_mesh.close()
+        """Release MediaPipe Face Landmarker resources."""
+        self._landmarker.close()
 
     def __enter__(self) -> "FaceCategoryMapper":
         return self

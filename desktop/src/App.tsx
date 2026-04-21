@@ -36,6 +36,7 @@ import {
   type ImageRecord,
   type ApiError,
   type ApiMode,
+  type ExplanationResult,
 } from '@/lib/api';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import AuthPage from '@/components/auth/AuthPage';
@@ -187,19 +188,25 @@ function DevToolbar({
           <div>
             <p className="mb-1.5 text-xs font-medium text-xade-charcoal/70">VLM Provider</p>
             <div className="grid grid-cols-2 gap-1.5">
-              {(['openai', 'google', 'mock', 'none'] as const).map((provider) => (
+              {(
+                [
+                  { id: 'openai', label: 'OpenAI' },
+                  { id: 'google', label: 'Google' },
+                  { id: 'rule_based', label: 'Rule-Based' },
+                  { id: 'mock', label: 'Mock' },
+                  { id: 'none', label: 'None' },
+                ] as const
+              ).map(({ id, label }) => (
                 <button
-                  key={provider}
-                  onClick={() => onVlmProviderChange(provider)}
+                  key={id}
+                  onClick={() => onVlmProviderChange(id)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    vlmProvider === provider
+                    vlmProvider === id
                       ? 'bg-xade-blue text-white'
                       : 'bg-xade-charcoal/5 text-xade-charcoal/60 hover:bg-xade-charcoal/10'
                   }`}
                 >
-                  {provider === 'none'
-                    ? 'None'
-                    : provider.charAt(0).toUpperCase() + provider.slice(1)}
+                  {label}
                 </button>
               ))}
             </div>
@@ -928,7 +935,15 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
-function TechnicalDetails({ result, isFake }: { result: DetectionResult; isFake: boolean }) {
+function TechnicalDetails({
+  result,
+  isFake,
+  explanation,
+}: {
+  result: DetectionResult;
+  isFake: boolean;
+  explanation: ExplanationResult | null;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -997,13 +1012,22 @@ function TechnicalDetails({ result, isFake }: { result: DetectionResult; isFake:
             </div>
           )}
 
-          {result.explanation?.technical_notes && (
+          {explanation?.detailed_analysis && (
+            <div className="mt-4 border-t border-xade-charcoal/10 pt-4">
+              <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">Full Analysis</p>
+              <p className="mt-2 text-sm leading-relaxed text-xade-charcoal/70">
+                {explanation.detailed_analysis}
+              </p>
+            </div>
+          )}
+
+          {explanation?.technical_notes && (
             <div className="mt-4 border-t border-xade-charcoal/10 pt-4">
               <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">
                 Technical Notes
               </p>
               <p className="mt-2 text-sm leading-relaxed text-xade-charcoal/70">
-                {result.explanation.technical_notes}
+                {explanation.technical_notes}
               </p>
             </div>
           )}
@@ -1040,62 +1064,42 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         Back
       </button>
 
-      {/* Top row: Verdict + Summary */}
-      <div className="mb-4 grid grid-cols-2 gap-4">
-        {/* Verdict */}
-        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-6">
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-widest ${isFake ? 'text-red-400' : 'text-emerald-500'}`}
-          >
-            {isFake ? 'Deepfake detected' : 'Authentic'}
-          </p>
-          <p
-            className={`mt-1 text-6xl font-bold tabular-nums leading-none ${isFake ? 'text-red-500' : 'text-emerald-500'}`}
-          >
-            {confidencePct}%
-          </p>
-          <p className="mt-1 text-sm text-xade-charcoal/40">confidence</p>
-          <div className="mt-5">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-xade-charcoal/8">
+      {/* Row 1: Verdict */}
+      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-6">
+        <div className="flex items-center gap-8">
+          <div className="shrink-0">
+            <p
+              className={`text-[11px] font-semibold uppercase tracking-widest ${isFake ? 'text-red-400' : 'text-emerald-500'}`}
+            >
+              {isFake ? 'Deepfake detected' : 'Authentic'}
+            </p>
+            <p
+              className={`mt-0.5 text-6xl font-bold tabular-nums leading-none ${isFake ? 'text-red-500' : 'text-emerald-500'}`}
+            >
+              {confidencePct}%
+            </p>
+            <p className="mt-1 text-sm text-xade-charcoal/40">confidence</p>
+          </div>
+          <div className="flex-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-xade-charcoal/8">
               <div
                 className={`h-full rounded-full ${isFake ? 'bg-red-400' : 'bg-emerald-400'}`}
                 style={{ width: `${fakePct}%` }}
               />
             </div>
-            <div className="mt-2 flex justify-between text-xs text-xade-charcoal/35">
+            <div className="mt-1.5 flex justify-between text-xs text-xade-charcoal/35">
               <span>{fakePct}% fake</span>
               <span>{realPct}% real</span>
             </div>
           </div>
         </div>
-
-        {/* Summary */}
-        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-6">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
-            Summary
-          </p>
-          {explanation ? (
-            <>
-              <p className="flex-1 text-sm leading-relaxed text-xade-charcoal/70">
-                {explanation.summary}
-              </p>
-              <p className="mt-4 text-xs text-xade-charcoal/30">
-                {explanation.model} · {(explanation.processing_time_ms / 1000).toFixed(1)}s
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-xade-charcoal/35">
-              No explanation available. Select a VLM provider in dev settings.
-            </p>
-          )}
-        </div>
       </div>
 
-      {/* Middle row: Visual Analysis + Analysis */}
+      {/* Row 2: Images + explanation side by side */}
       <div className="mb-4 grid grid-cols-2 items-stretch gap-4">
-        {/* Visual Analysis */}
-        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-6">
-          <p className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
+        {/* Images */}
+        <div className="rounded-2xl border border-black/[0.06] bg-white p-5">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
             Visual Analysis
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -1125,7 +1129,7 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
             <div>
               <p className="mb-1.5 text-xs text-xade-charcoal/40">
                 Heatmap
-                <span className="ml-1 text-xade-charcoal/25">· red = high focus</span>
+                <span className="ml-1 text-xade-charcoal/25">· red = focus</span>
               </p>
               {result.gradcam_heatmap_url ? (
                 <div
@@ -1154,108 +1158,117 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
         </div>
 
-        {/* Analysis */}
-        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-6">
+        {/* Explanation — merged summary + detailed */}
+        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-5">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
-            Analysis
+            Explanation
           </p>
           {explanation ? (
-            <p className="text-sm leading-relaxed text-xade-charcoal/70">
-              {explanation.detailed_analysis}
+            <p className="flex-1 text-sm leading-relaxed text-xade-charcoal/70">
+              {explanation.summary}
+              {explanation.detailed_analysis ? ' ' + explanation.detailed_analysis : ''}
             </p>
           ) : (
             <p className="text-sm text-xade-charcoal/35">
-              Detailed analysis is not available. Enable a VLM provider in dev settings.
+              No explanation available. Select a VLM provider in dev settings.
             </p>
           )}
         </div>
       </div>
 
-      {/* Region Analysis */}
-      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-6">
-        <div className="mb-5 flex items-baseline justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
-            Region Analysis
-          </p>
-          {result.evidence_regions && result.evidence_regions.length > 0 && (
+      {/* Row 3: Facial Regions — stacked list */}
+      {result.evidence_regions && result.evidence_regions.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-6">
+          <div className="mb-4 flex items-baseline justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
+              Facial Regions
+            </p>
             <span className="text-xs text-xade-charcoal/30">
-              Top {Math.min(result.evidence_regions.length, 3)} by activation
+              {Math.min(result.evidence_regions.length, 3)} regions · by activation
             </span>
-          )}
-        </div>
-        {result.evidence_regions && result.evidence_regions.length > 0 ? (
+          </div>
+
           <div className="flex flex-col divide-y divide-black/[0.04]">
-            {result.evidence_regions.slice(0, 3).map((region, idx) => (
-              <div key={idx} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-                {/* Crop thumbnail */}
-                <div
-                  className="h-16 w-16 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
-                  onClick={() => setLightboxSrc(region.url)}
-                >
-                  <img
-                    src={region.url}
-                    alt={region.label}
-                    className="h-full w-full object-cover transition-opacity hover:opacity-75"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
+            {result.evidence_regions.slice(0, 3).map((region, idx) => {
+              const actPct = Math.round(region.activation_score * 100);
+              const suspicious = isFake && region.activation_score > 0.5;
+              const verdictLabel = isFake
+                ? region.activation_score > 0.5
+                  ? 'Suspicious'
+                  : 'Low signal'
+                : 'Looks natural';
+              const verdictStyle = suspicious
+                ? 'bg-red-50 text-red-500'
+                : isFake
+                  ? 'bg-orange-50 text-orange-400'
+                  : 'bg-emerald-50 text-emerald-600';
 
-                {/* Content */}
-                <div className="flex flex-1 flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    {region.category_label && (
-                      <span className="rounded-full bg-xade-blue/8 px-2 py-0.5 text-[11px] font-medium text-xade-blue">
-                        {region.category_label}
-                      </span>
-                    )}
-                    <span className="text-sm font-medium text-xade-charcoal/80">
-                      {region.label}
-                    </span>
-                  </div>
-
-                  {region.explanation && (
-                    <p className="text-xs leading-relaxed text-xade-charcoal/55">
-                      {region.explanation}
-                    </p>
-                  )}
-
-                  {region.common_artifacts && region.common_artifacts.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {region.common_artifacts.map((artifact, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full bg-xade-charcoal/5 px-2 py-0.5 text-[11px] text-xade-charcoal/45"
-                        >
-                          {artifact}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Activation */}
-                <div className="flex shrink-0 flex-col items-end gap-1.5 pt-0.5">
-                  <span className="text-sm font-semibold tabular-nums text-xade-charcoal/60">
-                    {Math.round(region.activation_score * 100)}%
-                  </span>
-                  <div className="h-1 w-14 overflow-hidden rounded-full bg-xade-charcoal/10">
-                    <div
-                      className="h-full rounded-full bg-xade-charcoal/25"
-                      style={{ width: `${Math.round(region.activation_score * 100)}%` }}
+              return (
+                <div key={idx} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                  {/* Zoomed crop */}
+                  <div
+                    className="h-24 w-24 shrink-0 cursor-zoom-in overflow-hidden rounded-xl border border-black/[0.06]"
+                    onClick={() => setLightboxSrc(region.url)}
+                  >
+                    <img
+                      src={region.url}
+                      alt={region.label}
+                      className="h-full w-full object-cover transition-opacity hover:opacity-75"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-xade-charcoal/35">No high-activation regions detected.</p>
-        )}
-      </div>
 
-      <TechnicalDetails result={result} isFake={isFake} />
+                  {/* Content */}
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {region.category_label && (
+                        <span className="rounded-full bg-xade-blue/8 px-2 py-0.5 text-[11px] font-medium text-xade-blue">
+                          {region.category_label}
+                        </span>
+                      )}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${verdictStyle}`}
+                      >
+                        {verdictLabel}
+                      </span>
+                    </div>
+
+                    <p className="text-sm font-medium text-xade-charcoal/80">{region.label}</p>
+
+                    {region.explanation ? (
+                      <p className="text-xs leading-relaxed text-xade-charcoal/60">
+                        {region.explanation}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-xade-charcoal/35">
+                        No region-level explanation available.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Activation */}
+                  <div className="flex shrink-0 flex-col items-end gap-1.5 pt-0.5">
+                    <span className="text-sm font-semibold tabular-nums text-xade-charcoal/60">
+                      {actPct}%
+                    </span>
+                    <div className="h-1 w-16 overflow-hidden rounded-full bg-xade-charcoal/8">
+                      <div
+                        className={`h-full rounded-full ${suspicious ? 'bg-red-400' : 'bg-xade-charcoal/20'}`}
+                        style={{ width: `${actPct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-xade-charcoal/30">activation</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <TechnicalDetails result={result} isFake={isFake} explanation={explanation} />
     </div>
   );
 }
@@ -1277,9 +1290,8 @@ function AuthenticatedApp() {
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
 
-  function loadHistory(userId: string) {
-    console.log('[XADE] loadHistory for user:', userId);
-    setHistoryLoading(true);
+  function loadHistory(userId: string, showLoading = false) {
+    if (showLoading) setHistoryLoading(true);
     Promise.all([
       fetchUserAnalyses(userId).then(setAnalyses),
       fetchUserImages(userId).then((images) => {
@@ -1295,7 +1307,7 @@ function AuthenticatedApp() {
   }
 
   useEffect(() => {
-    if (user?.id) loadHistory(user.id);
+    if (user?.id) loadHistory(user.id, true);
     else setHistoryLoading(false);
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1305,6 +1317,7 @@ function AuthenticatedApp() {
     setSelectedAnalysisId(null);
     setBackToView('upload');
     setView('result');
+    // Refresh history in background without clearing the existing list
     if (user?.id) loadHistory(user.id);
   }
 
@@ -1355,7 +1368,7 @@ function AuthenticatedApp() {
             loading={historyLoading}
             onNewAnalysis={handleNewAnalysis}
             onSelectAnalysis={handleSelectAnalysis}
-            onRefresh={() => user?.id && loadHistory(user.id)}
+            onRefresh={() => user?.id && loadHistory(user.id, true)}
           />
         ) : view === 'statistics' ? (
           <StatisticsView analyses={analyses} loading={historyLoading} />
