@@ -176,9 +176,7 @@ def build_explanation_prompt(
     crop_image_start = 3 if gradcam_available else 2
     if gradcam_available:
         if region_count > 0:
-            crop_refs = ", ".join(
-                f"Image {crop_image_start + i}" for i in range(region_count)
-            )
+            crop_refs = ", ".join(f"Image {crop_image_start + i}" for i in range(region_count))
             image_instruction = (
                 f"Look at the GradCAM heatmap (Image 2) to see which areas the model focused on, "
                 f"then examine the zoomed-in region crops ({crop_refs}) to inspect each area up close. "

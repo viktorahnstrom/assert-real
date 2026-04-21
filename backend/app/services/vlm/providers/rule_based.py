@@ -28,6 +28,7 @@ from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInf
 # Activation pattern inference
 # ---------------------------------------------------------------------------
 
+
 def _infer_manipulation_type(regions: list) -> str:
     """
     Infer the likely manipulation type from the activation pattern across regions.
@@ -48,7 +49,7 @@ def _infer_manipulation_type(regions: list) -> str:
     ratio = top / second if second > 0 else float("inf")
 
     if ratio >= 2.0:
-        return "localised"   # one region dominates strongly
+        return "localised"  # one region dominates strongly
     if top >= 0.55 and second >= 0.45:
         return "distributed"  # multiple strong regions → generative artefacts
     return "ambiguous"
@@ -100,6 +101,7 @@ def _pick_artifact(category_id: str, confidence: float) -> str | None:
 # Summary
 # ---------------------------------------------------------------------------
 
+
 def _build_summary(detection: DetectionContext, top_region=None) -> str:
     pct = round(detection.confidence * 100)
     is_fake = detection.classification == "fake"
@@ -124,7 +126,9 @@ def _build_summary(detection: DetectionContext, top_region=None) -> str:
                 f"The detection model classified this image as authentic with {pct}% confidence."
             )
         elif detection.confidence >= 0.65:
-            opening = f"The detection model found no strong signs of manipulation ({pct}% confidence)."
+            opening = (
+                f"The detection model found no strong signs of manipulation ({pct}% confidence)."
+            )
         else:
             opening = (
                 f"The detection model returned a weak authenticity signal ({pct}% confidence). "
@@ -144,6 +148,7 @@ def _build_summary(detection: DetectionContext, top_region=None) -> str:
 # ---------------------------------------------------------------------------
 # Detailed analysis
 # ---------------------------------------------------------------------------
+
 
 def _build_detailed_analysis(detection: DetectionContext) -> str:
     is_fake = detection.classification == "fake"
@@ -175,8 +180,7 @@ def _build_detailed_analysis(detection: DetectionContext) -> str:
             )
 
         paragraphs.append(
-            f"The model assigned {pct}% probability to this image being manipulated. "
-            f"{pattern_note}"
+            f"The model assigned {pct}% probability to this image being manipulated. {pattern_note}"
         )
     else:
         paragraphs.append(
@@ -198,7 +202,11 @@ def _build_detailed_analysis(detection: DetectionContext) -> str:
             if i == 0:
                 rank_phrase = "The highest-activation region"
             elif i == 1:
-                ratio = round(top_score / region.activation_score, 1) if region.activation_score > 0 else "—"
+                ratio = (
+                    round(top_score / region.activation_score, 1)
+                    if region.activation_score > 0
+                    else "—"
+                )
                 rank_phrase = f"The second-ranked region ({ratio}× lower activation than the top)"
             else:
                 rank_phrase = "A third region"
@@ -265,6 +273,7 @@ def _build_detailed_analysis(detection: DetectionContext) -> str:
 # Per-region comments  (label → one-sentence explanation)
 # ---------------------------------------------------------------------------
 
+
 def _build_region_comments(detection: DetectionContext) -> dict[str, str]:
     """Return one focused sentence per region, keyed by region label.
 
@@ -313,6 +322,7 @@ def _build_region_comments(detection: DetectionContext) -> dict[str, str]:
 # Technical notes
 # ---------------------------------------------------------------------------
 
+
 def _build_technical_notes(detection: DetectionContext) -> str:
     fake_pct = round(detection.probabilities.get("fake", 0) * 100, 1)
     real_pct = round(detection.probabilities.get("real", 0) * 100, 1)
@@ -320,6 +330,7 @@ def _build_technical_notes(detection: DetectionContext) -> str:
     p_fake = detection.probabilities.get("fake", 0)
     if 0 < p_fake < 1:
         import math
+
         log_odds = round(math.log(p_fake / (1 - p_fake)), 3)
 
     regions = sorted(
@@ -349,10 +360,12 @@ def _build_technical_notes(detection: DetectionContext) -> str:
         )
 
         if len(regions) >= 2:
-            ratio = round(regions[0].activation_score / regions[1].activation_score, 2) if regions[1].activation_score > 0 else float("inf")
-            lines.append(
-                f"Activation dominance ratio (rank-1 / rank-2): {ratio:.2f}"
+            ratio = (
+                round(regions[0].activation_score / regions[1].activation_score, 2)
+                if regions[1].activation_score > 0
+                else float("inf")
             )
+            lines.append(f"Activation dominance ratio (rank-1 / rank-2): {ratio:.2f}")
 
     lines.append(
         "Saliency method: Gradient-weighted Class Activation Mapping (GradCAM) "
@@ -369,6 +382,7 @@ def _build_technical_notes(detection: DetectionContext) -> str:
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
+
 
 class RuleBasedProvider(BaseVLMProvider):
     """
