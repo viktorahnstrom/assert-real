@@ -36,13 +36,19 @@ class AnthropicProvider(BaseVLMProvider):
         heatmap_bytes: bytes,
         detection: DetectionContext,
         gradcam_available: bool = True,
+        region_image_bytes: list[bytes] | None = None,
     ) -> VLMExplanation:
         start_time = time.time()
+        regions = region_image_bytes or []
 
         system_prompt = (
             SYSTEM_PROMPT_WITH_GRADCAM if gradcam_available else SYSTEM_PROMPT_WITHOUT_GRADCAM
         )
-        user_prompt = build_explanation_prompt(detection, gradcam_available=gradcam_available)
+        user_prompt = build_explanation_prompt(
+            detection,
+            gradcam_available=gradcam_available,
+            region_count=len(regions),
+        )
 
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
@@ -65,6 +71,18 @@ class AnthropicProvider(BaseVLMProvider):
                         "type": "base64",
                         "media_type": "image/png",
                         "data": heatmap_b64,
+                    },
+                }
+            )
+        for region_bytes in regions:
+            region_b64 = base64.b64encode(region_bytes).decode("utf-8")
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": region_b64,
                     },
                 }
             )

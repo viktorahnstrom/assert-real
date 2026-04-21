@@ -90,6 +90,8 @@ class MockProvider(BaseVLMProvider):
         image_bytes: bytes,
         heatmap_bytes: bytes,
         detection: DetectionContext,
+        gradcam_available: bool = True,
+        region_image_bytes: list[bytes] | None = None,
     ) -> VLMExplanation:
         """Return a mock explanation based on the detection classification."""
 

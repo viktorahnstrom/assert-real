@@ -10,6 +10,7 @@ from typing import Optional
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import VLMConfig
 from app.services.vlm.providers.mock import MockProvider
+from app.services.vlm.providers.rule_based import RuleBasedProvider
 from app.services.vlm.usage_tracker import UsageLimitExceeded, UsageTracker
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class VLMProviderFactory:
         self._providers: dict[str, BaseVLMProvider] = {}
         self._usage_tracker = UsageTracker(config)
         self._providers["mock"] = MockProvider()
+        self._providers["rule_based"] = RuleBasedProvider()
 
     def get_provider(self, provider_id: Optional[str] = None) -> BaseVLMProvider:
         if provider_id is None:
@@ -66,9 +68,13 @@ class VLMProviderFactory:
         elif provider_id == "mock":
             return MockProvider()
 
+        elif provider_id == "rule_based":
+            return RuleBasedProvider()
+
         else:
             raise ValueError(
-                f"Unknown VLM provider: '{provider_id}'. Available: google, openai, anthropic, mock"
+                f"Unknown VLM provider: '{provider_id}'. "
+                f"Available: google, openai, anthropic, mock, rule_based"
             )
 
     async def generate_explanation(
@@ -78,6 +84,7 @@ class VLMProviderFactory:
         heatmap_bytes: bytes,
         detection: DetectionContext,
         gradcam_available: bool = True,
+        region_image_bytes: list[bytes] | None = None,
     ) -> VLMExplanation:
         """
         Generate an explanation using the specified provider.
@@ -88,6 +95,8 @@ class VLMProviderFactory:
             heatmap_bytes: GradCAM heatmap as bytes (only used when gradcam_available=True)
             detection: Detection results
             gradcam_available: Whether a real heatmap was generated
+            region_image_bytes: Zoomed-in crop images for each detected region,
+                                 sent to the VLM for close-up artifact inspection
         """
         resolved_id = provider_id or self._config.default_provider
 
@@ -117,6 +126,7 @@ class VLMProviderFactory:
             heatmap_bytes,
             detection,
             gradcam_available=gradcam_available,
+            region_image_bytes=region_image_bytes,
         )
 
         if resolved_id != "mock":
@@ -125,7 +135,10 @@ class VLMProviderFactory:
         return explanation
 
     def list_providers(self) -> list[ProviderInfo]:
-        providers = [MockProvider().get_provider_info()]
+        providers = [
+            MockProvider().get_provider_info(),
+            RuleBasedProvider().get_provider_info(),
+        ]
 
         if self._config.google.enabled:
             try:

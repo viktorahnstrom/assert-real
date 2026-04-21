@@ -73,6 +73,7 @@ real_vs_fake/
 *.pickle
 *.safetensors
 *.bin
+*.task
 
 # BUT keep checkpoint metadata (small JSON files)
 !backend/checkpoints/*.json

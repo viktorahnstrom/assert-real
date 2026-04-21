@@ -40,13 +40,19 @@ class GeminiProvider(BaseVLMProvider):
         heatmap_bytes: bytes,
         detection: DetectionContext,
         gradcam_available: bool = True,
+        region_image_bytes: list[bytes] | None = None,
     ) -> VLMExplanation:
         start_time = time.time()
+        regions = region_image_bytes or []
 
         system_prompt = (
             SYSTEM_PROMPT_WITH_GRADCAM if gradcam_available else SYSTEM_PROMPT_WITHOUT_GRADCAM
         )
-        user_prompt = build_explanation_prompt(detection, gradcam_available=gradcam_available)
+        user_prompt = build_explanation_prompt(
+            detection,
+            gradcam_available=gradcam_available,
+            region_count=len(regions),
+        )
 
         try:
             contents = [
@@ -55,6 +61,8 @@ class GeminiProvider(BaseVLMProvider):
             ]
             if gradcam_available:
                 contents.append(types.Part.from_bytes(data=heatmap_bytes, mime_type="image/png"))
+            for region_bytes in regions:
+                contents.append(types.Part.from_bytes(data=region_bytes, mime_type="image/jpeg"))
 
             response = self._client.models.generate_content(
                 model=self._model,

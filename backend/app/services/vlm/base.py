@@ -101,6 +101,7 @@ class BaseVLMProvider(ABC):
         heatmap_bytes: bytes,
         detection: DetectionContext,
         gradcam_available: bool = True,
+        region_image_bytes: list[bytes] | None = None,
     ) -> VLMExplanation:
         """
         Generate a structured explanation from the VLM provider.
@@ -112,6 +113,11 @@ class BaseVLMProvider(ABC):
             detection: The detection results to ground the explanation.
                        Includes region_labels from GradCAM evidence crops.
             gradcam_available: Whether heatmap_bytes contains a real heatmap.
+            region_image_bytes: Optional list of zoomed-in region crop images
+                                in the same order as detection.region_categories.
+                                When provided, each crop is sent to the VLM as
+                                a separate image so it can inspect the artifact
+                                up close rather than inferring from the full image.
 
         Returns:
             VLMExplanation with summary, detailed analysis, technical notes,

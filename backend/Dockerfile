@@ -34,11 +34,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     libgl1 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
 COPY app/ ./app/
 COPY pyproject.toml .
+
+# Download the MediaPipe Face Landmarker model (float16, ~6 MB)
+RUN mkdir -p /app/models && \
+    wget -q -O /app/models/face_landmarker.task \
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
 
 ENV HF_HOME=/app/.cache/huggingface
 

@@ -105,10 +105,16 @@ def _run_gradcam(
     image: Image.Image,
     image_tensor: torch.Tensor,
     target_class: int,
+    face_bbox: tuple[int, int, int, int] | None = None,
 ) -> tuple[bytes | None, str | None, list[dict], list[dict]]:
     """
     Run GradCAM on the image and return heatmap bytes for VLM, a local URL
     for the frontend, a list of saved evidence regions, and the raw crops.
+
+    Args:
+        face_bbox: Optional face bounding box (x1, y1, x2, y2) used to mask
+            background activations before region extraction. Regions that fall
+            entirely outside the face will never appear in results.
 
     Returns:
         Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops)
@@ -136,7 +142,7 @@ def _run_gradcam(
         overlay.save(buffer, format="PNG")
         heatmap_bytes = buffer.getvalue()
 
-        crops = generator.extract_evidence_regions(image, heatmap)
+        crops = generator.extract_evidence_regions(image, heatmap, face_bbox=face_bbox)
         evidence_regions = save_evidence_crops(crops)
 
         return heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops
@@ -316,11 +322,24 @@ async def create_analysis(request: AnalysisRequest):
             processing_time = int((time.time() - start_time) * 1000)
             classification = prediction if prediction in ("fake", "real") else "uncertain"
 
+            # Detect face bbox before GradCAM so background activations can
+            # be masked out. Falls back gracefully if no face is detected.
+            face_bbox = None
+            if face_category_mapper is not None:
+                try:
+                    face_bbox = face_category_mapper.detect_face_bbox(image)
+                    if face_bbox:
+                        logger.debug("Face bbox detected: %s", face_bbox)
+                    else:
+                        logger.debug("No face detected — GradCAM will run unmasked")
+                except Exception as e:
+                    logger.warning("Face bbox detection failed: %s", e)
+
             # Run GradCAM — returns None heatmap_bytes if it failed.
             # crops retains PIL image + bbox needed by the mapper;
             # evidence_regions has the saved URLs for the API response.
             heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops = _run_gradcam(
-                image, image_tensor, target_class
+                image, image_tensor, target_class, face_bbox=face_bbox
             )
 
             # gradcam_available drives both the VLM prompt and whether
@@ -363,12 +382,20 @@ async def create_analysis(request: AnalysisRequest):
                         region_categories=region_categories,
                     )
 
+                    # Convert region crop PIL images to JPEG bytes for VLM
+                    region_image_bytes = []
+                    for crop in crops:
+                        buf = io.BytesIO()
+                        crop["image"].save(buf, format="JPEG", quality=90)
+                        region_image_bytes.append(buf.getvalue())
+
                     vlm_explanation = await vlm_factory.generate_explanation(
                         provider_id=request.vlm_provider,
                         image_bytes=image_bytes,
                         heatmap_bytes=heatmap_bytes if gradcam_available else image_bytes,
                         detection=detection_context,
                         gradcam_available=gradcam_available,
+                        region_image_bytes=region_image_bytes if region_image_bytes else None,
                     )
 
                     print("VLM raw response:", vlm_explanation.raw_response)
