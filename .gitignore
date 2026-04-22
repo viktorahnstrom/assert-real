@@ -113,3 +113,9 @@ results/*.json
 # Accidental nested backend folder
 backend/backend/
 node_modules/.package-lock.json
+
+# Reproducible CAM comparison artifacts (regenerate with backend/scripts/compare_cams.py)
+backend/tests/fixtures/cam_comparison/*.png
+
+# Planning docs — kept locally, not tracked
+docs/vlm-grounding-roadmap.md
