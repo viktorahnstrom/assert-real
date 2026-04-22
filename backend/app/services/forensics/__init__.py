@@ -7,5 +7,6 @@ energy, and Error Level Analysis (ELA).
 """
 
 from app.services.forensics.report import ForensicsReport, extract
+from app.services.forensics.zscore import z_score
 
-__all__ = ["ForensicsReport", "extract"]
+__all__ = ["ForensicsReport", "extract", "z_score"]
