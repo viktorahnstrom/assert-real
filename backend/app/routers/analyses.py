@@ -254,6 +254,7 @@ async def create_analysis(request: AnalysisRequest):
         class_names,
         device,
         face_category_mapper,
+        face_parser,
         model,
         transform,
         vlm_factory,
@@ -368,13 +369,25 @@ async def create_analysis(request: AnalysisRequest):
             # Extract region labels to pass to VLM for per-region comments
             region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
 
-            # Map evidence regions to face categories via MediaPipe landmarks.
+            # Run BiSeNet face parsing once per image — shared by region mapping.
+            # Falls back gracefully; the mapper uses landmarks when parsing is None.
+            parsing_result = None
+            if face_parser is not None:
+                try:
+                    parsing_result = face_parser.parse(image)
+                except Exception as e:
+                    logger.warning("Face parsing failed: %s", e)
+
+            # Map evidence regions to face categories. Priority:
+            # BiSeNet pixel overlap > MediaPipe landmark count > label fallback.
             # Uses raw crops (which retain bbox) rather than saved evidence_regions.
             # Merges category data into evidence_regions for storage and API response.
             region_categories = []
             if face_category_mapper is not None and crops:
                 try:
-                    categorized = face_category_mapper.map_regions(image, crops)
+                    categorized = face_category_mapper.map_regions(
+                        image, crops, parsing_result=parsing_result
+                    )
                     region_categories = [r.to_region_with_category() for r in categorized]
                     for ev_region, cat in zip(evidence_regions, categorized, strict=True):
                         ev_region["category_id"] = cat.category_id
