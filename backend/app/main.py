@@ -43,6 +43,16 @@ async def lifespan(app: FastAPI):
         print(f"✗ Face category mapper failed to initialise: {e}")
         print("  (Region-to-category mapping will use label fallback)")
 
+    # Initialize BiSeNet face parser (pixel-accurate masks for 19 face classes)
+    try:
+        from app.services.face_parser import FaceParser
+
+        detect.face_parser = FaceParser()
+        print("✓ Face parser initialised (BiSeNet, weights lazy-loaded)")
+    except Exception as e:
+        print(f"✗ Face parser failed to initialise: {e}")
+        print("  (Region-to-category mapping will fall back to landmarks)")
+
     # Initialize VLM provider factory
     try:
         vlm_config = get_vlm_config()

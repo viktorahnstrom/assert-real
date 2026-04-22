@@ -29,6 +29,7 @@ from mediapipe.tasks.python import vision as mp_vision
 from PIL import Image
 
 from app.services.categories import FACE_CATEGORIES, get_category_for_label
+from app.services.face_parser import FaceParsingResult
 from app.services.vlm.base import RegionWithCategory
 
 # Resolve model path relative to this file so it works both locally
@@ -175,6 +176,7 @@ class FaceCategoryMapper:
         self,
         image: Image.Image,
         evidence_regions: list[dict],
+        parsing_result: FaceParsingResult | None = None,
     ) -> list[CategorizedRegion]:
         """Map each GradCAM evidence region to its dominant face category.
 
@@ -182,6 +184,11 @@ class FaceCategoryMapper:
             image: The original PIL image used for landmark detection.
             evidence_regions: Output of GradCAMGenerator.extract_evidence_regions(),
                 a list of dicts with keys: image, label, activation_score, bbox.
+            parsing_result: Optional BiSeNet face-parsing masks.  When provided,
+                assignment uses pixel-area overlap between each bbox and each
+                UI category mask — more accurate than landmark counting near
+                boundaries.  Falls back to landmarks when no category has
+                overlapping pixels.
 
         Returns:
             List of CategorizedRegion in the same order as evidence_regions.
@@ -195,7 +202,10 @@ class FaceCategoryMapper:
         if landmarks_px is None:
             logger.debug("MediaPipe found no face — using label fallback for all regions")
 
-        return [self._categorize_region(region, landmarks_px) for region in evidence_regions]
+        return [
+            self._categorize_region(region, landmarks_px, parsing_result)
+            for region in evidence_regions
+        ]
 
     def _detect_landmarks(
         self,
@@ -225,19 +235,71 @@ class FaceCategoryMapper:
         self,
         region: dict,
         landmarks_px: list[tuple[int, int]] | None,
+        parsing_result: FaceParsingResult | None = None,
     ) -> CategorizedRegion:
         """Assign a face category to one evidence region.
 
-        Tries landmark-based spatial assignment first; falls back to
-        get_category_for_label() when landmarks are unavailable or when
-        no categorised landmarks fall inside the bounding box.
+        Priority order:
+        1. Pixel-area overlap with BiSeNet parsing masks (when provided).
+        2. MediaPipe landmark counting inside the bbox.
+        3. get_category_for_label() string lookup on the GradCAM label.
         """
+        if parsing_result is not None:
+            result = self._assign_by_parsing(region, parsing_result)
+            if result is not None:
+                return result
+
         if landmarks_px is not None:
             result = self._assign_by_landmarks(region, landmarks_px)
             if result is not None:
                 return result
 
         return self._fallback_region(region)
+
+    @staticmethod
+    def _assign_by_parsing(
+        region: dict,
+        parsing_result: FaceParsingResult,
+    ) -> CategorizedRegion | None:
+        """Spatial assignment: pick the UI category with the most pixels in the bbox.
+
+        Confidence is the winning category's pixel count divided by the total
+        number of categorised pixels inside the bbox (excluding background and
+        classes not in the UI merge, so fully-background bboxes return None).
+        """
+        x1, y1, x2, y2 = region["bbox"]
+        width, height = parsing_result.image_size
+        x1 = max(0, min(x1, width))
+        x2 = max(0, min(x2, width))
+        y1 = max(0, min(y1, height))
+        y2 = max(0, min(y2, height))
+        if x2 <= x1 or y2 <= y1:
+            return None
+
+        area_per_category: dict[str, int] = {}
+        total = 0
+        for cat_id, mask in parsing_result.masks_ui.items():
+            count = int(mask[y1:y2, x1:x2].sum())
+            if count > 0:
+                area_per_category[cat_id] = count
+                total += count
+
+        if not area_per_category:
+            return None
+
+        winning_id = max(area_per_category, key=lambda k: area_per_category[k])
+        confidence = area_per_category[winning_id] / total if total > 0 else 0.0
+        winning_category = FACE_CATEGORIES[winning_id]
+
+        return CategorizedRegion(
+            image=region["image"],
+            label=region["label"],
+            activation_score=region["activation_score"],
+            bbox=region["bbox"],
+            category_id=winning_id,
+            category_label=winning_category.label,
+            overlap_confidence=round(confidence, 4),
+        )
 
     def _assign_by_landmarks(
         self,

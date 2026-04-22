@@ -32,6 +32,7 @@ class_names = ["fake", "real"]
 # Set by main.py on startup — shared with routers that need category mapping.
 vlm_factory = None
 face_category_mapper = None
+face_parser = None
 
 
 class DeepfakeDetector(nn.Module):
