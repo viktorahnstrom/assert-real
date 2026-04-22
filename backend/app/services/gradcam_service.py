@@ -1,13 +1,23 @@
 """
-GradCAM (Gradient-weighted Class Activation Mapping) service for XADE.
+Class Activation Mapping service for XADE.
 
 Generates heatmaps that visualize which facial regions the deepfake detection
 model focused on, enabling grounded VLM explanations.
+
+CAM method is selected by the `CAM_METHOD` environment variable:
+  - `layercam` (default) — multi-layer LayerCAM fused over the last two conv
+    stages of EfficientNet-B4. Sharper localization than vanilla Grad-CAM.
+  - `gradcam` — classic Grad-CAM on the final conv block. Kept as a
+    reproducible baseline for thesis ablation.
+
+Both paths use jacobgil/pytorch-grad-cam (MIT/Apache-2.0) so output shapes
+and normalization conventions are identical across methods.
 """
 
 from __future__ import annotations
 
 # stdlib
+import os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -17,11 +27,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
+from pytorch_grad_cam import GradCAM, LayerCAM
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
+CAM_METHOD = os.getenv("CAM_METHOD", "layercam").lower()
 
 
 @dataclass
 class RegionMetadata:
-    """Metadata about activated regions in the GradCAM heatmap."""
+    """Metadata about activated regions in the CAM heatmap."""
 
     centroid_x: float  # Normalized [0, 1] — horizontal center of mass
     centroid_y: float  # Normalized [0, 1] — vertical center of mass
@@ -32,57 +46,58 @@ class RegionMetadata:
 
 class GradCAMGenerator:
     """
-    Generates GradCAM heatmaps for a DeepfakeDetector model.
+    Generates class activation heatmaps for a DeepfakeDetector model.
 
-    Uses PyTorch forward/backward hooks on the last convolutional block of
-    EfficientNet-B4 (`model.model.features[-1]`).
+    Default method is LayerCAM (Jiang et al., 2021) fused over
+    `model.model.features[-2]` and `model.model.features[-1]`. The final
+    conv block alone gives 7×7 blobs at a 224² input; fusing the preceding
+    stage reduces that bleed. Set `CAM_METHOD=gradcam` to fall back to
+    classic Grad-CAM on the final block for baseline comparisons.
 
     Usage:
         generator = GradCAMGenerator(model)
-        heatmap = generator.generate(image_tensor, target_class=0)
+        heatmap = generator.generate(image_tensor, target_class=0, face_bbox=bbox)
         overlay = generator.create_overlay(original_image, heatmap)
         metadata = generator.extract_region_metadata(heatmap)
         regions = generator.extract_evidence_regions(original_image, heatmap)
     """
 
-    def __init__(self, model: nn.Module) -> None:
+    def __init__(self, model: nn.Module, method: Optional[str] = None) -> None:
         self.model = model
-        self._target_layer = model.model.features[-1]
-        self._activations: Optional[torch.Tensor] = None
-        self._gradients: Optional[torch.Tensor] = None
-        self._hooks: list = []
+        self.method = (method or CAM_METHOD).lower()
 
-    def _register_hooks(self) -> None:
-        """Register forward and backward hooks on the target layer."""
+        if self.method == "gradcam":
+            target_layers = [model.model.features[-1]]
+            self._cam = GradCAM(model=model, target_layers=target_layers)
+        else:
+            target_layers = [model.model.features[-2], model.model.features[-1]]
+            self._cam = LayerCAM(model=model, target_layers=target_layers)
+            self.method = "layercam"
 
-        def forward_hook(module: nn.Module, input: tuple, output: torch.Tensor) -> None:
-            self._activations = output.detach()
-
-        def backward_hook(module: nn.Module, grad_input: tuple, grad_output: tuple) -> None:
-            self._gradients = grad_output[0].detach()
-
-        self._hooks.append(self._target_layer.register_forward_hook(forward_hook))
-        self._hooks.append(self._target_layer.register_full_backward_hook(backward_hook))
-
-    def _remove_hooks(self) -> None:
-        """Remove all registered hooks to prevent memory leaks."""
-        for hook in self._hooks:
-            hook.remove()
-        self._hooks.clear()
+        self._target_layers = target_layers
 
     def generate(
         self,
         image_tensor: torch.Tensor,
         target_class: Optional[int] = None,
+        face_bbox: Optional[tuple[int, int, int, int]] = None,
     ) -> np.ndarray:
         """
-        Generate a GradCAM heatmap for the given image tensor.
+        Generate a CAM heatmap for the given image tensor.
+
+        When `face_bbox` is provided, the raw CAM is masked to the face
+        region **before** max-normalization so that background activations
+        cannot dominate the scale. The returned heatmap is therefore always
+        normalized to [0, 1] within the face (peak == 1.0 inside the bbox).
 
         Args:
             image_tensor: Preprocessed image tensor of shape (1, C, H, W).
                           Must already be on the correct device.
             target_class: Class index to generate heatmap for.
                           If None, uses the predicted class (argmax).
+            face_bbox: Optional (x1, y1, x2, y2) in image-tensor pixel
+                       coordinates. Activations outside this box are zeroed
+                       before normalization.
 
         Returns:
             Normalized heatmap as a float32 numpy array of shape (H, W)
@@ -91,45 +106,32 @@ class GradCAMGenerator:
         was_training = self.model.training
         self.model.eval()
 
-        self._register_hooks()
-
         try:
-            image_tensor = image_tensor.requires_grad_(False)
-
-            outputs = self.model(image_tensor)
-
             if target_class is None:
+                with torch.no_grad():
+                    outputs = self.model(image_tensor)
                 target_class = int(outputs.argmax(dim=1).item())
 
-            self.model.zero_grad()
+            targets = [ClassifierOutputTarget(target_class)]
+            # BaseCAM resizes to input spatial size and returns float32 [0,1]
+            cam = self._cam(input_tensor=image_tensor, targets=targets)[0]
 
-            one_hot = torch.zeros_like(outputs)
-            one_hot[0, target_class] = 1.0
-            outputs.backward(gradient=one_hot)
+            if face_bbox is not None:
+                _, _, H, W = image_tensor.shape
+                fx1, fy1, fx2, fy2 = face_bbox
+                fx1 = max(0, min(W, int(fx1)))
+                fy1 = max(0, min(H, int(fy1)))
+                fx2 = max(0, min(W, int(fx2)))
+                fy2 = max(0, min(H, int(fy2)))
+                mask = np.zeros_like(cam)
+                mask[fy1:fy2, fx1:fx2] = 1.0
+                cam = cam * mask
+                if cam.max() > 0:
+                    cam = cam / cam.max()
 
-            assert self._activations is not None, "Forward hook did not fire"
-            assert self._gradients is not None, "Backward hook did not fire"
-
-            activations = self._activations[0]  # (C, h, w)
-            gradients = self._gradients[0]  # (C, h, w)
-
-            weights = gradients.mean(dim=(1, 2))  # (C,)
-            cam = torch.einsum("c,chw->hw", weights, activations)  # (h, w)
-            cam = torch.clamp(cam, min=0)
-
-            cam_np = cam.cpu().numpy()
-            if cam_np.max() > 0:
-                cam_np = cam_np / cam_np.max()
-
-            _, _, H, W = image_tensor.shape
-            cam_resized = cv2.resize(cam_np, (W, H), interpolation=cv2.INTER_LINEAR)
-
-            return cam_resized.astype(np.float32)
+            return cam.astype(np.float32)
 
         finally:
-            self._remove_hooks()
-            self._activations = None
-            self._gradients = None
             if was_training:
                 self.model.train()
 

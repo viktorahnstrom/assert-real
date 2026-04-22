@@ -132,7 +132,26 @@ def _run_gradcam(
         )
 
         generator = GradCAMGenerator(model)
-        heatmap = generator.generate(image_tensor, target_class=target_class)
+
+        # face_bbox is in original-image coordinates; GradCAMGenerator.generate
+        # applies the mask at image_tensor resolution, so scale it down.
+        tensor_face_bbox: tuple[int, int, int, int] | None = None
+        if face_bbox is not None:
+            orig_w, orig_h = image.size
+            _, _, th, tw = image_tensor.shape
+            fx1, fy1, fx2, fy2 = face_bbox
+            tensor_face_bbox = (
+                int(fx1 * tw / orig_w),
+                int(fy1 * th / orig_h),
+                int(fx2 * tw / orig_w),
+                int(fy2 * th / orig_h),
+            )
+
+        heatmap = generator.generate(
+            image_tensor,
+            target_class=target_class,
+            face_bbox=tensor_face_bbox,
+        )
         overlay = generator.create_overlay(image, heatmap)
 
         filepath = save_heatmap_locally(overlay)
