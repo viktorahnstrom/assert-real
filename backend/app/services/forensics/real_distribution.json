@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "dataset": "..\\data\\140k-real-fake\\real_vs_fake\\real-vs-fake\\train\\real",
+    "n_sampled": 200,
+    "n_processed": 200,
+    "seed": 42,
+    "metrics": [
+      "laplacian_variance",
+      "hf_energy",
+      "ela_intensity"
+    ]
+  },
+  "regions": {
+    "eyes_pupils": {
+      "laplacian_variance": {
+        "mean": 3911.690255440966,
+        "std": 2776.2373120928482,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.0464880287541159,
+        "std": 0.03287548540017188,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.6839283633272504,
+        "std": 0.31295200504564485,
+        "n": 200
+      }
+    },
+    "eyebrows_eyelashes": {
+      "laplacian_variance": {
+        "mean": 6847.7918572231565,
+        "std": 3323.0347736883973,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.04725738564975142,
+        "std": 0.01601907534653521,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.29249596414079004,
+        "std": 0.19572008463920654,
+        "n": 200
+      }
+    },
+    "mouth_teeth": {
+      "laplacian_variance": {
+        "mean": 7060.909927891602,
+        "std": 4427.900730837881,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.023012740243625922,
+        "std": 0.013434873745622071,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.7140952381229256,
+        "std": 0.38374618067439586,
+        "n": 200
+      }
+    },
+    "skin_texture": {
+      "laplacian_variance": {
+        "mean": 2480.533181739843,
+        "std": 917.8054427273305,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.004775656491776138,
+        "std": 0.0012179464370883645,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.21991749445203312,
+        "std": 0.10114579913882515,
+        "n": 200
+      }
+    },
+    "hairline_ears": {
+      "laplacian_variance": {
+        "mean": 1930.7972284371579,
+        "std": 1014.8577315420781,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.022299739966590276,
+        "std": 0.014201513704470464,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.30823790621391356,
+        "std": 0.20432194789870453,
+        "n": 200
+      }
+    },
+    "facial_boundaries": {
+      "laplacian_variance": {
+        "mean": 1279.5742548235291,
+        "std": 669.8268013244457,
+        "n": 200
+      },
+      "hf_energy": {
+        "mean": 0.009408287966254059,
+        "std": 0.0035972756064132816,
+        "n": 200
+      },
+      "ela_intensity": {
+        "mean": 0.3250922220289913,
+        "std": 0.21539823662923915,
+        "n": 200
+      }
+    }
+  }
+}
