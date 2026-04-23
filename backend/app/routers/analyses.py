@@ -502,8 +502,10 @@ async def create_analysis(request: AnalysisRequest):
             # Preferred path: ranker fuses CAM attention with forensic z-scores
             # over the BiSeNet region masks. Falls through to CAM-only extraction
             # when parsing or the ranker is unavailable.
+            from app.services.vlm.base import RegionWithCategory
+
             ranker_used = False
-            region_categories: list[dict] = []
+            region_categories: list[RegionWithCategory] = []
             if parsing_result is not None and heatmap is not None:
                 ranked = _build_ranked_evidence(image, heatmap, parsing_result, face_bbox=face_bbox)
                 if ranked is not None:
@@ -536,11 +538,12 @@ async def create_analysis(request: AnalysisRequest):
                     face_cat = FACE_CATEGORIES.get(cat_id) if cat_id else None
                     if face_cat is not None:
                         region_categories.append(
-                            {
-                                "category_id": face_cat.id,
-                                "category_label": face_cat.label,
-                                "common_artifacts": list(face_cat.common_artifacts),
-                            }
+                            RegionWithCategory(
+                                label=face_cat.label,
+                                category_id=face_cat.id,
+                                category_label=face_cat.label,
+                                common_artifacts=face_cat.common_artifacts[:3],
+                            )
                         )
 
             # Extract region labels to pass to VLM for per-region comments
