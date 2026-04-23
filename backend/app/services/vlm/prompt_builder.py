@@ -310,6 +310,11 @@ def _parse_region_comments(regions_text: str) -> dict[str, str]:
     Expected format per line:
         Region label | One sentence explanation.
 
+    VLMs often decorate their labels with Markdown bold (``**Label**``),
+    leading bullets (``- Label``), or trailing punctuation.  Those are
+    stripped so downstream consumers can look up the plain label exactly
+    as it appeared in the prompt.
+
     Args:
         regions_text: Raw text from the [REGIONS] section.
 
@@ -320,11 +325,25 @@ def _parse_region_comments(regions_text: str) -> dict[str, str]:
 
     for line in regions_text.strip().splitlines():
         line = line.strip()
-        if "|" in line:
-            parts = line.split("|", 1)
-            label = parts[0].strip()
-            comment = parts[1].strip()
-            if label and comment:
-                comments[label] = comment
+        if "|" not in line:
+            continue
+
+        raw_label, comment = line.split("|", 1)
+        label = _normalise_region_label(raw_label)
+        comment = comment.strip()
+        if label and comment:
+            comments[label] = comment
 
     return comments
+
+
+def _normalise_region_label(raw: str) -> str:
+    """Strip Markdown emphasis, leading bullets, and trailing punctuation."""
+    label = raw.strip()
+    # Drop a leading list bullet ("- Label", "* Label", "• Label").
+    for bullet in ("- ", "* ", "• "):
+        if label.startswith(bullet):
+            label = label[len(bullet) :].lstrip()
+            break
+    # Strip Markdown emphasis and trailing colons/spaces from both ends.
+    return label.strip("*_ :").strip()
