@@ -161,10 +161,7 @@ def main() -> None:
         print("WARNING: running on CPU — generation will be extremely slow.")
 
     generator = load_generator(device)
-    print(
-        f"Generator loaded: z_dim={generator.z_dim}, "
-        f"img_resolution={generator.img_resolution}"
-    )
+    print(f"Generator loaded: z_dim={generator.z_dim}, img_resolution={generator.img_resolution}")
 
     args.output.mkdir(parents=True, exist_ok=True)
     print(f"Output: {args.output}")

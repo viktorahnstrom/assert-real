@@ -108,7 +108,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", default="backend/checkpoints/best_model.pt")
     parser.add_argument("--data", default="backend/data/ciplab")
     parser.add_argument("--output", default="backend/results/ciplab_evaluation.json")
-    parser.add_argument("--name", default="CIPLAB", help="Dataset label to embed in the results JSON.")
+    parser.add_argument(
+        "--name", default="CIPLAB", help="Dataset label to embed in the results JSON."
+    )
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args()
 
