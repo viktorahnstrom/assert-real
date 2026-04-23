@@ -90,7 +90,7 @@ def compute_metrics(y_true, y_pred, y_probs, dataset_name: str) -> dict:
 
 def print_results(metrics: dict) -> None:
     print("\n" + "=" * 50)
-    print(f"CIPLAB EVALUATION — {metrics['dataset']}")
+    print(f"EVALUATION — {metrics['dataset']}")
     print("=" * 50)
     print(
         f"  Samples:   {metrics['n_samples']} ({metrics['n_real']} real, {metrics['n_fake']} fake)"
@@ -108,6 +108,9 @@ if __name__ == "__main__":
     parser.add_argument("--model", default="backend/checkpoints/best_model.pt")
     parser.add_argument("--data", default="backend/data/ciplab")
     parser.add_argument("--output", default="backend/results/ciplab_evaluation.json")
+    parser.add_argument(
+        "--name", default="CIPLAB", help="Dataset label to embed in the results JSON."
+    )
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args()
 
@@ -116,7 +119,7 @@ if __name__ == "__main__":
 
     model = load_model(args.model, device)
     y_true, y_pred, y_probs, classes = run_inference(model, args.data, device)
-    metrics = compute_metrics(y_true, y_pred, y_probs, dataset_name="CIPLAB")
+    metrics = compute_metrics(y_true, y_pred, y_probs, dataset_name=args.name)
 
     print_results(metrics)
 
