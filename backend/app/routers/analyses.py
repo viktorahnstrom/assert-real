@@ -11,6 +11,7 @@ import time
 import traceback
 
 import httpx
+import numpy as np
 import torch
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
@@ -55,6 +56,11 @@ class EvidenceRegion(BaseModel):
     category_id: str | None = None
     category_label: str | None = None
     common_artifacts: list[str] | None = None
+    # Populated by the region ranker when parsing + forensics are available.
+    cam_score: float | None = None
+    forensic_score: float | None = None
+    suspicion_score: float | None = None
+    z_scores: dict[str, float] | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -106,10 +112,11 @@ def _run_gradcam(
     image_tensor: torch.Tensor,
     target_class: int,
     face_bbox: tuple[int, int, int, int] | None = None,
-) -> tuple[bytes | None, str | None, list[dict], list[dict]]:
+) -> tuple[np.ndarray | None, bytes | None, str | None, list[dict], list[dict]]:
     """
-    Run GradCAM on the image and return heatmap bytes for VLM, a local URL
-    for the frontend, a list of saved evidence regions, and the raw crops.
+    Run GradCAM on the image and return the raw heatmap, heatmap bytes for
+    the VLM, a local URL for the frontend, saved evidence regions, and
+    the raw crops.
 
     Args:
         face_bbox: Optional face bounding box (x1, y1, x2, y2) used to mask
@@ -117,10 +124,10 @@ def _run_gradcam(
             entirely outside the face will never appear in results.
 
     Returns:
-        Tuple of (heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops)
-        where evidence_regions has URL/label/activation_score for the response
-        and crops retains the PIL image and bbox needed by FaceCategoryMapper.
-        heatmap_bytes and gradcam_heatmap_url will be None if GradCAM failed.
+        Tuple ``(heatmap, heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops)``.
+        The raw heatmap is the float32 (H, W) array at image_tensor resolution,
+        used by the region ranker. All five values are ``None`` / ``[]`` if
+        GradCAM failed.
     """
     try:
         from app.api.detect import model
@@ -164,12 +171,124 @@ def _run_gradcam(
         crops = generator.extract_evidence_regions(image, heatmap, face_bbox=face_bbox)
         evidence_regions = save_evidence_crops(crops)
 
-        return heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops
+        return heatmap, heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops
 
     except Exception as exc:
         logger.error("GradCAM generation failed: %s\n%s", exc, traceback.format_exc())
         print(f"[XADE] GradCAM FAILED: {exc}\n{traceback.format_exc()}")
-        return None, None, [], []
+        return None, None, None, [], []
+
+
+def _crop_from_mask(
+    image: Image.Image,
+    mask: np.ndarray,
+    face_bbox: tuple[int, int, int, int] | None = None,
+) -> tuple[tuple[int, int, int, int], Image.Image] | None:
+    """Build a padded crop from a boolean region mask.
+
+    Mirrors the padding/minimum-size logic used by gradcam_service.extract_evidence_regions
+    so crops look consistent regardless of which path produced them.
+    Returns ``None`` when the mask has no active pixels.
+    """
+    if mask.sum() == 0:
+        return None
+
+    width, height = image.size
+    pad = max(20, int(min(width, height) * 0.06))
+
+    if face_bbox is not None:
+        fx1, fy1, fx2, fy2 = face_bbox
+        min_half_w = int((fx2 - fx1) * 0.28)
+        min_half_h = int((fy2 - fy1) * 0.28)
+    else:
+        min_half_w = int(width * 0.18)
+        min_half_h = int(height * 0.18)
+
+    rows, cols = np.where(mask)
+    r0, r1 = int(rows.min()), int(rows.max()) + 1
+    c0, c1 = int(cols.min()), int(cols.max()) + 1
+    cx = (c0 + c1) // 2
+    cy = (r0 + r1) // 2
+
+    x1 = max(0, c0 - pad)
+    y1 = max(0, r0 - pad)
+    x2 = min(width, c1 + pad)
+    y2 = min(height, r1 + pad)
+
+    if (x2 - x1) < min_half_w * 2:
+        x1 = max(0, cx - min_half_w)
+        x2 = min(width, cx + min_half_w)
+    if (y2 - y1) < min_half_h * 2:
+        y1 = max(0, cy - min_half_h)
+        y2 = min(height, cy + min_half_h)
+
+    return (x1, y1, x2, y2), image.crop((x1, y1, x2, y2))
+
+
+def _build_ranked_evidence(
+    image: Image.Image,
+    heatmap: np.ndarray,
+    parsing_result,
+    face_bbox: tuple[int, int, int, int] | None = None,
+) -> tuple[list[dict], list[dict]] | None:
+    """Run forensics + region ranker, returning ``(evidence_regions, crops)``.
+
+    Returns ``None`` when forensics or ranking raises, so the caller can fall
+    back to the legacy CAM-only evidence extraction path.
+    """
+    try:
+        from app.services.categories import FACE_CATEGORIES
+        from app.services.forensics import extract as forensics_extract
+        from app.services.gradcam_storage import save_evidence_crops
+        from app.services.region_ranker import rank as rank_regions
+
+        forensics_report = forensics_extract(image, parsing_result.masks_ui)
+        ranked = rank_regions(heatmap, parsing_result.masks_ui, forensics_report)
+        if not ranked:
+            return None
+
+        crops: list[dict] = []
+        for region in ranked:
+            mask = parsing_result.masks_ui.get(region.category_id)
+            if mask is None:
+                continue
+            crop_info = _crop_from_mask(image, mask, face_bbox=face_bbox)
+            if crop_info is None:
+                continue
+            bbox, crop_img = crop_info
+            face_cat = FACE_CATEGORIES.get(region.category_id)
+            label = face_cat.label if face_cat else region.category_id
+            crops.append(
+                {
+                    "image": crop_img,
+                    "label": label,
+                    "activation_score": region.suspicion_score,
+                    "bbox": bbox,
+                    "_ranked": region,
+                }
+            )
+
+        if not crops:
+            return None
+
+        evidence_regions = save_evidence_crops(crops)
+        for ev, crop in zip(evidence_regions, crops, strict=True):
+            region = crop["_ranked"]
+            ev["category_id"] = region.category_id
+            ev["cam_score"] = region.cam_score
+            ev["forensic_score"] = region.forensic_score
+            ev["suspicion_score"] = region.suspicion_score
+            ev["z_scores"] = dict(region.z_scores)
+            face_cat = FACE_CATEGORIES.get(region.category_id)
+            if face_cat is not None:
+                ev["category_label"] = face_cat.label
+                ev["common_artifacts"] = list(face_cat.common_artifacts[:3])
+
+        return evidence_regions, crops
+
+    except Exception as exc:
+        logger.warning("Region ranker path failed, falling back: %s", exc)
+        return None
 
 
 def _attach_region_comments(
@@ -356,21 +475,23 @@ async def create_analysis(request: AnalysisRequest):
                     logger.warning("Face bbox detection failed: %s", e)
 
             # Run GradCAM — returns None heatmap_bytes if it failed.
+            # heatmap is the raw (H, W) float array, needed by the region ranker.
             # crops retains PIL image + bbox needed by the mapper;
             # evidence_regions has the saved URLs for the API response.
-            heatmap_bytes, gradcam_heatmap_url, evidence_regions, crops = _run_gradcam(
-                image, image_tensor, target_class, face_bbox=face_bbox
-            )
+            (
+                heatmap,
+                heatmap_bytes,
+                gradcam_heatmap_url,
+                evidence_regions,
+                crops,
+            ) = _run_gradcam(image, image_tensor, target_class, face_bbox=face_bbox)
 
             # gradcam_available drives both the VLM prompt and whether
             # the heatmap image is sent to the VLM at all
             gradcam_available = gradcam_heatmap_url is not None
 
-            # Extract region labels to pass to VLM for per-region comments
-            region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
-
-            # Run BiSeNet face parsing once per image — shared by region mapping.
-            # Falls back gracefully; the mapper uses landmarks when parsing is None.
+            # Run BiSeNet face parsing once per image — shared by ranker + mapper.
+            # Falls back gracefully; downstream paths handle None.
             parsing_result = None
             if face_parser is not None:
                 try:
@@ -378,12 +499,22 @@ async def create_analysis(request: AnalysisRequest):
                 except Exception as e:
                     logger.warning("Face parsing failed: %s", e)
 
-            # Map evidence regions to face categories. Priority:
-            # BiSeNet pixel overlap > MediaPipe landmark count > label fallback.
-            # Uses raw crops (which retain bbox) rather than saved evidence_regions.
-            # Merges category data into evidence_regions for storage and API response.
-            region_categories = []
-            if face_category_mapper is not None and crops:
+            # Preferred path: ranker fuses CAM attention with forensic z-scores
+            # over the BiSeNet region masks. Falls through to CAM-only extraction
+            # when parsing or the ranker is unavailable.
+            from app.services.vlm.base import RegionWithCategory
+
+            ranker_used = False
+            region_categories: list[RegionWithCategory] = []
+            if parsing_result is not None and heatmap is not None:
+                ranked = _build_ranked_evidence(image, heatmap, parsing_result, face_bbox=face_bbox)
+                if ranked is not None:
+                    evidence_regions, crops = ranked
+                    ranker_used = True
+
+            # Fallback: run the legacy MediaPipe/label-based mapper over the
+            # CAM-derived crops so categories still get attached.
+            if not ranker_used and face_category_mapper is not None and crops:
                 try:
                     categorized = face_category_mapper.map_regions(
                         image, crops, parsing_result=parsing_result
@@ -398,6 +529,25 @@ async def create_analysis(request: AnalysisRequest):
                         )
                 except Exception as e:
                     logger.warning("Face category mapping failed: %s", e)
+
+            # When the ranker produced evidence, rebuild region_categories from
+            # its output so the VLM prompt still gets the category context.
+            if ranker_used:
+                for ev_region in evidence_regions:
+                    cat_id = ev_region.get("category_id")
+                    face_cat = FACE_CATEGORIES.get(cat_id) if cat_id else None
+                    if face_cat is not None:
+                        region_categories.append(
+                            RegionWithCategory(
+                                label=face_cat.label,
+                                category_id=face_cat.id,
+                                category_label=face_cat.label,
+                                common_artifacts=face_cat.common_artifacts[:3],
+                            )
+                        )
+
+            # Extract region labels to pass to VLM for per-region comments
+            region_labels = [r["label"] for r in evidence_regions] if evidence_regions else []
 
             explanation_data = None
             vlm_explanation_text = None
