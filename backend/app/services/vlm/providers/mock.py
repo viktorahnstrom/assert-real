@@ -108,10 +108,30 @@ class MockProvider(BaseVLMProvider):
 
         processing_time = int((time.time() - start_time) * 1000)
 
+        # Emit a minimal structured record for every labelled region so
+        # callers can rely on the same contract as the live VLM providers.
+        labels: list[str] = list(detection.region_labels or [])
+        if not labels and detection.region_categories:
+            labels = [getattr(r, "label", "") for r in detection.region_categories]
+        structured_regions = [
+            {
+                "region": label,
+                "observation": (
+                    f"Mock observation for {label} at {confidence_pct}% model confidence."
+                ),
+                "evidence_type": "heatmap",
+                "evidence_ref": f"GradCAM peak around {label}",
+                "confidence": 0.6,
+            }
+            for label in labels
+            if label
+        ]
+
         return VLMExplanation(
             summary=template["summary"],
             detailed_analysis=template["detailed_analysis"].format(confidence=confidence_pct),
             technical_notes=template["technical_notes"],
+            structured_regions=structured_regions or None,
             provider="mock",
             model="mock-v1",
             processing_time_ms=processing_time,
