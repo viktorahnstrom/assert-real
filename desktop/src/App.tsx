@@ -1294,49 +1294,48 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                     )}
 
                     {/* Forensic z-score strip */}
-                    {region.z_scores &&
-                      METRIC_KEYS.some((k) => region.z_scores![k] != null) && (
-                        <div className="mt-2 flex flex-col gap-1">
-                          {METRIC_KEYS.map((key) => {
-                            const z = region.z_scores![key];
-                            if (z == null) return null;
-                            const clampedZ = Math.max(-3, Math.min(3, z));
-                            const fillPct = (Math.abs(clampedZ) / 3) * 50;
-                            const isNeg = clampedZ < 0;
-                            const absZ = Math.abs(z);
-                            const isHighlighted =
-                              hoveredMetric?.idx === idx && hoveredMetric?.metric === key;
-                            const barColor = isHighlighted
-                              ? 'bg-xade-blue'
-                              : absZ >= 2.5
-                                ? 'bg-red-400'
-                                : absZ >= 1.5
-                                  ? 'bg-orange-400'
-                                  : 'bg-emerald-400';
-                            return (
-                              <div key={key} className="flex items-center gap-2">
-                                <span className="w-16 shrink-0 text-right text-[10px] text-xade-charcoal/40">
-                                  {METRIC_LABELS[key]}
-                                </span>
-                                <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-xade-charcoal/8">
-                                  <div className="absolute inset-y-0 left-1/2 w-px bg-xade-charcoal/25" />
-                                  <div
-                                    className={`absolute inset-y-0 ${barColor} transition-colors`}
-                                    style={{
-                                      left: isNeg ? `${50 - fillPct}%` : '50%',
-                                      width: `${fillPct}%`,
-                                    }}
-                                  />
-                                </div>
-                                <span className="w-10 shrink-0 text-[10px] tabular-nums text-xade-charcoal/40">
-                                  {z >= 0 ? '+' : ''}
-                                  {z.toFixed(1)}σ
-                                </span>
+                    {region.z_scores && METRIC_KEYS.some((k) => region.z_scores![k] != null) && (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {METRIC_KEYS.map((key) => {
+                          const z = region.z_scores![key];
+                          if (z == null) return null;
+                          const clampedZ = Math.max(-3, Math.min(3, z));
+                          const fillPct = (Math.abs(clampedZ) / 3) * 50;
+                          const isNeg = clampedZ < 0;
+                          const absZ = Math.abs(z);
+                          const isHighlighted =
+                            hoveredMetric?.idx === idx && hoveredMetric?.metric === key;
+                          const barColor = isHighlighted
+                            ? 'bg-xade-blue'
+                            : absZ >= 2.5
+                              ? 'bg-red-400'
+                              : absZ >= 1.5
+                                ? 'bg-orange-400'
+                                : 'bg-emerald-400';
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              <span className="w-16 shrink-0 text-right text-[10px] text-xade-charcoal/40">
+                                {METRIC_LABELS[key]}
+                              </span>
+                              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-xade-charcoal/8">
+                                <div className="absolute inset-y-0 left-1/2 w-px bg-xade-charcoal/25" />
+                                <div
+                                  className={`absolute inset-y-0 ${barColor} transition-colors`}
+                                  style={{
+                                    left: isNeg ? `${50 - fillPct}%` : '50%',
+                                    width: `${fillPct}%`,
+                                  }}
+                                />
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              <span className="w-10 shrink-0 text-[10px] tabular-nums text-xade-charcoal/40">
+                                {z >= 0 ? '+' : ''}
+                                {z.toFixed(1)}σ
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Activation */}
@@ -1358,12 +1357,11 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
           </div>
 
           <p className="mt-4 text-[10px] leading-relaxed text-xade-charcoal/30">
-            Bars compare each region to the real-face distribution (0 = average real face).
-            Positive = above average · Negative = below average.{' '}
-            <span className="text-red-400">Red</span> = unusual (&gt;2.5σ) ·{' '}
-            <span className="text-orange-400">Orange</span> = moderate ·{' '}
-            <span className="text-emerald-500">Green</span> = normal. Hover a claim to highlight
-            its cited metric.
+            Bars compare each region to the real-face distribution (0 = average real face). Positive
+            = above average · Negative = below average. <span className="text-red-400">Red</span> =
+            unusual (&gt;2.5σ) · <span className="text-orange-400">Orange</span> = moderate ·{' '}
+            <span className="text-emerald-500">Green</span> = normal. Hover a claim to highlight its
+            cited metric.
           </p>
         </div>
       )}
