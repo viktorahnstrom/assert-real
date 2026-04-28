@@ -10,7 +10,7 @@ import io
 import json
 import logging
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -172,7 +172,7 @@ async def analyze_for_study(file: UploadFile = File(...)):
     target_class = int(predicted.item())
     classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-    heatmap_bytes, gradcam_url, evidence_regions, crops = _run_gradcam(
+    _, heatmap_bytes, gradcam_url, evidence_regions, crops = _run_gradcam(
         image, image_tensor, target_class
     )
 
@@ -204,7 +204,7 @@ async def analyze_for_study(file: UploadFile = File(...)):
     explanations: dict[str, StudyExplanation] = {}
 
     if vlm_factory is not None:
-        providers = ["openai", "google", "anthropic"]
+        providers = ["openai", "google", "anthropic", "rule_based"]
         raw_results = await asyncio.gather(
             *[
                 _run_vlm_provider(
@@ -222,7 +222,7 @@ async def analyze_for_study(file: UploadFile = File(...)):
         for pid, data in raw_results:
             explanations[pid] = StudyExplanation(**data)
     else:
-        for pid in ["openai", "google", "anthropic"]:
+        for pid in ["openai", "google", "anthropic", "rule_based"]:
             explanations[pid] = StudyExplanation(
                 provider=pid,
                 model="mock",
@@ -244,7 +244,7 @@ async def analyze_for_study(file: UploadFile = File(...)):
 async def save_study_results(results: StudyResults):
     """Append one participant's anonymised results to the JSONL log file."""
     entry = results.model_dump()
-    entry["saved_at"] = datetime.now(datetime.UTC).isoformat()
+    entry["saved_at"] = datetime.now(UTC).isoformat()
 
     with open(_results_file(), "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
@@ -285,7 +285,7 @@ async def precompute_study_analyses():
     heatmaps_dir.mkdir(parents=True, exist_ok=True)
 
     analyses: dict[str, dict] = {}
-    providers = ["openai", "google", "anthropic"]
+    providers = ["openai", "google", "anthropic", "rule_based"]
 
     for img_meta in _STUDY_IMAGES:
         img_id = str(img_meta["id"])
@@ -310,7 +310,7 @@ async def precompute_study_analyses():
             target_class = int(predicted.item())
             classification = prediction if prediction in ("fake", "real") else "uncertain"
 
-            heatmap_bytes, _, evidence_regions, crops = _run_gradcam(
+            _, heatmap_bytes, _, evidence_regions, crops = _run_gradcam(
                 image, image_tensor, target_class
             )
 
@@ -372,7 +372,7 @@ async def precompute_study_analyses():
                         "processing_time_ms": 0,
                         "error": None,
                     }
-                    for p in providers
+                    for p in ["openai", "google", "anthropic", "rule_based"]
                 }
 
             analyses[img_id] = {
@@ -388,7 +388,7 @@ async def precompute_study_analyses():
             analyses[img_id] = {"error": str(exc)}
 
     output = {
-        "generated_at": datetime.now(datetime.UTC).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "analyses": analyses,
     }
 

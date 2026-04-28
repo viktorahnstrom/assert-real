@@ -62,6 +62,7 @@ interface ProviderAssignment {
   A: string;
   B: string;
   C: string;
+  D: string;
 }
 
 interface ExplanationItem {
@@ -69,7 +70,7 @@ interface ExplanationItem {
   userAnswer: 'real' | 'fake';
   analysis: StudyAnalysisResult | null;
   assignment: ProviderAssignment;
-  preferredExplanation: 'A' | 'B' | 'C' | 'all' | 'none' | null;
+  preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none' | null;
   understandingRating: number | null;
   mostUsefulPart: 'heatmap' | 'text' | 'confidence' | null;
 }
@@ -144,7 +145,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
               {
                 step: '2',
                 title: 'Explanation Evaluation',
-                desc: 'For images you got wrong, compare three AI explanations and rate their usefulness.',
+                desc: 'For images you got wrong, compare four AI explanations and rate their usefulness.',
               },
               {
                 step: '3',
@@ -333,19 +334,19 @@ function ExplanationScreen({
   current: number;
   total: number;
   onSubmit: (answers: {
-    preferredExplanation: 'A' | 'B' | 'C' | 'all' | 'none';
+    preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none';
     understandingRating: number;
     mostUsefulPart: 'heatmap' | 'text' | 'confidence';
   }) => void;
 }) {
-  const [preferred, setPreferred] = useState<'A' | 'B' | 'C' | 'all' | 'none' | null>(null);
+  const [preferred, setPreferred] = useState<'A' | 'B' | 'C' | 'D' | 'all' | 'none' | null>(null);
   const [understanding, setUnderstanding] = useState<number | null>(null);
   const [usefulPart, setUsefulPart] = useState<'heatmap' | 'text' | 'confidence' | null>(null);
 
   const canSubmit = preferred !== null && understanding !== null && usefulPart !== null;
   const { analysis, assignment } = item;
 
-  function explanationText(label: 'A' | 'B' | 'C') {
+  function explanationText(label: 'A' | 'B' | 'C' | 'D') {
     const providerId = assignment[label];
     const exp = analysis?.explanations[providerId];
     if (!exp) return { summary: 'Unavailable.', detailed: '' };
@@ -358,7 +359,7 @@ function ExplanationScreen({
 
   return (
     <div className="min-h-screen bg-xade-cream px-6 py-8">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-2 flex items-center justify-between text-xs text-xade-charcoal/40">
           <span>
@@ -466,10 +467,10 @@ function ExplanationScreen({
           </div>
         </div>
 
-        {/* Three explanations */}
-        <div className="mt-6 grid grid-cols-3 gap-4">
-          {(['A', 'B', 'C'] as const).map((label) => {
-            const { summary, detailed } = explanationText(label);
+        {/* Four explanations */}
+        <div className="mt-6 grid grid-cols-4 gap-4">
+          {(['A', 'B', 'C', 'D'] as const).map((label) => {
+            const { summary } = explanationText(label);
             return (
               <div
                 key={label}
@@ -481,11 +482,6 @@ function ExplanationScreen({
                 <p className="text-xs font-medium leading-relaxed text-xade-charcoal/80">
                   {summary}
                 </p>
-                {detailed && (
-                  <p className="mt-2 text-[11px] leading-relaxed text-xade-charcoal/50">
-                    {detailed}
-                  </p>
-                )}
               </div>
             );
           })}
@@ -499,7 +495,7 @@ function ExplanationScreen({
               1. Which explanation helped you understand the detection decision best?
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(['A', 'B', 'C', 'all', 'none'] as const).map((opt) => (
+              {(['A', 'B', 'C', 'D', 'all', 'none'] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setPreferred(opt)}
@@ -813,11 +809,12 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
 
     const items: ExplanationItem[] = [];
     for (const record of wrong) {
-      const providers = shuffleArray(['openai', 'google', 'anthropic']);
+      const providers = shuffleArray(['openai', 'google', 'anthropic', 'rule_based']);
       const assignment: ProviderAssignment = {
         A: providers[0],
         B: providers[1],
         C: providers[2],
+        D: providers[3],
       };
 
       let analysis: StudyAnalysisResult | null = null;
@@ -866,7 +863,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
 
   // ---- Explanation answer ----
   function handleExplanationSubmit(answers: {
-    preferredExplanation: 'A' | 'B' | 'C' | 'all' | 'none';
+    preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none';
     understandingRating: number;
     mostUsefulPart: 'heatmap' | 'text' | 'confidence';
   }) {
