@@ -37,6 +37,14 @@ def get_local_heatmap_url(filepath: str) -> str:
     return f"{GRADCAM_SERVE_URL}/{filename}"
 
 
+def save_ela_locally(ela_bytes: bytes) -> str:
+    """Save ELA overlay PNG bytes to the local temp directory and return an HTTP URL."""
+    filename = f"ela_{uuid.uuid4()}.png"
+    filepath = _TEMP_DIR / filename
+    filepath.write_bytes(ela_bytes)
+    return f"{GRADCAM_SERVE_URL}/{filename}"
+
+
 def save_evidence_crops(crops: list[dict]) -> list[dict]:
     """
     Save evidence region crops to the temp directory and return HTTP URLs.

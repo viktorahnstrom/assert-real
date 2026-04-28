@@ -84,6 +84,7 @@ class AnalysisResponse(BaseModel):
     completed_at: str | None = None
     explanation: ExplanationData | None = None
     gradcam_heatmap_url: str | None = None
+    ela_heatmap_url: str | None = None
     evidence_regions: list[EvidenceRegion] = []
 
 
@@ -355,6 +356,7 @@ def _build_analysis_response(
     explanation: ExplanationData | None = None,
     gradcam_heatmap_url: str | None = None,
     evidence_regions: list[dict] | None = None,
+    ela_heatmap_url: str | None = None,
 ) -> AnalysisResponse:
     """Build AnalysisResponse from database row."""
     # Restore structured explanation from JSON if not provided fresh
@@ -389,6 +391,7 @@ def _build_analysis_response(
         completed_at=a.get("completed_at"),
         explanation=explanation,
         gradcam_heatmap_url=gradcam_heatmap_url or a.get("gradcam_path"),
+        ela_heatmap_url=ela_heatmap_url,
         evidence_regions=[EvidenceRegion(**r) for r in (evidence_regions or [])],
     )
 
@@ -598,18 +601,21 @@ async def create_analysis(request: AnalysisRequest):
             # image. Only sent when forensics ran successfully — otherwise
             # the prompt builder skips the [FORENSIC EVIDENCE] block too.
             ela_bytes = None
+            ela_heatmap_url = None
             if forensics_report is not None:
                 try:
                     from app.services.forensics.ela import (
                         compute_ela,
                         create_ela_overlay,
                     )
+                    from app.services.gradcam_storage import save_ela_locally
 
                     ela_map = compute_ela(image, quality=95, scale=10)
                     ela_overlay = create_ela_overlay(image, ela_map)
                     buf = io.BytesIO()
                     ela_overlay.save(buf, format="PNG")
                     ela_bytes = buf.getvalue()
+                    ela_heatmap_url = save_ela_locally(ela_bytes)
                 except Exception as e:
                     logger.warning("ELA overlay generation failed: %s", e)
 
@@ -721,6 +727,7 @@ async def create_analysis(request: AnalysisRequest):
                 explanation=explanation_data,
                 gradcam_heatmap_url=gradcam_heatmap_url,
                 evidence_regions=evidence_regions,
+                ela_heatmap_url=ela_heatmap_url,
             )
 
         except HTTPException:

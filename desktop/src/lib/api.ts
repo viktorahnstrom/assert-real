@@ -22,6 +22,13 @@ export interface EvidenceRegion {
   category_id: string | null;
   category_label: string | null;
   common_artifacts: string[] | null;
+  z_scores?: Record<string, number> | null;
+  evidence_type?: string | null;
+  evidence_ref?: string | null;
+  cam_score?: number | null;
+  forensic_score?: number | null;
+  suspicion_score?: number | null;
+  claim_confidence?: number | null;
 }
 
 export interface DetectionResult {
@@ -34,6 +41,7 @@ export interface DetectionResult {
   model: string;
   accuracy: string;
   gradcam_heatmap_url: string | null;
+  ela_heatmap_url?: string | null;
   explanation: ExplanationResult | null;
   evidence_regions: EvidenceRegion[];
 }
@@ -53,6 +61,7 @@ export interface AnalysisResult {
   completed_at: string | null;
   explanation: ExplanationResult | null;
   gradcam_heatmap_url?: string | null;
+  ela_heatmap_url?: string | null;
   evidence_regions?: EvidenceRegion[];
 }
 
@@ -222,6 +231,7 @@ export async function analyzeImage(
     model: analysis.model_used ?? 'EfficientNet-B4',
     accuracy: '98.48%',
     gradcam_heatmap_url: analysis.gradcam_heatmap_url ?? null,
+    ela_heatmap_url: analysis.ela_heatmap_url ?? null,
     explanation: analysis.explanation ?? null,
     evidence_regions: analysis.evidence_regions ?? [],
   };

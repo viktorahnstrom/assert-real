@@ -1051,6 +1051,14 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const explanation = result.explanation;
+  const [hoveredMetric, setHoveredMetric] = useState<{ idx: number; metric: string } | null>(null);
+
+  const METRIC_LABELS: Record<string, string> = {
+    sharpness_z: 'Sharpness',
+    hf_energy_z: 'HF Energy',
+    ela_intensity_z: 'ELA',
+  };
+  const METRIC_KEYS = ['sharpness_z', 'hf_energy_z', 'ela_intensity_z'] as const;
 
   return (
     <div className="mx-auto max-w-4xl px-16 py-10">
@@ -1095,85 +1103,114 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
         </div>
       </div>
 
-      {/* Row 2: Images + explanation side by side */}
-      <div className="mb-4 grid grid-cols-2 items-stretch gap-4">
-        {/* Images */}
-        <div className="rounded-2xl border border-black/[0.06] bg-white p-5">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
-            Visual Analysis
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="mb-1.5 text-xs text-xade-charcoal/40">Original</p>
-              {previewUrl ? (
-                <div
-                  className="w-full cursor-zoom-in overflow-hidden rounded-lg"
-                  style={{ aspectRatio: '1 / 1' }}
-                  onClick={() => setLightboxSrc(previewUrl)}
-                >
-                  <img
-                    src={previewUrl}
-                    alt="Original"
-                    className="h-full w-full object-cover transition-opacity hover:opacity-75"
-                  />
-                </div>
-              ) : (
-                <div
-                  className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  Unavailable
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs text-xade-charcoal/40">
-                Heatmap
-                <span className="ml-1 text-xade-charcoal/25">· red = focus</span>
-              </p>
-              {result.gradcam_heatmap_url ? (
-                <div
-                  className="w-full cursor-zoom-in overflow-hidden rounded-lg"
-                  style={{ aspectRatio: '1 / 1' }}
-                  onClick={() => setLightboxSrc(result.gradcam_heatmap_url!)}
-                >
-                  <img
-                    src={result.gradcam_heatmap_url}
-                    alt="GradCAM heatmap"
-                    className="h-full w-full object-cover transition-opacity hover:opacity-75"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              ) : (
-                <div
-                  className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  Unavailable
-                </div>
-              )}
-            </div>
+      {/* Row 2: Three image tiles */}
+      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-5">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
+          Visual Analysis
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          {/* Original */}
+          <div>
+            <p className="mb-1.5 text-xs text-xade-charcoal/40">Original</p>
+            {previewUrl ? (
+              <div
+                className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                style={{ aspectRatio: '1 / 1' }}
+                onClick={() => setLightboxSrc(previewUrl)}
+              >
+                <img
+                  src={previewUrl}
+                  alt="Original"
+                  className="h-full w-full object-cover transition-opacity hover:opacity-75"
+                />
+              </div>
+            ) : (
+              <div
+                className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                Unavailable
+              </div>
+            )}
+          </div>
+          {/* Heatmap */}
+          <div>
+            <p className="mb-1.5 text-xs text-xade-charcoal/40">
+              Heatmap
+              <span className="ml-1 text-xade-charcoal/25">· red = focus</span>
+            </p>
+            {result.gradcam_heatmap_url ? (
+              <div
+                className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                style={{ aspectRatio: '1 / 1' }}
+                onClick={() => setLightboxSrc(result.gradcam_heatmap_url!)}
+              >
+                <img
+                  src={result.gradcam_heatmap_url}
+                  alt="GradCAM heatmap"
+                  className="h-full w-full object-cover transition-opacity hover:opacity-75"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                Unavailable
+              </div>
+            )}
+          </div>
+          {/* ELA */}
+          <div>
+            <p className="mb-1.5 text-xs text-xade-charcoal/40">
+              ELA
+              <span className="ml-1 text-xade-charcoal/25">· bright = tampered</span>
+            </p>
+            {result.ela_heatmap_url ? (
+              <div
+                className="w-full cursor-zoom-in overflow-hidden rounded-lg"
+                style={{ aspectRatio: '1 / 1' }}
+                onClick={() => setLightboxSrc(result.ela_heatmap_url!)}
+              >
+                <img
+                  src={result.ela_heatmap_url}
+                  alt="ELA overlay"
+                  className="h-full w-full object-cover transition-opacity hover:opacity-75"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                className="flex w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                Unavailable
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Explanation — merged summary + detailed */}
-        <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white p-5">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
-            Explanation
+      {/* Row 3: Explanation */}
+      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-5">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
+          Explanation
+        </p>
+        {explanation ? (
+          <p className="text-sm leading-relaxed text-xade-charcoal/70">
+            {explanation.summary}
+            {explanation.detailed_analysis ? ' ' + explanation.detailed_analysis : ''}
           </p>
-          {explanation ? (
-            <p className="flex-1 text-sm leading-relaxed text-xade-charcoal/70">
-              {explanation.summary}
-              {explanation.detailed_analysis ? ' ' + explanation.detailed_analysis : ''}
-            </p>
-          ) : (
-            <p className="text-sm text-xade-charcoal/35">
-              No explanation available. Select a VLM provider in dev settings.
-            </p>
-          )}
-        </div>
+        ) : (
+          <p className="text-sm text-xade-charcoal/35">
+            No explanation available. Select a VLM provider in dev settings.
+          </p>
+        )}
       </div>
 
       {/* Row 3: Facial Regions — stacked list */}
@@ -1238,7 +1275,16 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                     <p className="text-sm font-medium text-xade-charcoal/80">{region.label}</p>
 
                     {region.explanation ? (
-                      <p className="text-xs leading-relaxed text-xade-charcoal/60">
+                      <p
+                        className="cursor-default text-xs leading-relaxed text-xade-charcoal/60"
+                        onMouseEnter={() => {
+                          if (region.evidence_type === 'metric' && region.evidence_ref) {
+                            const metric = region.evidence_ref.split('=')[0].trim();
+                            setHoveredMetric({ idx, metric });
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredMetric(null)}
+                      >
                         {region.explanation}
                       </p>
                     ) : (
@@ -1246,6 +1292,51 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
                         No region-level explanation available.
                       </p>
                     )}
+
+                    {/* Forensic z-score strip */}
+                    {region.z_scores &&
+                      METRIC_KEYS.some((k) => region.z_scores![k] != null) && (
+                        <div className="mt-2 flex flex-col gap-1">
+                          {METRIC_KEYS.map((key) => {
+                            const z = region.z_scores![key];
+                            if (z == null) return null;
+                            const clampedZ = Math.max(-3, Math.min(3, z));
+                            const fillPct = (Math.abs(clampedZ) / 3) * 50;
+                            const isNeg = clampedZ < 0;
+                            const absZ = Math.abs(z);
+                            const isHighlighted =
+                              hoveredMetric?.idx === idx && hoveredMetric?.metric === key;
+                            const barColor = isHighlighted
+                              ? 'bg-xade-blue'
+                              : absZ >= 2.5
+                                ? 'bg-red-400'
+                                : absZ >= 1.5
+                                  ? 'bg-orange-400'
+                                  : 'bg-emerald-400';
+                            return (
+                              <div key={key} className="flex items-center gap-2">
+                                <span className="w-16 shrink-0 text-right text-[10px] text-xade-charcoal/40">
+                                  {METRIC_LABELS[key]}
+                                </span>
+                                <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-xade-charcoal/8">
+                                  <div className="absolute inset-y-0 left-1/2 w-px bg-xade-charcoal/25" />
+                                  <div
+                                    className={`absolute inset-y-0 ${barColor} transition-colors`}
+                                    style={{
+                                      left: isNeg ? `${50 - fillPct}%` : '50%',
+                                      width: `${fillPct}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-10 shrink-0 text-[10px] tabular-nums text-xade-charcoal/40">
+                                  {z >= 0 ? '+' : ''}
+                                  {z.toFixed(1)}σ
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                   </div>
 
                   {/* Activation */}
@@ -1265,6 +1356,15 @@ function ResultView({ result, previewUrl, onBack }: ResultViewProps) {
               );
             })}
           </div>
+
+          <p className="mt-4 text-[10px] leading-relaxed text-xade-charcoal/30">
+            Bars compare each region to the real-face distribution (0 = average real face).
+            Positive = above average · Negative = below average.{' '}
+            <span className="text-red-400">Red</span> = unusual (&gt;2.5σ) ·{' '}
+            <span className="text-orange-400">Orange</span> = moderate ·{' '}
+            <span className="text-emerald-500">Green</span> = normal. Hover a claim to highlight
+            its cited metric.
+          </p>
         </div>
       )}
 
