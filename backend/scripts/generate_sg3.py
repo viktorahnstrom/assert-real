@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import os
 import pickle
 import subprocess
 import sys
