@@ -85,6 +85,7 @@ class VLMProviderFactory:
         detection: DetectionContext,
         gradcam_available: bool = True,
         region_image_bytes: list[bytes] | None = None,
+        ela_bytes: bytes | None = None,
     ) -> VLMExplanation:
         """
         Generate an explanation using the specified provider.
@@ -97,6 +98,9 @@ class VLMProviderFactory:
             gradcam_available: Whether a real heatmap was generated
             region_image_bytes: Zoomed-in crop images for each detected region,
                                  sent to the VLM for close-up artifact inspection
+            ela_bytes: Optional ELA overlay PNG bytes — passed alongside
+                       detection.forensics_report so the VLM has both the
+                       visual map and the per-region z-scores.
         """
         resolved_id = provider_id or self._config.default_provider
 
@@ -127,6 +131,7 @@ class VLMProviderFactory:
             detection,
             gradcam_available=gradcam_available,
             region_image_bytes=region_image_bytes,
+            ela_bytes=ela_bytes,
         )
 
         if resolved_id != "mock":

@@ -50,6 +50,46 @@ def compute_ela(image: Image.Image, quality: int = 95, scale: int = 10) -> Image
     return Image.fromarray(residual, mode="RGB")
 
 
+def create_ela_overlay(
+    original: Image.Image,
+    ela_map: Image.Image,
+    alpha: float = 0.55,
+) -> Image.Image:
+    """Blend an ELA residual map faintly over the original image.
+
+    Mirrors the GradCAM overlay pattern so the VLM receives a visually
+    consistent set of evidence images. The ELA map is converted to a single
+    luminance channel and recoloured with a hot colormap (dark = no residual,
+    bright yellow/white = strong residual) so anomalies pop visually.
+
+    Args:
+        original: Source PIL image (any mode; converted to RGB internally).
+        ela_map: ELA residual image from :func:`compute_ela`.
+        alpha: Overlay blend weight (0 = original only, 1 = ELA only).
+
+    Returns:
+        PIL RGB image of the same size as *original* with the ELA residual
+        rendered as a faint hot colormap on top.
+    """
+    rgb = original.convert("RGB")
+    orig_arr = np.array(rgb, dtype=np.float32)
+
+    # Use luminance of the residual as scalar intensity, then map to a
+    # red-yellow gradient so high-residual areas are visually obvious.
+    ela_resized = ela_map.convert("L").resize(rgb.size, Image.BILINEAR)
+    intensity = np.array(ela_resized, dtype=np.float32) / 255.0
+    intensity = np.clip(intensity, 0.0, 1.0)
+
+    coloured = np.zeros_like(orig_arr)
+    coloured[..., 0] = 255.0 * np.minimum(1.0, intensity * 2.0)  # R
+    coloured[..., 1] = 255.0 * np.clip(intensity * 2.0 - 0.5, 0.0, 1.0)  # G
+    coloured[..., 2] = 0.0  # B
+
+    overlay = (1.0 - alpha) * orig_arr + alpha * coloured
+    overlay = np.clip(overlay, 0, 255).astype(np.uint8)
+    return Image.fromarray(overlay, mode="RGB")
+
+
 def ela_intensity_per_region(
     ela_map: Image.Image,
     masks: dict[str, np.ndarray],

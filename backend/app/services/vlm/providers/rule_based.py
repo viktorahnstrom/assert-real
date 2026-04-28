@@ -399,6 +399,7 @@ class RuleBasedProvider(BaseVLMProvider):
         detection: DetectionContext,
         gradcam_available: bool = True,
         region_image_bytes: list[bytes] | None = None,
+        ela_bytes: bytes | None = None,
     ) -> VLMExplanation:
         start = time.time()
 

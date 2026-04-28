@@ -230,11 +230,14 @@ def _build_ranked_evidence(
     heatmap: np.ndarray,
     parsing_result,
     face_bbox: tuple[int, int, int, int] | None = None,
-) -> tuple[list[dict], list[dict]] | None:
-    """Run forensics + region ranker, returning ``(evidence_regions, crops)``.
+):
+    """Run forensics + region ranker.
 
-    Returns ``None`` when forensics or ranking raises, so the caller can fall
-    back to the legacy CAM-only evidence extraction path.
+    Returns ``(evidence_regions, crops, forensics_report)`` on success, or
+    ``None`` when forensics or ranking raises so the caller can fall back to
+    the legacy CAM-only evidence extraction path. The forensics report is
+    surfaced so the VLM prompt can render the ``[FORENSIC EVIDENCE]`` block
+    even when no individual region clears the suspicion threshold.
     """
     try:
         from app.services.categories import FACE_CATEGORIES
@@ -284,7 +287,7 @@ def _build_ranked_evidence(
                 ev["category_label"] = face_cat.label
                 ev["common_artifacts"] = list(face_cat.common_artifacts[:3])
 
-        return evidence_regions, crops
+        return evidence_regions, crops, forensics_report
 
     except Exception as exc:
         logger.warning("Region ranker path failed, falling back: %s", exc)
@@ -506,10 +509,11 @@ async def create_analysis(request: AnalysisRequest):
 
             ranker_used = False
             region_categories: list[RegionWithCategory] = []
+            forensics_report = None
             if parsing_result is not None and heatmap is not None:
                 ranked = _build_ranked_evidence(image, heatmap, parsing_result, face_bbox=face_bbox)
                 if ranked is not None:
-                    evidence_regions, crops = ranked
+                    evidence_regions, crops, forensics_report = ranked
                     ranker_used = True
 
             # Fallback: run the legacy MediaPipe/label-based mapper over the
@@ -553,6 +557,26 @@ async def create_analysis(request: AnalysisRequest):
             vlm_explanation_text = None
             vlm_model_used = None
 
+            # Build the ELA overlay once per analysis. Mirrors the GradCAM
+            # overlay pattern so the VLM gets a visually consistent evidence
+            # image. Only sent when forensics ran successfully — otherwise
+            # the prompt builder skips the [FORENSIC EVIDENCE] block too.
+            ela_bytes = None
+            if forensics_report is not None:
+                try:
+                    from app.services.forensics.ela import (
+                        compute_ela,
+                        create_ela_overlay,
+                    )
+
+                    ela_map = compute_ela(image, quality=95, scale=10)
+                    ela_overlay = create_ela_overlay(image, ela_map)
+                    buf = io.BytesIO()
+                    ela_overlay.save(buf, format="PNG")
+                    ela_bytes = buf.getvalue()
+                except Exception as e:
+                    logger.warning("ELA overlay generation failed: %s", e)
+
             if vlm_factory is not None:
                 try:
                     detection_context = DetectionContext(
@@ -562,6 +586,7 @@ async def create_analysis(request: AnalysisRequest):
                         probabilities={"fake": fake_prob, "real": real_prob},
                         region_labels=region_labels,
                         region_categories=region_categories,
+                        forensics_report=forensics_report,
                     )
 
                     # Convert region crop PIL images to JPEG bytes for VLM
@@ -578,6 +603,7 @@ async def create_analysis(request: AnalysisRequest):
                         detection=detection_context,
                         gradcam_available=gradcam_available,
                         region_image_bytes=region_image_bytes if region_image_bytes else None,
+                        ela_bytes=ela_bytes,
                     )
 
                     print("VLM raw response:", vlm_explanation.raw_response)
