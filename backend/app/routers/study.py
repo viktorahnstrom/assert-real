@@ -10,7 +10,7 @@ import io
 import json
 import logging
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -244,7 +244,7 @@ async def analyze_for_study(file: UploadFile = File(...)):
 async def save_study_results(results: StudyResults):
     """Append one participant's anonymised results to the JSONL log file."""
     entry = results.model_dump()
-    entry["saved_at"] = datetime.now(timezone.utc).isoformat()
+    entry["saved_at"] = datetime.now(UTC).isoformat()
 
     with open(_results_file(), "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
@@ -388,7 +388,7 @@ async def precompute_study_analyses():
             analyses[img_id] = {"error": str(exc)}
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "analyses": analyses,
     }
 
