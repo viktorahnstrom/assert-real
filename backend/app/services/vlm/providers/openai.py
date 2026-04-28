@@ -11,11 +11,15 @@ from openai import APIError, APITimeoutError, OpenAI, RateLimitError
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import ProviderConfig
 from app.services.vlm.prompt_builder import (
+    SYSTEM_PROMPT_STRUCTURED,
     SYSTEM_PROMPT_WITH_GRADCAM,
     SYSTEM_PROMPT_WITHOUT_GRADCAM,
     build_explanation_prompt,
     parse_explanation_response,
+    parse_structured_response,
+    structured_to_legacy,
 )
+from app.services.vlm.structured_schema import openai_response_format
 
 logger = logging.getLogger(__name__)
 
@@ -77,24 +81,83 @@ class OpenAIProvider(BaseVLMProvider):
             )
 
         try:
+            # Preferred path: strict json_schema response_format. The
+            # Responses API rejects malformed output before it reaches us, so
+            # parse_structured_response only fails if the model legitimately
+            # produced nonsense. On hard failure we fall back to the legacy
+            # text path so a single bad reply never breaks user-facing output.
+            response_format = openai_response_format()
             response = self._client.responses.create(
                 model=self._model,
-                instructions=system_prompt,
+                instructions=SYSTEM_PROMPT_STRUCTURED if gradcam_available else system_prompt,
                 input=[{"role": "user", "content": content}],
                 max_output_tokens=2000,
                 temperature=0.3,
+                text=response_format,
             )
 
+            input_tokens, output_tokens = _extract_usage(response)
+            estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+
             raw_text = response.output_text or ""
+            parsed = parse_structured_response(raw_text)
+
+            if parsed is None:
+                logger.warning("OpenAI structured response invalid; retrying once")
+                response = self._client.responses.create(
+                    model=self._model,
+                    instructions=SYSTEM_PROMPT_STRUCTURED if gradcam_available else system_prompt,
+                    input=[
+                        {"role": "user", "content": content},
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "input_text",
+                                    "text": (
+                                        "Your previous reply did not match the "
+                                        "required JSON schema. Re-emit the "
+                                        "entire explanation as a single JSON "
+                                        "object matching the schema, with all "
+                                        "required fields populated."
+                                    ),
+                                }
+                            ],
+                        },
+                    ],
+                    max_output_tokens=2000,
+                    temperature=0.3,
+                    text=response_format,
+                )
+                retry_in, retry_out = _extract_usage(response)
+                input_tokens = (input_tokens or 0) + (retry_in or 0)
+                output_tokens = (output_tokens or 0) + (retry_out or 0)
+                estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+                raw_text = response.output_text or ""
+                parsed = parse_structured_response(raw_text)
+
             processing_time = int((time.time() - start_time) * 1000)
 
-            input_tokens = None
-            output_tokens = None
-            if response.usage:
-                input_tokens = response.usage.input_tokens
-                output_tokens = response.usage.output_tokens
+            if parsed is not None:
+                legacy = structured_to_legacy(parsed)
+                return VLMExplanation(
+                    summary=legacy["summary"],
+                    detailed_analysis=legacy["detailed_analysis"],
+                    technical_notes=legacy["technical_notes"] or None,
+                    region_comments=legacy["region_comments"] or None,
+                    structured_regions=parsed["regions"],
+                    provider="openai",
+                    model=self._model,
+                    processing_time_ms=processing_time,
+                    estimated_cost_usd=estimated_cost,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    raw_response=raw_text,
+                )
 
-            estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+            logger.warning(
+                "OpenAI structured output failed twice; falling back to free-text parser"
+            )
             sections = parse_explanation_response(raw_text)
 
             return VLMExplanation(
@@ -186,3 +249,11 @@ class OpenAIProvider(BaseVLMProvider):
         except Exception as e:
             logger.warning(f"OpenAI health check failed: {e}")
             return False
+
+
+def _extract_usage(response) -> tuple[int | None, int | None]:
+    """Pull (input_tokens, output_tokens) out of a Responses API result."""
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None, None
+    return getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)

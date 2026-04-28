@@ -11,11 +11,15 @@ import anthropic
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import ProviderConfig
 from app.services.vlm.prompt_builder import (
+    SYSTEM_PROMPT_STRUCTURED,
     SYSTEM_PROMPT_WITH_GRADCAM,
     SYSTEM_PROMPT_WITHOUT_GRADCAM,
     build_explanation_prompt,
     parse_explanation_response,
+    parse_structured_response,
+    structured_to_legacy,
 )
+from app.services.vlm.structured_schema import anthropic_tool_definition
 
 logger = logging.getLogger(__name__)
 
@@ -104,21 +108,85 @@ class AnthropicProvider(BaseVLMProvider):
         content.append({"type": "text", "text": user_prompt})
 
         try:
+            # Preferred path: tool-use forces the model to call our schema tool
+            # so the response is JSON we can validate. On hard validation
+            # failure we fall through to the legacy free-text path so a
+            # malformed structured reply never breaks user-facing output.
+            tool = anthropic_tool_definition()
             response = self._client.messages.create(
                 model=self._model,
-                system=system_prompt,
+                system=SYSTEM_PROMPT_STRUCTURED if gradcam_available else system_prompt,
                 messages=[{"role": "user", "content": content}],
                 max_tokens=2000,
                 temperature=0.3,
+                tools=[tool],
+                tool_choice={"type": "tool", "name": tool["name"]},
             )
-
-            raw_text = response.content[0].text if response.content else ""
-            processing_time = int((time.time() - start_time) * 1000)
 
             input_tokens = response.usage.input_tokens if response.usage else None
             output_tokens = response.usage.output_tokens if response.usage else None
-
             estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+
+            structured_payload = _extract_tool_input(response)
+            parsed = parse_structured_response(structured_payload)
+
+            if parsed is None:
+                # Single retry with a sterner reminder to call the tool. A
+                # second failure falls through to the legacy parser below.
+                logger.warning("Anthropic structured response invalid; retrying once")
+                retry_content = list(content)
+                retry_content.append(
+                    {
+                        "type": "text",
+                        "text": (
+                            "Your previous reply was not a valid call to the "
+                            "submit_explanation tool. Re-emit the entire "
+                            "explanation by calling that tool with all "
+                            "required fields populated."
+                        ),
+                    }
+                )
+                response = self._client.messages.create(
+                    model=self._model,
+                    system=SYSTEM_PROMPT_STRUCTURED if gradcam_available else system_prompt,
+                    messages=[{"role": "user", "content": retry_content}],
+                    max_tokens=2000,
+                    temperature=0.3,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": tool["name"]},
+                )
+                if response.usage:
+                    input_tokens = (input_tokens or 0) + response.usage.input_tokens
+                    output_tokens = (output_tokens or 0) + response.usage.output_tokens
+                    estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+                structured_payload = _extract_tool_input(response)
+                parsed = parse_structured_response(structured_payload)
+
+            processing_time = int((time.time() - start_time) * 1000)
+
+            if parsed is not None:
+                legacy = structured_to_legacy(parsed)
+                return VLMExplanation(
+                    summary=legacy["summary"],
+                    detailed_analysis=legacy["detailed_analysis"],
+                    technical_notes=legacy["technical_notes"] or None,
+                    region_comments=legacy["region_comments"] or None,
+                    structured_regions=parsed["regions"],
+                    provider="anthropic",
+                    model=self._model,
+                    processing_time_ms=processing_time,
+                    estimated_cost_usd=estimated_cost,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    raw_response=str(structured_payload) if structured_payload else None,
+                )
+
+            # Final fallback: scrape any text content the model returned and
+            # parse it with the legacy section parser.
+            logger.warning(
+                "Anthropic structured output failed twice; falling back to free-text parser"
+            )
+            raw_text = _extract_text(response)
             sections = parse_explanation_response(raw_text)
 
             return VLMExplanation(
@@ -208,3 +276,25 @@ class AnthropicProvider(BaseVLMProvider):
         except Exception as e:
             logger.warning(f"Anthropic health check failed: {e}")
             return False
+
+
+def _extract_tool_input(response) -> dict | None:
+    """Pull the first tool_use block's ``input`` from an Anthropic response."""
+    if not response or not getattr(response, "content", None):
+        return None
+    for block in response.content:
+        if getattr(block, "type", None) == "tool_use":
+            payload = getattr(block, "input", None)
+            return payload if isinstance(payload, dict) else None
+    return None
+
+
+def _extract_text(response) -> str:
+    """Concatenate every text block in an Anthropic response."""
+    if not response or not getattr(response, "content", None):
+        return ""
+    parts: list[str] = []
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            parts.append(getattr(block, "text", "") or "")
+    return "\n".join(p for p in parts if p)

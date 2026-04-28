@@ -25,6 +25,13 @@ class VLMExplanation:
     # e.g. {"Nose and mid-face region": "The bright red activation here..."}
     region_comments: Optional[dict] = None
 
+    # Per-region structured records when the provider used the JSON-schema
+    # path. Each entry has keys: region, observation, evidence_type
+    # ("visual" | "metric" | "heatmap"), evidence_ref, confidence. Surfaced
+    # alongside region_comments so the frontend can show per-claim evidence
+    # tags without breaking callers that only consume region_comments.
+    structured_regions: Optional[list[dict]] = None
+
     provider: str = ""
     model: str = ""
     processing_time_ms: int = 0

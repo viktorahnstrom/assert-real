@@ -12,11 +12,15 @@ from google.genai.errors import APIError
 from app.services.vlm.base import BaseVLMProvider, DetectionContext, ProviderInfo, VLMExplanation
 from app.services.vlm.config import ProviderConfig
 from app.services.vlm.prompt_builder import (
+    SYSTEM_PROMPT_STRUCTURED,
     SYSTEM_PROMPT_WITH_GRADCAM,
     SYSTEM_PROMPT_WITHOUT_GRADCAM,
     build_explanation_prompt,
     parse_explanation_response,
+    parse_structured_response,
+    structured_to_legacy,
 )
+from app.services.vlm.structured_schema import gemini_response_schema
 
 logger = logging.getLogger(__name__)
 
@@ -70,29 +74,77 @@ class GeminiProvider(BaseVLMProvider):
             for region_bytes in regions:
                 contents.append(types.Part.from_bytes(data=region_bytes, mime_type="image/jpeg"))
 
-            # Run the synchronous SDK call in a thread so it doesn't block the event loop
-            # (important when called in parallel with other providers via asyncio.gather)
+            # Preferred path: response_schema forces Gemini to emit JSON
+            # matching our schema. On hard validation failure we retry once,
+            # then fall back to the legacy text path so a single bad reply
+            # never breaks user-facing output.
+            structured_config = types.GenerateContentConfig(
+                system_instruction=(
+                    SYSTEM_PROMPT_STRUCTURED if gradcam_available else system_prompt
+                ),
+                max_output_tokens=2000,
+                temperature=0.3,
+                response_mime_type="application/json",
+                response_schema=gemini_response_schema(),
+            )
             response = await asyncio.to_thread(
                 self._client.models.generate_content,
                 model=self._model,
                 contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    max_output_tokens=2000,
-                    temperature=0.3,
-                ),
+                config=structured_config,
             )
 
+            input_tokens, output_tokens = _extract_usage(response)
+            estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+
             raw_text = response.text or ""
+            parsed = parse_structured_response(raw_text)
+
+            if parsed is None:
+                logger.warning("Gemini structured response invalid; retrying once")
+                retry_contents = list(contents) + [
+                    (
+                        "Your previous reply did not match the required JSON "
+                        "schema. Re-emit the entire explanation as a single "
+                        "JSON object matching the schema, with all required "
+                        "fields populated."
+                    )
+                ]
+                response = await asyncio.to_thread(
+                    self._client.models.generate_content,
+                    model=self._model,
+                    contents=retry_contents,
+                    config=structured_config,
+                )
+                retry_in, retry_out = _extract_usage(response)
+                input_tokens = (input_tokens or 0) + (retry_in or 0)
+                output_tokens = (output_tokens or 0) + (retry_out or 0)
+                estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+                raw_text = response.text or ""
+                parsed = parse_structured_response(raw_text)
+
             processing_time = int((time.time() - start_time) * 1000)
 
-            input_tokens = None
-            output_tokens = None
-            if response.usage_metadata:
-                input_tokens = response.usage_metadata.prompt_token_count
-                output_tokens = response.usage_metadata.candidates_token_count
+            if parsed is not None:
+                legacy = structured_to_legacy(parsed)
+                return VLMExplanation(
+                    summary=legacy["summary"],
+                    detailed_analysis=legacy["detailed_analysis"],
+                    technical_notes=legacy["technical_notes"] or None,
+                    region_comments=legacy["region_comments"] or None,
+                    structured_regions=parsed["regions"],
+                    provider="google",
+                    model=self._model,
+                    processing_time_ms=processing_time,
+                    estimated_cost_usd=estimated_cost,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    raw_response=raw_text,
+                )
 
-            estimated_cost = self.estimate_cost(input_tokens or 0, output_tokens or 0)
+            logger.warning(
+                "Gemini structured output failed twice; falling back to free-text parser"
+            )
             sections = parse_explanation_response(raw_text)
 
             return VLMExplanation(
@@ -169,3 +221,14 @@ class GeminiProvider(BaseVLMProvider):
         except Exception as e:
             logger.warning(f"Gemini health check failed: {e}")
             return False
+
+
+def _extract_usage(response) -> tuple[int | None, int | None]:
+    """Pull (prompt_token_count, candidates_token_count) from a Gemini result."""
+    usage = getattr(response, "usage_metadata", None)
+    if usage is None:
+        return None, None
+    return (
+        getattr(usage, "prompt_token_count", None),
+        getattr(usage, "candidates_token_count", None),
+    )

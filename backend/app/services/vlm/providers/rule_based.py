@@ -319,6 +319,43 @@ def _build_region_comments(detection: DetectionContext) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Structured-output records
+# ---------------------------------------------------------------------------
+
+
+def _build_structured_regions(detection: DetectionContext) -> list[dict]:
+    """Build the structured per-region records emitted by this provider.
+
+    Mirrors :func:`_build_region_comments` but yields the schema shape used by
+    the VLM providers, so callers and the frontend can treat all four
+    providers uniformly. Every claim is grounded in the GradCAM activation
+    score (``evidence_type='metric'``) since this provider has no access to
+    the image pixels.
+    """
+    regions = sorted(
+        detection.region_categories or [], key=lambda r: r.activation_score, reverse=True
+    )
+    out: list[dict] = []
+    for region in regions[:3]:
+        sentence = _build_region_comments(detection).get(region.label, "")
+        if not sentence:
+            continue
+        # Confidence tracks the model's overall confidence so the rule-based
+        # arm matches the calibration of the VLM arms; activation-derived
+        # ranking is encoded in evidence_ref.
+        out.append(
+            {
+                "region": region.label,
+                "observation": sentence,
+                "evidence_type": "metric",
+                "evidence_ref": f"activation={region.activation_score:.3f}",
+                "confidence": round(min(0.95, max(0.4, detection.confidence)), 2),
+            }
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Technical notes
 # ---------------------------------------------------------------------------
 
@@ -412,12 +449,14 @@ class RuleBasedProvider(BaseVLMProvider):
         detailed = _build_detailed_analysis(detection)
         notes = _build_technical_notes(detection)
         region_comments = _build_region_comments(detection)
+        structured_regions = _build_structured_regions(detection)
 
         return VLMExplanation(
             summary=summary,
             detailed_analysis=detailed,
             technical_notes=notes,
             region_comments=region_comments if region_comments else None,
+            structured_regions=structured_regions if structured_regions else None,
             provider="rule_based",
             model="rule-based-v1",
             processing_time_ms=int((time.time() - start) * 1000),

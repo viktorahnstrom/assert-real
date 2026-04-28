@@ -12,8 +12,14 @@ template ensures explanations are:
 5. Grounded via few-shot examples to establish tone and style
 """
 
+import json
+import logging
+
 from app.services.categories import FACE_CATEGORIES
 from app.services.vlm.base import DetectionContext
+from app.services.vlm.structured_schema import EVIDENCE_TYPES
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT_WITH_GRADCAM = """You are a forensic image analyst explaining deepfake detection results \
 to everyday users with no technical background.
@@ -153,6 +159,194 @@ Use the [SUMMARY], [DETAILED], [TECHNICAL], [REGIONS] format exactly."""
 
 # Alias for backwards compatibility
 SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_GRADCAM
+
+
+SYSTEM_PROMPT_STRUCTURED = """You are a forensic image analyst explaining deepfake detection results \
+to everyday users with no technical background. You return your answer as a \
+SINGLE structured JSON object — no preamble, no Markdown.
+
+You will receive several images. The user message states the exact position of \
+each one. Possible image types:
+- The ORIGINAL photo that was analyzed.
+- A GRADCAM HEATMAP overlay. Warmer/brighter colors show which regions the AI \
+detection model paid most attention to.
+- An ELA (Error Level Analysis) MAP overlay. Bright red/yellow pixels show \
+areas with anomalously high JPEG re-compression residuals.
+- Zoomed-in CROPS of specific facial regions, ordered from highest to lowest \
+activation.
+
+Your output must conform to this shape:
+
+{
+  "summary": "<one sentence>",
+  "detailed_analysis": "<two to three sentences>",
+  "technical_notes": "<three to five short lines>",
+  "regions": [
+    {
+      "region": "<exact label from the [REGIONS] list>",
+      "observation": "<one to three sentences of specific visual or measured detail>",
+      "evidence_type": "visual" | "metric" | "heatmap",
+      "evidence_ref": "<specific anchor — see rules below>",
+      "confidence": <number in [0, 1]>
+    }
+  ]
+}
+
+EVIDENCE GROUNDING — non-negotiable:
+- Every region object must tag its evidence_type and provide an evidence_ref.
+- "visual" → cite the crop or photo area, e.g. "left jaw crop" or "skin near \
+the cheekbone in Image 1".
+- "metric" → cite a metric from the [FORENSIC EVIDENCE] block by name and \
+value, e.g. "sharpness_z=-3.8" or "ela_intensity_z=+2.9 in Mouth & Teeth".
+- "heatmap" → cite a pattern visible in the GradCAM or ELA overlay, e.g. \
+"GradCAM peak around the mouth" or "ELA hotspot on the jawline".
+- evidence_ref MAY be empty only when no specific anchor exists. If you set \
+confidence above 0.7 you MUST provide a non-empty evidence_ref.
+
+CONTENT RULES:
+- summary: one sentence stating what was found and where.
+- detailed_analysis: two to three sentences. The single most distinctive cue. \
+No filler like "consistent with" or "strongly supports".
+- technical_notes: three to five short lines. May reference activation \
+percentages, z-scores, or model confidence.
+- regions: cover at least every entry in the user's [REGIONS] list. You may \
+add extra entries if you spotted something noteworthy outside the heatmap. \
+Each observation must describe something specific, not a generic pattern.
+- Plain everyday language in summary, detailed_analysis, observations.
+- Forbidden phrases: "composite artifact", "synthetic", "indicates \
+manipulation", "consistent with", "strongly suggests", "digital alteration", \
+"forensic" (the word — but the metric names from the evidence block are fine).
+
+Return ONLY the JSON object."""
+
+
+def parse_structured_response(payload: object) -> dict | None:
+    """Validate and normalise a structured VLM response.
+
+    Accepts either a dict (already-parsed JSON, the common case for tool-use
+    and json_schema modes) or a raw string (we parse it as JSON). Returns a
+    normalised dict on success, or ``None`` on outright validation failure
+    (malformed JSON, missing required field, wrong type, unknown
+    evidence_type) — the caller uses ``None`` as the signal to retry once
+    or fall back to free-text parsing.
+
+    "Soft" issues — confidence > 0.7 with empty evidence_ref, confidence
+    outside [0, 1] — are clamped or logged but not treated as failures, so
+    we don't burn a second VLM call on something that's still useful.
+    """
+    if payload is None:
+        return None
+
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            logger.warning("Structured response is not valid JSON: %s", exc)
+            return None
+
+    if not isinstance(payload, dict):
+        logger.warning("Structured response is not a JSON object: %r", type(payload))
+        return None
+
+    required_top = ("summary", "detailed_analysis", "technical_notes", "regions")
+    missing = [k for k in required_top if k not in payload]
+    if missing:
+        logger.warning("Structured response missing required keys: %s", missing)
+        return None
+
+    if not isinstance(payload["regions"], list):
+        logger.warning("Structured response 'regions' is not a list")
+        return None
+
+    cleaned_regions: list[dict] = []
+    for idx, region in enumerate(payload["regions"]):
+        normalised = _normalise_region(region, idx)
+        if normalised is None:
+            return None
+        cleaned_regions.append(normalised)
+
+    return {
+        "summary": str(payload["summary"]).strip(),
+        "detailed_analysis": str(payload["detailed_analysis"]).strip(),
+        "technical_notes": str(payload["technical_notes"]).strip(),
+        "regions": cleaned_regions,
+    }
+
+
+def _normalise_region(region: object, idx: int) -> dict | None:
+    """Validate one region object; return ``None`` on hard failure."""
+    if not isinstance(region, dict):
+        logger.warning("Region #%d is not an object: %r", idx, type(region))
+        return None
+
+    required = ("region", "observation", "evidence_type", "evidence_ref", "confidence")
+    missing = [k for k in required if k not in region]
+    if missing:
+        logger.warning("Region #%d missing keys: %s", idx, missing)
+        return None
+
+    evidence_type = str(region["evidence_type"]).strip().lower()
+    if evidence_type not in EVIDENCE_TYPES:
+        logger.warning(
+            "Region #%d has unknown evidence_type %r (allowed: %s)",
+            idx,
+            evidence_type,
+            EVIDENCE_TYPES,
+        )
+        return None
+
+    try:
+        confidence = float(region["confidence"])
+    except (TypeError, ValueError):
+        logger.warning("Region #%d confidence is not numeric: %r", idx, region["confidence"])
+        return None
+
+    # Soft-clamp out-of-range confidence rather than failing — the prose is
+    # still useful and we'd rather not burn a second VLM call.
+    if not 0.0 <= confidence <= 1.0:
+        logger.info(
+            "Region #%d confidence %.3f out of [0, 1]; clamping",
+            idx,
+            confidence,
+        )
+        confidence = max(0.0, min(1.0, confidence))
+
+    label = _normalise_region_label(str(region["region"]))
+    observation = str(region["observation"]).strip()
+    evidence_ref = str(region["evidence_ref"]).strip()
+
+    # Soft check: a high-confidence claim with no anchor is the failure mode
+    # the schema is meant to prevent, but we don't fail validation over it —
+    # the providers log + keep the claim. The frontend can flag it.
+    if confidence > 0.7 and not evidence_ref:
+        logger.warning(
+            "Region %r has confidence %.2f but empty evidence_ref",
+            label,
+            confidence,
+        )
+
+    return {
+        "region": label,
+        "observation": observation,
+        "evidence_type": evidence_type,
+        "evidence_ref": evidence_ref,
+        "confidence": confidence,
+    }
+
+
+def structured_to_legacy(parsed: dict) -> dict[str, object]:
+    """Convert a validated structured response into the flat shape used by
+    today's parser, so providers and ``analyses.py`` can consume both paths
+    uniformly. The richer per-region fields are surfaced separately via
+    :class:`VLMExplanation.structured_regions`.
+    """
+    region_comments = {r["region"]: r["observation"] for r in parsed["regions"]}
+    return {
+        "summary": parsed["summary"],
+        "detailed_analysis": parsed["detailed_analysis"],
+        "technical_notes": parsed["technical_notes"],
+        "region_comments": region_comments,
+    }
 
 
 # Threshold below which a metric z-score is treated as "within real-face range"

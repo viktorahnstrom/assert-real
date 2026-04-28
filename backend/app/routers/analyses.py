@@ -61,6 +61,12 @@ class EvidenceRegion(BaseModel):
     forensic_score: float | None = None
     suspicion_score: float | None = None
     z_scores: dict[str, float] | None = None
+    # Populated when the VLM returned a structured per-claim record
+    # (structured_regions). Optional so older analyses persisted before this
+    # field existed continue to deserialise.
+    evidence_type: str | None = None
+    evidence_ref: str | None = None
+    claim_confidence: float | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -297,20 +303,50 @@ def _build_ranked_evidence(
 def _attach_region_comments(
     evidence_regions: list[dict],
     region_comments: dict,
+    structured_regions: list[dict] | None = None,
 ) -> list[dict]:
-    """
-    Attach VLM region comments to evidence region dicts by matching label.
+    """Attach VLM region comments and per-claim evidence tags to evidence regions.
 
-    Args:
-        evidence_regions: List of dicts with url, label, activation_score.
-        region_comments: Dict mapping label -> one-sentence explanation.
+    The flat ``region_comments`` dict (label → one-sentence explanation) is
+    used to populate ``explanation`` for backwards compatibility. When
+    ``structured_regions`` is provided, each entry's ``observation``
+    additionally overrides the explanation (it carries the same text under
+    the structured schema), and ``evidence_type``, ``evidence_ref``, and
+    ``claim_confidence`` are attached for the frontend to highlight cited
+    metrics or heatmap regions.
 
-    Returns:
-        Evidence regions with explanation field populated where available.
+    Matching is by region label, with case- and whitespace-insensitive
+    fallback so minor casing drift between provider output and our region
+    labels does not silently drop the tag.
     """
+    structured_by_label: dict[str, dict] = {}
+    if structured_regions:
+        for record in structured_regions:
+            label = (record.get("region") or "").strip()
+            if label:
+                structured_by_label[label.lower()] = record
+
     for region in evidence_regions:
         label = region.get("label", "")
         region["explanation"] = region_comments.get(label, None)
+
+        record = structured_by_label.get(label.strip().lower())
+        if record is None:
+            continue
+        # Prefer the structured observation when present — the legacy
+        # region_comments dict was derived from the same field for VLM
+        # providers that took the JSON path.
+        observation = record.get("observation")
+        if observation:
+            region["explanation"] = observation
+        region["evidence_type"] = record.get("evidence_type")
+        region["evidence_ref"] = record.get("evidence_ref")
+        confidence = record.get("confidence")
+        if confidence is not None:
+            try:
+                region["claim_confidence"] = float(confidence)
+            except (TypeError, ValueError):
+                pass
     return evidence_regions
 
 
@@ -609,11 +645,16 @@ async def create_analysis(request: AnalysisRequest):
                     print("VLM raw response:", vlm_explanation.raw_response)
                     print("Region comments parsed:", vlm_explanation.region_comments)
 
-                    # Attach per-region comments to evidence crops
-                    if vlm_explanation.region_comments and evidence_regions:
+                    # Attach per-region comments + structured evidence tags
+                    # to evidence crops. structured_regions is None when the
+                    # provider fell back to the legacy free-text path.
+                    if (
+                        vlm_explanation.region_comments or vlm_explanation.structured_regions
+                    ) and evidence_regions:
                         evidence_regions = _attach_region_comments(
                             evidence_regions,
-                            vlm_explanation.region_comments,
+                            vlm_explanation.region_comments or {},
+                            structured_regions=vlm_explanation.structured_regions,
                         )
 
                     explanation_data = ExplanationData(
