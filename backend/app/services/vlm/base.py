@@ -7,7 +7,10 @@ Uses the strategy pattern so providers can be swapped without changing the rest 
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from app.services.forensics.report import ForensicsReport
 
 
 @dataclass
@@ -82,6 +85,10 @@ class DetectionContext:
     # categories.get_category_for_label() resolves a label successfully.
     # Providers and prompt_builder prefer this over plain region_labels.
     region_categories: list[RegionWithCategory] = field(default_factory=list)
+    # Per-region forensic metrics (sharpness, HF energy, ELA intensity).
+    # When present, prompt_builder emits a [FORENSIC EVIDENCE] block that the
+    # VLM can cite by name; absence falls back to today's CAM-only behavior.
+    forensics_report: Optional["ForensicsReport"] = None
 
 
 class BaseVLMProvider(ABC):
@@ -102,6 +109,7 @@ class BaseVLMProvider(ABC):
         detection: DetectionContext,
         gradcam_available: bool = True,
         region_image_bytes: list[bytes] | None = None,
+        ela_bytes: bytes | None = None,
     ) -> VLMExplanation:
         """
         Generate a structured explanation from the VLM provider.
@@ -111,13 +119,19 @@ class BaseVLMProvider(ABC):
             heatmap_bytes: The GradCAM heatmap in bytes. Only sent to the
                            VLM when gradcam_available is True.
             detection: The detection results to ground the explanation.
-                       Includes region_labels from GradCAM evidence crops.
+                       Includes region_labels from GradCAM evidence crops and,
+                       when available, a forensics_report whose metrics the
+                       prompt builder turns into a [FORENSIC EVIDENCE] block.
             gradcam_available: Whether heatmap_bytes contains a real heatmap.
             region_image_bytes: Optional list of zoomed-in region crop images
                                 in the same order as detection.region_categories.
                                 When provided, each crop is sent to the VLM as
                                 a separate image so it can inspect the artifact
                                 up close rather than inferring from the full image.
+            ela_bytes: Optional ELA (Error Level Analysis) overlay image in PNG
+                       bytes. Sent to the VLM after the GradCAM heatmap and
+                       before the region crops so the model can ground claims
+                       in visible recompression residuals.
 
         Returns:
             VLMExplanation with summary, detailed analysis, technical notes,

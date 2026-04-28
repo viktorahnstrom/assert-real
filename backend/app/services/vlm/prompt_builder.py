@@ -12,17 +12,22 @@ template ensures explanations are:
 5. Grounded via few-shot examples to establish tone and style
 """
 
+from app.services.categories import FACE_CATEGORIES
 from app.services.vlm.base import DetectionContext
 
 SYSTEM_PROMPT_WITH_GRADCAM = """You are a forensic image analyst explaining deepfake detection results \
 to everyday users with no technical background.
 
-You will receive images in this order:
-- Image 1: The original photo that was analyzed
-- Image 2: A GradCAM heatmap overlay. Warmer and brighter colors (red, orange, yellow) show \
+You will receive several images. The user message states the exact position of \
+each one. Possible image types:
+- The ORIGINAL photo that was analyzed.
+- A GRADCAM HEATMAP overlay. Warmer/brighter colors (red, orange, yellow) show \
 which regions the AI detection model paid most attention to.
-- Images 3, 4, 5 (if present): Zoomed-in crops of the specific facial regions, in order from \
-highest to lowest activation. Study these carefully — they are the primary evidence.
+- An ELA (Error Level Analysis) MAP overlay. Bright red/yellow pixels show \
+areas with anomalously high JPEG re-compression residuals — a forensic signal \
+that often spikes near generated, blended, or otherwise manipulated regions.
+- Zoomed-in CROPS of specific facial regions, in order from highest to lowest \
+activation. Study these carefully — they are the primary visual evidence.
 
 LENGTH RULES — follow these strictly:
 - [SUMMARY]: 1 sentence. State what was found and where. Nothing more.
@@ -43,6 +48,13 @@ highlight it. Label it clearly (e.g. "Hair and eyebrows", "Left eye", "Skin tone
 - Aim to comment on at least 3 distinct facial areas total, mixing GradCAM regions and your \
 own observations from the full photo.
 - If the image is classified as real, scan the same areas and note what looks natural.
+
+GROUNDING RULE — applies whenever a [FORENSIC EVIDENCE] block is provided:
+- Every claim in [REGIONS] must reference EITHER (a) a specific visual cue \
+you can see in that region's crop or in the ELA map, OR (b) a forensic metric \
+from the [FORENSIC EVIDENCE] block, cited by name (e.g. "the sharpness z-score \
+of -3.8" or "the ELA peak in the mouth area"). Do not invent metrics. Do not \
+contradict the numbers in the evidence block.
 
 QUALITY RULES:
 - Every sentence must reference something you can actually see, not a general pattern
@@ -143,10 +155,122 @@ Use the [SUMMARY], [DETAILED], [TECHNICAL], [REGIONS] format exactly."""
 SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_GRADCAM
 
 
+# Threshold below which a metric z-score is treated as "within real-face range"
+# and gets a brief, non-suspicious description.
+_NOTABLE_Z = 1.0
+# Cap on how many regions appear in the [FORENSIC EVIDENCE] block. Keeps the
+# block short so the VLM can scan the numbers quickly (target ≲ 10 lines).
+_MAX_FORENSIC_ROWS = 6
+
+
+def _describe_metric(metric: str, z: float) -> str:
+    """Return a short ``"label z=±X.X (descriptor)"`` fragment for one metric.
+
+    The descriptors are tuned to nudge the VLM toward forensically-correct
+    interpretations: low sharpness on a face usually means over-smoothing,
+    high HF energy often signals upsampling/GAN textures, and a high ELA
+    intensity on a region indicates the region was re-encoded differently
+    from its surroundings (a classic compositing tell).
+    """
+    if metric == "laplacian_variance":
+        if abs(z) < _NOTABLE_Z:
+            descr = "within real-face range"
+        elif z < 0:
+            descr = "unusually smooth"
+        else:
+            descr = "unusually sharp"
+        return f"sharpness z={z:+.1f} ({descr})"
+    if metric == "hf_energy":
+        if abs(z) < _NOTABLE_Z:
+            descr = "within real-face range"
+        elif z > 0:
+            descr = "upsampling artifacts likely"
+        else:
+            descr = "high-freq deficit"
+        return f"high-freq energy z={z:+.1f} ({descr})"
+    if metric == "ela_intensity":
+        if abs(z) < _NOTABLE_Z:
+            descr = "within real-face range"
+        elif z > 0:
+            descr = f"ELA peak {abs(z):.1f}σ above face mean"
+        else:
+            descr = "low ELA residual"
+        return f"ELA intensity z={z:+.1f} ({descr})"
+    return f"{metric} z={z:+.1f}"
+
+
+def build_forensic_evidence_block(detection: DetectionContext) -> str:
+    """Render the optional ``[FORENSIC EVIDENCE]`` block from forensics_report.
+
+    Each row lists the per-region z-scores for sharpness, high-frequency
+    energy, and ELA intensity. Metrics with ``|z| < 1`` are dropped per
+    region (or kept as a single "within real-face range" line when none of
+    the three are notable) so the block stays scannable.
+
+    Returns an empty string when ``detection.forensics_report`` is None or
+    the reference distribution cannot be loaded — keeping the prompt fully
+    backwards-compatible.
+    """
+    report = detection.forensics_report
+    if report is None or not report.regions:
+        return ""
+
+    # Local import keeps the module importable when the reference distribution
+    # is absent (e.g. in unit tests that don't ship real_distribution.json).
+    try:
+        from app.services.forensics import z_score
+    except Exception:
+        return ""
+
+    rows: list[tuple[str, float]] = []  # (line_text, max_abs_z)
+    for cat_id, region in report.regions.items():
+        face_cat = FACE_CATEGORIES.get(cat_id)
+        if face_cat is None:
+            continue
+
+        try:
+            z_by_metric = {
+                "laplacian_variance": z_score(
+                    cat_id, "laplacian_variance", region.laplacian_variance
+                ),
+                "hf_energy": z_score(cat_id, "hf_energy", region.hf_energy),
+                "ela_intensity": z_score(cat_id, "ela_intensity", region.ela_intensity),
+            }
+        except RuntimeError:
+            # real_distribution.json missing — skip the block entirely so the
+            # VLM doesn't see a half-rendered evidence list.
+            return ""
+
+        notable = [
+            _describe_metric(metric, z) for metric, z in z_by_metric.items() if abs(z) >= _NOTABLE_Z
+        ]
+        max_abs_z = max((abs(z) for z in z_by_metric.values()), default=0.0)
+
+        if not notable:
+            # Keep the row but mark it as benign so the VLM knows this region
+            # was checked and found unremarkable.
+            line = f"{face_cat.label} — within real-face range across all metrics"
+        else:
+            line = f"{face_cat.label} — " + ", ".join(notable)
+
+        rows.append((line, max_abs_z))
+
+    if not rows:
+        return ""
+
+    # Surface the most anomalous regions first so the VLM's attention lands
+    # on them; drop the long tail to keep the block compact.
+    rows.sort(key=lambda r: r[1], reverse=True)
+    top = rows[:_MAX_FORENSIC_ROWS]
+
+    return "[FORENSIC EVIDENCE]\n" + "\n".join(line for line, _ in top)
+
+
 def build_explanation_prompt(
     detection: DetectionContext,
     gradcam_available: bool = True,
     region_count: int = 0,
+    ela_available: bool = False,
 ) -> str:
     """
     Build the user-facing prompt with detection context and region labels.
@@ -172,29 +296,66 @@ def build_explanation_prompt(
     fake_prob = detection.probabilities.get("fake", 0)
     real_prob = detection.probabilities.get("real", 0)
 
-    # Build the image layout description so the VLM knows exactly which image is which
-    crop_image_start = 3 if gradcam_available else 2
+    # Image positions are dynamic — original is always image 1, then GradCAM
+    # and ELA are inserted in that order when available, then region crops.
+    next_idx = 2
+    layout_lines: list[str] = ["Image 1: the original photo."]
+
+    gradcam_idx = None
     if gradcam_available:
-        if region_count > 0:
-            crop_refs = ", ".join(f"Image {crop_image_start + i}" for i in range(region_count))
-            image_instruction = (
-                f"Look at the GradCAM heatmap (Image 2) to see which areas the model focused on, "
-                f"then examine the zoomed-in region crops ({crop_refs}) to inspect each area up close. "
-                f"Describe the specific visual details you actually see in the crops — texture, edges, "
-                f"blending, skin quality — that support or contradict this classification."
-            )
-        else:
-            image_instruction = (
-                "Look at the GradCAM heatmap (Image 2) and describe what you observe "
-                "in the highlighted regions of the original photo (Image 1). "
-                "What specific visual details in those regions support this classification?"
-            )
+        gradcam_idx = next_idx
+        layout_lines.append(f"Image {gradcam_idx}: the GradCAM heatmap overlay.")
+        next_idx += 1
+
+    ela_idx = None
+    if ela_available:
+        ela_idx = next_idx
+        layout_lines.append(
+            f"Image {ela_idx}: the ELA (Error Level Analysis) overlay — "
+            "bright red/yellow pixels mark areas with anomalously high JPEG "
+            "re-compression residuals."
+        )
+        next_idx += 1
+
+    crop_image_start = next_idx
+    if region_count > 0:
+        crop_refs = ", ".join(str(crop_image_start + i) for i in range(region_count))
+        plural = "Images" if region_count > 1 else "Image"
+        layout_lines.append(
+            f"{plural} {crop_refs}: zoomed-in crops of facial regions, ordered "
+            "from highest to lowest activation."
+        )
+
+    if gradcam_available and region_count > 0:
+        cite_clauses = [f"the GradCAM heatmap (Image {gradcam_idx})"]
+        if ela_idx is not None:
+            cite_clauses.append(f"the ELA map (Image {ela_idx})")
+        cite_text = " and ".join(cite_clauses)
+        image_instruction = (
+            f"Look at {cite_text} to see where the model and the forensic "
+            f"signals point, then examine each region crop up close. Describe "
+            f"the specific visual details you actually see in the crops — "
+            f"texture, edges, blending, skin quality — that support or "
+            f"contradict this classification."
+        )
+    elif gradcam_available:
+        cite_clauses = [f"the GradCAM heatmap (Image {gradcam_idx})"]
+        if ela_idx is not None:
+            cite_clauses.append(f"the ELA map (Image {ela_idx})")
+        cite_text = " and ".join(cite_clauses)
+        image_instruction = (
+            f"Look at {cite_text} and describe what you observe in the "
+            "highlighted regions of the original photo (Image 1). What "
+            "specific visual details there support this classification?"
+        )
     else:
         image_instruction = (
             "The GradCAM heatmap is not available for this analysis. "
             "Look at the original photo and describe what visual features "
             "you can directly observe that support or contradict this classification."
         )
+
+    layout_block = "Image layout:\n" + "\n".join(f"- {line}" for line in layout_lines)
 
     regions_instruction = ""
 
@@ -233,13 +394,18 @@ def build_explanation_prompt(
             f"{labels_list}"
         )
 
+    forensic_block = build_forensic_evidence_block(detection)
+    forensic_section = f"\n\n{forensic_block}" if forensic_block else ""
+
     prompt = f"""Here are the detection results for the image.
 
 Detection result: {classification} ({confidence_pct} confidence)
 Fake probability: {fake_prob:.1%} | Real probability: {real_prob:.1%}
 Model: {detection.model_used}
 
-{image_instruction}{regions_instruction}
+{layout_block}
+
+{image_instruction}{forensic_section}{regions_instruction}
 
 Use the [SUMMARY], [DETAILED], [TECHNICAL], [REGIONS] format."""
 

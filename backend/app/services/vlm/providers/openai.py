@@ -40,9 +40,11 @@ class OpenAIProvider(BaseVLMProvider):
         detection: DetectionContext,
         gradcam_available: bool = True,
         region_image_bytes: list[bytes] | None = None,
+        ela_bytes: bytes | None = None,
     ) -> VLMExplanation:
         start_time = time.time()
         regions = region_image_bytes or []
+        ela_available = ela_bytes is not None
 
         system_prompt = (
             SYSTEM_PROMPT_WITH_GRADCAM if gradcam_available else SYSTEM_PROMPT_WITHOUT_GRADCAM
@@ -51,6 +53,7 @@ class OpenAIProvider(BaseVLMProvider):
             detection,
             gradcam_available=gradcam_available,
             region_count=len(regions),
+            ela_available=ela_available,
         )
 
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -64,6 +67,9 @@ class OpenAIProvider(BaseVLMProvider):
             content.append(
                 {"type": "input_image", "image_url": f"data:image/png;base64,{heatmap_b64}"}
             )
+        if ela_available:
+            ela_b64 = base64.b64encode(ela_bytes).decode("utf-8")
+            content.append({"type": "input_image", "image_url": f"data:image/png;base64,{ela_b64}"})
         for region_bytes in regions:
             region_b64 = base64.b64encode(region_bytes).decode("utf-8")
             content.append(
