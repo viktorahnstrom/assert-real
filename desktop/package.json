@@ -9,6 +9,7 @@
     "dev": "vite",
     "dev:electron": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "tsc -b && vite build",
+    "build:web": "tsc -b && vite build --mode web",
     "build:electron": "tsc -b && vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint src/",

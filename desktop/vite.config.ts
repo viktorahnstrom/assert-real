@@ -3,14 +3,15 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: './',
+  // Electron needs relative paths; web (Vercel) needs absolute '/'
+  base: mode === 'web' ? '/' : './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -19,4 +20,4 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
-});
+}));
