@@ -333,9 +333,7 @@ function AnalyzingScreen({ done, total }: { done: number; total: number }) {
 // ============================================
 // Phase: Explanation evaluation (Phase 2)
 // ============================================
-function studyAnalysisToDetectionResult(
-  item: ExplanationItem
-): DetectionResult {
+function studyAnalysisToDetectionResult(item: ExplanationItem): DetectionResult {
   const { analysis, provider } = item;
   const fakeScore = analysis?.deepfake_score ?? 0;
   const explanation = analysis?.explanations[provider] ?? null;

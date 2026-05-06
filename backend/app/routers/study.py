@@ -124,9 +124,7 @@ def _run_detection_pipeline(image, image_tensor, target_class) -> dict:
     region_categories: list[RegionWithCategory] = []
 
     if parsing_result is not None and heatmap is not None:
-        ranked = _build_ranked_evidence(
-            image, heatmap, parsing_result, face_bbox=face_bbox
-        )
+        ranked = _build_ranked_evidence(image, heatmap, parsing_result, face_bbox=face_bbox)
         if ranked is not None:
             evidence_regions, crops, _ = ranked
             ranker_used = True
@@ -226,9 +224,7 @@ async def _run_openai_and_attach_region_comments(
 
         # Attach per-region commentary so Facial Regions cards show their
         # own observations instead of leaving them empty.
-        if (
-            vlm_result.region_comments or vlm_result.structured_regions
-        ) and evidence_regions:
+        if (vlm_result.region_comments or vlm_result.structured_regions) and evidence_regions:
             _attach_region_comments(
                 evidence_regions,
                 vlm_result.region_comments or {},
