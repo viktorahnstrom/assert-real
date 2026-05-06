@@ -1,530 +1,1106 @@
 {
-  "generated_at": "2026-04-28T11:26:38.638706+00:00",
+  "generated_at": "2026-05-06T12:51:21.419200+00:00",
   "analyses": {
     "1": {
-      "deepfake_score": 1.0,
+      "deepfake_score": 0.8872,
       "classification": "fake",
-      "confidence": 1.0,
+      "confidence": 0.8872,
       "gradcam_url": "/quiz-heatmaps/heatmap_1.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_1.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_1_0.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.743,
+          "category_id": "skin_texture",
+          "cam_score": 0.4856,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.7428,
+          "z_scores": {
+            "laplacian_variance": -2.0778,
+            "hf_energy": -3.1853,
+            "ela_intensity": 10.2154
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin appears overly smooth with very few visible pores, creating a waxy look. There is an unnatural consistency in the skin tone, lacking the expected variations found in real skin. The texture around the cheeks and forehead does not show typical aging signs, such as fine lines or blemishes.",
+          "evidence_type": "visual",
+          "evidence_ref": "skin texture in Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_1_1.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.703,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.4049,
+          "suspicion_score": 0.7025,
+          "z_scores": {
+            "laplacian_variance": -1.2127,
+            "hf_energy": -1.5048,
+            "ela_intensity": 1.6198
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth exhibit irregular spacing, and the gum line is blurred, making it hard to distinguish between teeth and gums. The overall geometry of the teeth appears unnatural, as some teeth seem to overlap in a way that is not typical for a natural smile. The color of the teeth is also unusually uniform, lacking natural variations.",
+          "evidence_type": "visual",
+          "evidence_ref": "mouth crop in Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_1_2.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.622,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.2444,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6222,
+          "z_scores": {
+            "laplacian_variance": -1.4944,
+            "hf_energy": -2.3436,
+            "ela_intensity": 6.2546
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows are too uniform in thickness and lack the individual hair detail that would normally be present. There is an asymmetry in the shape of the eyebrows, which is not typical for natural human features. The eyelashes appear merged into a single block rather than showing individual strands.",
+          "evidence_type": "visual",
+          "evidence_ref": "eyebrow crop in Image 6",
+          "claim_confidence": 0.8
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is classified as fake with high confidence.",
-          "detailed_analysis": "The GradCAM heatmap highlights significant inconsistencies in facial features, particularly around the jawline, forehead, and mid-face. These areas show unnatural textures and edges that deviate from typical human characteristics, reinforcing the classification as fake.",
-          "technical_notes": "The model achieved a 100% confidence level in identifying the image as fake. Key regions exhibited unusual texture patterns and edge definitions. The model used is EfficientNet-B4, which is known for its sensitivity to facial anomalies.",
-          "processing_time_ms": 9666,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The analysis strongly indicates that this image is not a real photograph, with key visual cues concentrated around the left jawline and mid-face.",
-          "detailed_analysis": "The most distinctive visual cue is the unnatural smoothness and lack of fine detail in the skin texture, particularly noticeable along the left jaw and cheek. This area also shows an irregular contour and a subtle blurring effect, which are common characteristics in generated images.",
-          "technical_notes": "Model confidence in 'fake' classification is 100.0%.EfficientNet-B4 model was used for detection.GradCAM highlights the left jaw and mid-face as primary decision regions.Background inconsistencies also contribute to the overall assessment.",
-          "processing_time_ms": 9751,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model flagged the forehead, nose, and left jaw as the strongest indicators of a fake image, with intense GradCAM activation concentrated on the face's central and lower regions.",
-          "detailed_analysis": "The most distinctive cue is the extreme concentration of GradCAM activation (bright yellow and red) across the forehead, nose, and left jaw\u2014areas that typically show the most blending artifacts in generated or heavily edited faces. The sunglasses obscure the eyes, which are normally the easiest region for AI to scrutinize, suggesting the manipulation may have been designed to avoid detection in that area. The sharp boundary between the face and the background, combined with the unnaturally smooth skin tone visible in the unobstructed regions, points to a face that was either generated or heavily blended into the original scene.",
-          "technical_notes": "EfficientNet-B4 achieved 100% fake confidence, with GradCAM peaks concentrated on the lower two-thirds of the face. The heatmap shows minimal activation around the eyes (obscured by sunglasses) and maximum intensity on the nose bridge, cheekbones, and jawline\u2014classic regions where generative models struggle with anatomical consistency. The background shows no corresponding activation, confirming the model focused on facial features rather than scene context.",
-          "processing_time_ms": 8692,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Left jaw region, Forehead and hairline region, Nose and mid-face region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 100.0%, P(real): 0.0%  |  log-odds: +12.764\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates that the image is likely fake based on several visual cues.",
+          "detailed_analysis": "The skin texture appears unnaturally smooth and lacks the expected variation in pore size, suggesting a digital alteration. Additionally, the mouth shows irregularities in the tooth alignment and gum definition, which are not typical in natural images. The eyebrows and eyelashes appear overly uniform, lacking the natural variation expected in human features.",
+          "technical_notes": "The model's confidence in the image being fake is 88.7%. The skin texture shows a significant deviation from natural patterns, with a sharpness z-score indicating an unnatural smoothness. The mouth and teeth region exhibits irregularities in geometry and spacing, contributing to the overall classification.",
+          "processing_time_ms": 19096,
           "error": null
         }
       }
     },
     "2": {
-      "deepfake_score": 0.9999,
+      "deepfake_score": 0.8954,
       "classification": "fake",
-      "confidence": 0.9999,
+      "confidence": 0.8954,
       "gradcam_url": "/quiz-heatmaps/heatmap_2.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_2.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_2_0.jpg",
+          "label": "Facial Boundaries",
+          "activation_score": 0.892,
+          "category_id": "facial_boundaries",
+          "cam_score": 1.0,
+          "forensic_score": 0.7842,
+          "suspicion_score": 0.8921,
+          "z_scores": {
+            "laplacian_variance": -1.5145,
+            "hf_energy": -1.9356,
+            "ela_intensity": 3.1367
+          },
+          "category_label": "Facial Boundaries",
+          "common_artifacts": [
+            "jawline smoothing or blending seam at face-neck junction",
+            "asymmetric jaw contour relative to midline",
+            "nose bridge width or curvature proportion anomaly"
+          ],
+          "explanation": "The jawline appears unusually smooth, lacking the natural irregularities typically seen in human faces. There is an evident blending seam at the neck, which does not match the expected contour.",
+          "evidence_type": "visual",
+          "evidence_ref": "jawline crop in Image 4",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_2_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.75,
+          "category_id": "skin_texture",
+          "cam_score": 0.5001,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.7501,
+          "z_scores": {
+            "laplacian_variance": -1.998,
+            "hf_energy": -3.0494,
+            "ela_intensity": 8.2383
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin has a plastic-like appearance with an unnatural smoothness, lacking the expected pore detail for a child of this age. There are no visible skin imperfections, which is inconsistent with natural skin texture.",
+          "evidence_type": "visual",
+          "evidence_ref": "skin near the cheekbone in Image 5",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_2_2.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.597,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.1934,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.5967,
+          "z_scores": {
+            "laplacian_variance": -1.7024,
+            "hf_energy": -2.3653,
+            "ela_intensity": 4.8667
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows appear as a uniform block without distinct hair strands, and there is a noticeable asymmetry in density between the left and right brows. This lack of detail contributes to an artificial look.",
+          "evidence_type": "visual",
+          "evidence_ref": "eyebrow crop in Image 6",
+          "claim_confidence": 0.8
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is classified as fake with high confidence based on the nose and mid-face region.",
-          "detailed_analysis": "The GradCAM heatmap highlights significant irregularities in the nose and mid-face area, particularly around the edges and texture. The skin appears overly smooth and lacks natural variations, which is atypical for authentic images.",
-          "technical_notes": "The model achieved a 100% confidence in identifying the image as fake. The nose and mid-face region showed pronounced activation, suggesting notable discrepancies in texture and boundary definition. The EfficientNet-B4 model focused primarily on the facial features.",
-          "processing_time_ms": 5094,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The image exhibits characteristics of being computer-generated, with notable cues found in the nose and mid-face region.",
-          "detailed_analysis": "The most distinctive cue is the unnaturally smooth and uniform skin texture across the nose and cheeks, which lacks the subtle imperfections and varied details typically present in real human skin. This overly polished appearance, combined with slightly softened edges around facial features, contributes to an artificial look.",
-          "technical_notes": "Model classified as FAKE with 100.0% confidence.EfficientNet-B4 model was used for detection.GradCAM heatmap shows peak activation around the nose and mouth.",
-          "processing_time_ms": 7404,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The nose and mid-face region shows artificial smoothing and blending artifacts consistent with AI generation, particularly around the nasal bridge and cheek transition.",
-          "detailed_analysis": "The GradCAM heatmap shows intense activation across the nose and mid-face, with the brightest red concentration on the nasal bridge and upper cheek area. In the original photo, the skin in this region appears unnaturally smooth and lacks the fine pore texture and natural micro-variations visible elsewhere on the face. The transition between the nose and cheeks shows a soft, blended quality rather than the sharper anatomical boundaries typical of real skin.",
-          "technical_notes": "GradCAM peak intensity centered on nasal bridge and mid-face region (Image 2, red hotspot). Model confidence 100% for fake classification. Skin smoothing artifact visible in original photo where natural texture should show pore detail. Cheek-to-nose boundary lacks the fine edge definition present in authentic facial photography.",
-          "processing_time_ms": 4851,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Nose and mid-face region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 100.0%, P(real): 0.0%  |  log-odds: +8.950\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates that the image is likely fake based on various visual cues.",
+          "detailed_analysis": "The facial boundaries show unusual blending at the jawline, while the skin texture appears overly smooth and waxy. Additionally, the eyebrows lack individual hair definition, suggesting a lack of realism.",
+          "technical_notes": "The model assigned an 89.5% probability of being fake. Key regions showed significant activation, particularly in facial boundaries and skin texture. The GradCAM highlighted areas of concern that align with the ELA findings.",
+          "processing_time_ms": 13043,
           "error": null
         }
       }
     },
     "3": {
-      "deepfake_score": 0.9995,
+      "deepfake_score": 0.9559,
       "classification": "fake",
-      "confidence": 0.9995,
+      "confidence": 0.9559,
       "gradcam_url": "/quiz-heatmaps/heatmap_3.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_3.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_3_0.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.695,
+          "category_id": "skin_texture",
+          "cam_score": 0.3889,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6945,
+          "z_scores": {
+            "laplacian_variance": -2.3345,
+            "hf_energy": -3.2752,
+            "ela_intensity": 7.0805
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin appears overly smooth with a waxy finish, lacking the natural variation in pore size and texture. There are no visible pores, which is unusual for the subject's age.",
+          "evidence_type": "visual",
+          "evidence_ref": "skin near the cheekbone in Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_3_1.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.685,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3694,
+          "suspicion_score": 0.6847,
+          "z_scores": {
+            "laplacian_variance": -1.4325,
+            "hf_energy": -1.4774,
+            "ela_intensity": 0.7923
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth show an unnatural alignment with some overlapping edges, and the gum-to-tooth boundary appears blurred. Additionally, the spacing between the teeth is inconsistent, which is atypical.",
+          "evidence_type": "visual",
+          "evidence_ref": "mouth crop in Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_3_2.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.674,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.3474,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6737,
+          "z_scores": {
+            "laplacian_variance": -1.5853,
+            "hf_energy": -2.2718,
+            "ela_intensity": 4.8634
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows lack individual hair definition and appear as a solid block, indicating a lack of natural variation. The thickness is uniform along the entire brow, which is not typical for natural eyebrows.",
+          "evidence_type": "visual",
+          "evidence_ref": "eyebrow crop in Image 6",
+          "claim_confidence": 0.8
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is classified as fake with high confidence.",
-          "detailed_analysis": "The left jaw region shows irregular texture and unnatural blending, which are common signs of manipulation. The GradCAM overlay highlights this area, suggesting it was a focal point for the detection model due to these inconsistencies.",
-          "technical_notes": "The model achieved 100.0% confidence in classifying the image as fake. The left jaw region exhibited significant activation, indicating potential anomalies. The texture and boundary irregularities were key factors in this classification.",
-          "processing_time_ms": 6557,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 4811,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model flagged the left jaw region as the primary indicator of a fake image, with maximum GradCAM activation concentrated on the lower left face.",
-          "detailed_analysis": "The GradCAM heatmap shows intense red activation peaking directly over the left jaw and lower cheek area, suggesting the model detected an anomaly in how that region was rendered or blended. In the original photo, the left jaw shows an unusually smooth transition between skin tones and a subtle discontinuity in texture that does not match the natural aging and stubble pattern visible on the right side of the face.",
-          "technical_notes": "GradCAM peak activation concentrated in left jaw region with red intensity indicating high model confidence. The asymmetry between left and right jaw texture and shading suggests localized manipulation or blending artifact. EfficientNet-B4 achieved 100% fake confidence, with the jaw region driving the decision boundary.",
-          "processing_time_ms": 4810,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Left jaw region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 100.0%, P(real): 0.0%  |  log-odds: +7.679\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates the image is likely fake, with a high confidence level of 95.6%.",
+          "detailed_analysis": "Key indicators of manipulation include an unnatural skin texture and inconsistencies in the mouth and teeth regions. The GradCAM heatmap highlights these areas, while the ELA map shows significant anomalies in the skin and mouth regions.",
+          "technical_notes": "The model's confidence in detecting fakeness is at 95.6%. The heatmap indicates high activation around the mouth and skin areas. ELA analysis reveals bright red pixels, suggesting re-compression artifacts.",
+          "processing_time_ms": 13348,
           "error": null
         }
       }
     },
     "4": {
-      "deepfake_score": 1.0,
+      "deepfake_score": 0.7348,
       "classification": "fake",
-      "confidence": 1.0,
+      "confidence": 0.7348,
       "gradcam_url": "/quiz-heatmaps/heatmap_4.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_4.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_4_0.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.691,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3816,
+          "suspicion_score": 0.6908,
+          "z_scores": {
+            "laplacian_variance": -1.3766,
+            "hf_energy": -1.5265,
+            "ela_intensity": 1.0121
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth appear unnaturally uniform in spacing, and the gum-to-tooth boundary is blurred. There is a lack of detail in the gums, which typically would show more texture. The overall appearance lacks the natural irregularities found in real teeth.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 4",
+          "claim_confidence": 0.8
+        },
+        {
+          "url": "/quiz-heatmaps/region_4_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.659,
+          "category_id": "skin_texture",
+          "cam_score": 0.3179,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6589,
+          "z_scores": {
+            "laplacian_variance": -2.3549,
+            "hf_energy": -3.3202,
+            "ela_intensity": 7.5169
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin has an overly smooth appearance, lacking the natural pores and texture expected for the subject's age. There are areas that appear waxy, which is not typical for human skin. The uniformity of the skin tone is also suspicious.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 5",
+          "claim_confidence": 0.75
+        },
+        {
+          "url": "/quiz-heatmaps/region_4_2.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.606,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.2118,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6059,
+          "z_scores": {
+            "laplacian_variance": -1.6263,
+            "hf_energy": -2.0972,
+            "ela_intensity": 4.5443
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows appear to have an unnatural thickness and lack individual strands, creating a block-like appearance. There is also noticeable asymmetry in the shape and density of the eyebrows. The eyelashes do not show the expected variation in length or density.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 6",
+          "claim_confidence": 0.7
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image is classified as fake with high confidence based on the analysis of the nose and mid-face region.",
-          "detailed_analysis": "The GradCAM heatmap highlights significant irregularities in the nose and mid-face region, particularly around the edges and texture. The skin appears overly smooth with unnatural transitions, suggesting manipulation.",
-          "technical_notes": "The model achieved 100% confidence in detecting fakeness. The nose region shows an unusual lack of detail, with a sharp contrast in texture compared to surrounding areas. Activation percentages indicate a strong focus on the mid-face.",
-          "processing_time_ms": 5829,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 6332,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model detected this image as fake with 100% confidence, focusing most heavily on the nose and mid-face region where blending artifacts and texture inconsistencies are visible.",
-          "detailed_analysis": "The GradCAM heatmap shows intense activation concentrated around the nose, mouth, and central face\u2014the exact areas where a generated or manipulated face typically shows the most visible seams. The nose and surrounding mid-face region display a subtle but noticeable softness and lack of fine skin texture detail compared to what you'd expect in a natural photograph, particularly around the nasal bridge and the transition to the cheeks.",
-          "technical_notes": "EfficientNet-B4 assigned 100% fake probability with peak GradCAM activation in the nose and mouth region. The model's focus on the central face suggests it detected blending or smoothing artifacts typical of generative models. Skin texture in the mid-face shows reduced granularity and unnaturally uniform pore distribution.",
-          "processing_time_ms": 6331,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Nose and mid-face region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 100.0%, P(real): 0.0%\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates the image is likely fake, with a 73.5% confidence rating.",
+          "detailed_analysis": "The most notable feature is the unnatural blending around the mouth and teeth, which appears overly smooth and lacks the expected detail. Additionally, the skin texture shows signs of being too uniform, suggesting possible manipulation. The eyebrow and eyelash regions also exhibit irregularities in thickness and density.",
+          "technical_notes": "Model confidence is at 73.5%. The analysis highlights discrepancies in facial features, particularly around the mouth and skin texture. Activation percentages suggest significant focus on the mouth and teeth region.",
+          "processing_time_ms": 37593,
           "error": null
         }
       }
     },
     "5": {
-      "deepfake_score": 1.0,
+      "deepfake_score": 0.965,
       "classification": "fake",
-      "confidence": 1.0,
+      "confidence": 0.965,
       "gradcam_url": "/quiz-heatmaps/heatmap_5.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_5.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_5_0.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.717,
+          "category_id": "skin_texture",
+          "cam_score": 0.4337,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.7169,
+          "z_scores": {
+            "laplacian_variance": -2.2032,
+            "hf_energy": -3.1798,
+            "ela_intensity": 9.0482
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin appears unnaturally smooth with a lack of visible pores, which is inconsistent with typical human skin. There are also signs of a waxy appearance, especially around the cheeks and forehead.",
+          "evidence_type": "visual",
+          "evidence_ref": "skin texture in Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_5_1.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.698,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3956,
+          "suspicion_score": 0.6978,
+          "z_scores": {
+            "laplacian_variance": -1.2697,
+            "hf_energy": -1.4914,
+            "ela_intensity": 1.5824
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth show a blurred boundary with the gums, and the spacing between the teeth is irregular, which is not typical for natural dentition. Additionally, the overall geometry of the mouth appears inconsistent.",
+          "evidence_type": "visual",
+          "evidence_ref": "mouth crop in Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_5_2.jpg",
+          "label": "Hairline & Ears",
+          "activation_score": 0.548,
+          "category_id": "hairline_ears",
+          "cam_score": 0.0952,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.5476,
+          "z_scores": {
+            "laplacian_variance": -1.7711,
+            "hf_energy": -1.3998,
+            "ela_intensity": 4.1148
+          },
+          "category_label": "Hairline & Ears",
+          "common_artifacts": [
+            "blending artefacts at the hair-to-skin boundary",
+            "wispy or floating stray hair strands with no follicle origin",
+            "asymmetric ear geometry or missing helix detail"
+          ],
+          "explanation": "The hairline shows blending artifacts where it meets the skin, and there are stray hairs that lack a clear follicle origin. The ear also appears asymmetric with some missing details in the helix area.",
+          "evidence_type": "visual",
+          "evidence_ref": "hairline and ear crop in Image 6",
+          "claim_confidence": 0.8
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is classified as fake with high confidence.",
-          "detailed_analysis": "The GradCAM heatmap highlights the nose and mid-face region, showing unusual texture and boundary inconsistencies. The skin appears overly smooth with unnatural edges around the nose, suggesting a lack of realistic detail.",
-          "technical_notes": "The model shows 100% confidence in the fake classification. The highlighted regions exhibit significant texture anomalies. The nose area displays a lack of natural skin variation.",
-          "processing_time_ms": 7572,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The analysis indicates this image is not a real photograph, with the detection model focusing heavily on the central facial features.",
-          "detailed_analysis": "The most distinctive cue is the unusually smooth and uniform skin texture across the nose and mid-face, which lacks the subtle imperfections and variations typically found in real human skin. This smoothness, combined with the model's high attention to these areas, points towards an artificial origin.",
-          "technical_notes": "Detection confidence: 100.0% (FAKE).Model used: EfficientNet-B4.GradCAM shows peak activation around the nose and mouth.",
-          "processing_time_ms": 6573,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model flagged the nose and mid-face region as the primary indicator of a fake image, with maximum GradCAM activation concentrated around the nasal area and cheeks.",
-          "detailed_analysis": "The nose and surrounding mid-face show unusually smooth, almost airbrushed skin texture with minimal natural pore detail or micro-relief. The nasal bridge and tip lack the subtle shading and anatomical irregularities typical of real skin, appearing instead as a uniformly rendered surface. The transition between the nose and cheeks is too clean and lacks the fine wrinkles or natural color variation you'd expect in a genuine photograph.",
-          "technical_notes": "GradCAM peak intensity centered on the nose and mid-face region (Image 2 shows maximum warm/red coloration here). The model assigned 100% fake confidence, suggesting the nose geometry or texture rendering triggered strong synthetic detection signals. Skin smoothing and loss of natural micro-texture are hallmarks of AI generation or heavy digital retouching. The uniform lighting and lack of shadow complexity in the nasal region further support the detection.",
-          "processing_time_ms": 5422,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Nose and mid-face region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 100.0%, P(real): 0.0%  |  log-odds: +13.109\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates that the image is likely fake based on several visual cues.",
+          "detailed_analysis": "The skin texture appears overly smooth and lacks the natural variation typically seen in real skin, suggesting manipulation. Additionally, the mouth and teeth show irregularities, such as blurred boundaries and inconsistent spacing, which are not characteristic of natural human features.",
+          "technical_notes": "The model assigned a 96.5% probability of the image being fake. Key regions showed high activation, particularly in the areas of the mouth and skin texture. The ELA map revealed bright anomalies indicating potential re-compression artifacts.",
+          "processing_time_ms": 45235,
           "error": null
         }
       }
     },
     "6": {
-      "deepfake_score": 0.9986,
+      "deepfake_score": 0.6616,
       "classification": "fake",
-      "confidence": 0.9986,
+      "confidence": 0.6616,
       "gradcam_url": "/quiz-heatmaps/heatmap_6.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_6.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_6_0.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.654,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3079,
+          "suspicion_score": 0.654,
+          "z_scores": {
+            "laplacian_variance": -1.1806,
+            "hf_energy": -1.2317,
+            "ela_intensity": 1.1805
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth appear unusually uniform in spacing and shape, lacking the natural irregularities typically found in human dentition. The gum-to-tooth boundary is blurred, which is not characteristic of real teeth. Additionally, the overall texture around the mouth seems overly smooth.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 4",
+          "claim_confidence": 0.8
+        },
+        {
+          "url": "/quiz-heatmaps/region_6_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.628,
+          "category_id": "skin_texture",
+          "cam_score": 0.2562,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.6281,
+          "z_scores": {
+            "laplacian_variance": -2.1237,
+            "hf_energy": -3.1317,
+            "ela_intensity": 8.1742
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin shows an unnatural smoothness with very few visible pores, which is inconsistent with the subject's age. There are areas that appear waxy, lacking the natural variation in texture. This smoothness suggests possible digital alteration.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 5",
+          "claim_confidence": 0.75
+        },
+        {
+          "url": "/quiz-heatmaps/region_6_2.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.502,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.0035,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.5018,
+          "z_scores": {
+            "laplacian_variance": -1.7046,
+            "hf_energy": -2.3739,
+            "ela_intensity": 5.2017
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows appear to be unnaturally thick and uniform, lacking individual hair detail. There is also a noticeable asymmetry in the shape and density of the eyebrows. The eyelashes seem to blend into the skin rather than standing out distinctly.",
+          "evidence_type": "visual",
+          "evidence_ref": "crop from Image 6",
+          "claim_confidence": 0.7
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates that the image is likely fake based on highlighted regions.",
-          "detailed_analysis": "The GradCAM heatmap shows significant attention on the forehead and mid-face, revealing inconsistencies in skin texture and edge definition. The forehead appears unnaturally smooth, while the nose region lacks realistic detail, suggesting artificial enhancement.",
-          "technical_notes": "Model confidence is at 99.9%, indicating a strong likelihood of manipulation. The forehead and mid-face regions show abnormal texture patterns. Activation percentages suggest a focus on facial features that typically exhibit more natural variation.",
-          "processing_time_ms": 9397,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The image is highly likely not real, with key areas of concern identified around the forehead, hairline, nose, and mid-face.",
-          "detailed_analysis": "The most distinctive cue is the inconsistent and often overly smooth skin texture across the face, particularly noticeable around the nose and cheeks, which lacks the natural variation and subtle imperfections of real skin. Additionally, the transitions between hair and skin appear somewhat unnatural, contributing to the overall artificial impression of the image.",
-          "technical_notes": "Model confidence for fake: 99.9%.GradCAM shows high activation around the forehead, nose, and right cheek.The model focused on texture and boundary inconsistencies.",
-          "processing_time_ms": 7684,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model flagged the nose and mid-face region as the primary indicator of manipulation, with secondary attention to the forehead and hairline.",
-          "detailed_analysis": "The nose and mid-face show unnaturally smooth blending and a glossy, almost plastic appearance that lacks the fine pore structure and natural skin variation typical of real skin. The forehead and hairline region exhibits inconsistent sharpness and an abrupt transition between the skin and hair edges, with the hair appearing artificially rendered rather than naturally textured.",
-          "technical_notes": "GradCAM activation peaks at the nose bridge and cheekbone area, indicating the model detected anomalies in surface texture consistency. The forehead shows secondary activation along the hairline boundary, suggesting edge artifacts. The overall 99.9% fake confidence reflects strong model agreement on mid-face region irregularities. Skin luminosity appears artificially uniform across the nose and cheeks, lacking natural micro-shadows and pore definition.",
-          "processing_time_ms": 6045,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as a deepfake with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being manipulated. The activation pattern did not clearly indicate a single manipulation type.\n\nThe model's attention was distributed across: Forehead and hairline region, Nose and mid-face region. These regions exhibited activation patterns inconsistent with unmanipulated photographs.\n\nThis analysis is based on the model's internal spatial attention and reflects where in the image the detection signal is strongest. It does not constitute a pixel-level forensic inspection.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 99.9%, P(real): 0.1%  |  log-odds: +6.551\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The image analysis indicates it is likely a fake with a 66.2% confidence level.",
+          "detailed_analysis": "The most notable feature is the unnatural blending around the mouth and teeth, which appears inconsistent with natural human anatomy. Additionally, the skin texture lacks the expected variation and detail, suggesting artificial smoothing. Overall, these cues contribute to the classification as fake.",
+          "technical_notes": "The model's confidence score is 66.2%, indicating a moderate likelihood of manipulation. The GradCAM heatmap highlights the mouth area as a focal point, while the ELA map shows significant anomalies. The skin texture appears overly uniform, which is atypical for natural skin.",
+          "processing_time_ms": 31172,
           "error": null
         }
       }
     },
     "7": {
-      "deepfake_score": 0.0148,
+      "deepfake_score": 0.0842,
       "classification": "real",
-      "confidence": 0.9852,
+      "confidence": 0.9158,
       "gradcam_url": "/quiz-heatmaps/heatmap_7.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_7.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_7_0.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.87,
+          "category_id": "skin_texture",
+          "cam_score": 0.7392,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.8696,
+          "z_scores": {
+            "laplacian_variance": -2.4994,
+            "hf_energy": -3.1715,
+            "ela_intensity": 5.9075
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin shows a natural texture with visible pores and slight imperfections, consistent with typical human skin. There is no waxy or overly smooth appearance, indicating authenticity. The color gradient is also natural without abrupt changes.",
+          "evidence_type": "visual",
+          "evidence_ref": "skin near the cheekbone in Image 1",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_7_1.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.747,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.519,
+          "forensic_score": 0.9748,
+          "suspicion_score": 0.7469,
+          "z_scores": {
+            "laplacian_variance": -1.985,
+            "hf_energy": -2.0272,
+            "ela_intensity": 3.8992
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows have individual hair strands that are not merged into a uniform block, maintaining a natural look. The density and shape appear consistent across both sides, with no signs of artificial uniformity. The eyelashes are also distinct and not overly thick.",
+          "evidence_type": "visual",
+          "evidence_ref": "eyebrow crop in Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_7_2.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.679,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3585,
+          "suspicion_score": 0.6793,
+          "z_scores": {
+            "laplacian_variance": -1.4341,
+            "hf_energy": -1.2537,
+            "ela_intensity": 0.684
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The teeth are well-defined with clear boundaries between gums and teeth, showing no signs of blurring or fusion. The spacing between the teeth appears normal, and the overall geometry is consistent with a natural smile. There are no irregularities in the gum line.",
+          "evidence_type": "visual",
+          "evidence_ref": "mouth crop in Image 6",
+          "claim_confidence": 0.88
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis confirms the image is real with high confidence based on detailed observations of facial regions.",
-          "detailed_analysis": "The forehead and hairline show natural skin texture with consistent color and no signs of artifacts. The nose and mid-face region display smooth contours and realistic shading, reinforcing the authenticity of the image.",
-          "technical_notes": "Model confidence is at 98.5%, indicating strong alignment with natural facial features. The GradCAM highlights areas that correspond with typical human facial characteristics. No significant anomalies detected in the highlighted regions.",
-          "processing_time_ms": 7512,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 7847,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model classified this image as real with 98.5% confidence, with strongest attention to the forehead and nose regions where natural skin texture and consistent lighting are clearly visible.",
-          "detailed_analysis": "The GradCAM heatmap shows peak activation across the central face, particularly the forehead and nose, which are the most reliable indicators of authenticity in this image. The skin exhibits natural pore structure, consistent warm tone, and genuine shadows that follow the child's facial geometry without the blurring or over-smoothing typical of manipulated images. The hairline and forehead transition show proper hair-to-skin boundaries with realistic fine details.",
-          "technical_notes": "EfficientNet-B4 assigned 98.5% real probability, indicating high confidence in authenticity. GradCAM activation concentrates on mid-face and forehead regions where natural texture cues are strongest. The model's attention pattern aligns with genuine facial geometry and lighting consistency. No anomalous compression artifacts or boundary discontinuities detected in highlighted regions.",
-          "processing_time_ms": 6208,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as authentic with 99% confidence.",
-          "detailed_analysis": "The model assigned 99% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region, Nose and mid-face region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 1.5%, P(real): 98.5%  |  log-odds: -4.198\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates the image is real with high confidence.",
+          "detailed_analysis": "The facial features exhibit natural textures and details, particularly in the skin and hair. There are no signs of unnatural smoothness or blending that would suggest manipulation. The overall appearance aligns well with typical human characteristics.",
+          "technical_notes": "Model confidence is at 91.6%, with a low fake probability of 8.4%. The analysis focused on texture and detail in key facial regions. No significant anomalies were detected in the ELA map.",
+          "processing_time_ms": 36054,
           "error": null
         }
       }
     },
     "8": {
-      "deepfake_score": 0.0,
+      "deepfake_score": 0.0728,
       "classification": "real",
-      "confidence": 1.0,
+      "confidence": 0.9272,
       "gradcam_url": "/quiz-heatmaps/heatmap_8.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_8.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_8_0.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 1.0,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 1.0,
+          "forensic_score": 1.0,
+          "suspicion_score": 1.0,
+          "z_scores": {
+            "laplacian_variance": -1.6931,
+            "hf_energy": -2.3641,
+            "ela_intensity": 5.4081
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows show individual strands with a natural thickness and shape, lacking any uniformity that would suggest manipulation. There is a clear distinction between the eyebrow hairs and the skin, indicating realistic texture.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_8_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.861,
+          "category_id": "skin_texture",
+          "cam_score": 0.7214,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.8607,
+          "z_scores": {
+            "laplacian_variance": -2.1981,
+            "hf_energy": -3.2674,
+            "ela_intensity": 10.3115
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin has a natural appearance with visible pores and slight imperfections, which are consistent with the subject's age. There is no waxy or overly smooth surface, reinforcing the authenticity of the image.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_8_2.jpg",
+          "label": "Facial Boundaries",
+          "activation_score": 0.722,
+          "category_id": "facial_boundaries",
+          "cam_score": 0.4883,
+          "forensic_score": 0.9553,
+          "suspicion_score": 0.7218,
+          "z_scores": {
+            "laplacian_variance": -1.6866,
+            "hf_energy": -2.2529,
+            "ela_intensity": 3.8213
+          },
+          "category_label": "Facial Boundaries",
+          "common_artifacts": [
+            "jawline smoothing or blending seam at face-neck junction",
+            "asymmetric jaw contour relative to midline",
+            "nose bridge width or curvature proportion anomaly"
+          ],
+          "explanation": "The jawline is well-defined with no signs of blending or smoothing at the face-neck junction. The contours appear symmetrical and proportional, which is typical for a natural face.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.88
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image is classified as real with high confidence based on the analysis of the forehead and hairline region.",
-          "detailed_analysis": "The forehead and hairline exhibit natural skin texture with consistent shading and no visible artifacts. The edges of the hairline blend smoothly into the skin, showing a realistic transition without any signs of manipulation.",
-          "technical_notes": "Model confidence is at 100%, indicating a strong likelihood of authenticity. The analysis focused on the forehead region, where the texture and edges were evaluated. No anomalies were detected in the highlighted areas.",
-          "processing_time_ms": 7477,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The image exhibits natural characteristics across the face, particularly in the forehead and hairline, indicating it is a genuine photograph.",
-          "detailed_analysis": "The image exhibits a high degree of natural detail across the face, particularly in the skin texture and the way hair integrates with the scalp. These authentic characteristics, including subtle imperfections and varied textures, are typical of genuine photographs.",
-          "technical_notes": "Model confidence: 100.0% real.\nModel: EfficientNet-B4.\nGradCAM highlights natural features.\nNo signs of generative model artifacts detected.",
-          "processing_time_ms": 12187,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model classified this image as real with 100% confidence, with strongest attention to the forehead and hairline region showing natural skin texture and hair characteristics.",
-          "detailed_analysis": "The GradCAM heatmap shows concentrated activation across the forehead and hairline, indicating the model focused on this area to confirm authenticity. The skin texture in this region displays natural pore structure, subtle variations in tone, and realistic hair-to-skin boundaries that are consistent with a genuine photograph rather than a generated or manipulated image.",
-          "technical_notes": "EfficientNet-B4 assigned 100% real probability with 0% fake probability. GradCAM activation is strongest in the upper face, particularly the forehead-hairline interface. The model's high confidence suggests it detected natural skin microstructure and hair rendering characteristics typical of authentic images. No ELA or compression anomalies were flagged in this region.",
-          "processing_time_ms": 4810,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as authentic with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 0.0%, P(real): 100.0%  |  log-odds: -10.493\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates that the image is real with a high confidence level of 92.7%.",
+          "detailed_analysis": "The facial features appear natural, with no signs of artificial blending or texture anomalies. The skin texture shows realistic variations, and the facial boundaries are well-defined without any unusual smoothing.",
+          "technical_notes": "Model confidence is high at 92.7%. GradCAM highlights significant attention on facial features, particularly around the eyes and mouth. ELA shows no major anomalies in compression patterns.",
+          "processing_time_ms": 42999,
           "error": null
         }
       }
     },
     "9": {
-      "deepfake_score": 0.3977,
+      "deepfake_score": 0.0028,
       "classification": "real",
-      "confidence": 0.6023,
+      "confidence": 0.9972,
       "gradcam_url": "/quiz-heatmaps/heatmap_9.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_9.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_9_0.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 1.0,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 1.0,
+          "forensic_score": 1.0,
+          "suspicion_score": 1.0,
+          "z_scores": {
+            "laplacian_variance": -1.5234,
+            "hf_energy": -2.4572,
+            "ela_intensity": 5.194
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows show individual strands with a natural density and shape, without any merging into a uniform block. There is a slight asymmetry in thickness, but it is within normal variation. The eyelashes appear well-defined and consistent with typical human features.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_9_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.802,
+          "category_id": "skin_texture",
+          "cam_score": 0.6044,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.8022,
+          "z_scores": {
+            "laplacian_variance": -2.0944,
+            "hf_energy": -3.213,
+            "ela_intensity": 7.5111
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin texture is consistent with typical human characteristics, showing natural pores and slight imperfections. There is no waxy or overly smooth appearance, and the skin tone is even across the face. The texture appears realistic, with variations that align with the subject's age.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_9_2.jpg",
+          "label": "Eyes & Pupils",
+          "activation_score": 0.754,
+          "category_id": "eyes_pupils",
+          "cam_score": 0.9566,
+          "forensic_score": 0.5524,
+          "suspicion_score": 0.7545,
+          "z_scores": {
+            "laplacian_variance": -1.1183,
+            "hf_energy": -1.0817,
+            "ela_intensity": 2.2097
+          },
+          "category_label": "Eyes & Pupils",
+          "common_artifacts": [
+            "pupil shape asymmetry between left and right eye",
+            "unnatural glossiness or over-bright specular highlights",
+            "missing or blurred iris texture and limbal ring"
+          ],
+          "explanation": "The eyes display a natural glossiness with well-defined pupils and visible iris texture. There is no asymmetry in pupil shape, and the limbal ring is clearly visible, contributing to a lifelike appearance. The reflections in the eyes are consistent with lighting conditions.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.9
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is likely real with a 60.2% confidence level.",
-          "detailed_analysis": "The forehead and hairline region shows natural hair texture and skin tone consistency, while the right jaw region displays smooth skin with no noticeable artifacts. These details contribute to the overall impression of authenticity.",
-          "technical_notes": "The model's confidence in the real classification is moderate at 60.2%. The highlighted regions in the GradCAM heatmap suggest areas of focus that align with typical human features. No significant anomalies were detected in the observed regions.",
-          "processing_time_ms": 11305,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "The image is classified as likely real, with the detection model primarily focusing on the natural textures and transitions observed in the right jaw and forehead/hairline regions.",
-          "detailed_analysis": "The most distinctive cue supporting the 'real' classification is the highly detailed and varied texture of the skin and hair, particularly around the right jaw and cheek. These areas exhibit subtle imperfections and natural variations that are characteristic of genuine photographs, lacking the common smoothness or artificial patterns seen in generated images.",
-          "technical_notes": "Detection result: REAL (60.2% confidence). The model used was EfficientNet-B4. GradCAM activation was highest on the right jaw and upper right forehead/hairline.",
-          "processing_time_ms": 6883,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model flagged the right jaw and forehead regions as moderately suspicious, but the overall classification remains REAL at 60.2% confidence due to consistent skin texture and natural facial geometry throughout the image.",
-          "detailed_analysis": "The GradCAM heatmap shows concentrated activation on the right jaw and forehead, yet both regions display natural skin texture and hair growth patterns consistent with an authentic photograph. The right jaw exhibits normal shading gradients and skin pore definition, while the forehead shows realistic hair-to-skin boundaries without obvious blending artifacts or discontinuities that would suggest manipulation.",
-          "technical_notes": "GradCAM activation peaks on right jaw and forehead regions (warm yellow-orange in heatmap overlay). Model confidence for REAL classification is 60.2%, indicating moderate uncertainty rather than high confidence in authenticity. No extreme z-score anomalies reported in the forensic evidence block. The highlighted regions show natural lighting consistency with the rest of the face.",
-          "processing_time_ms": 5597,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model returned a weak authenticity signal (60% confidence). Minor editing or compression may be present.",
-          "detailed_analysis": "The model assigned 60% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region, Right jaw region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 39.8%, P(real): 60.2%  |  log-odds: -0.415\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The image appears to be real with a high confidence level of 99.7%.",
+          "detailed_analysis": "The facial features exhibit natural textures and details, with no signs of digital manipulation. The skin, eyes, and hair all show consistent characteristics typical of a genuine photograph.",
+          "technical_notes": "Model confidence is at 99.7%, with a fake probability of only 0.3%. The analysis utilized EfficientNet-B4 for detection. No significant anomalies were found in the ELA or heatmap overlays.",
+          "processing_time_ms": 30199,
           "error": null
         }
       }
     },
     "10": {
-      "deepfake_score": 0.0107,
+      "deepfake_score": 0.097,
       "classification": "real",
-      "confidence": 0.9893,
+      "confidence": 0.903,
       "gradcam_url": "/quiz-heatmaps/heatmap_10.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_10.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_10_0.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.954,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.9073,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.9537,
+          "z_scores": {
+            "laplacian_variance": -1.279,
+            "hf_energy": -2.3447,
+            "ela_intensity": 5.3444
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows have a natural shape with individual strands visible, avoiding any blocky appearance. The density and thickness are consistent across both brows, showing no asymmetry. The edges are well-defined, contributing to a realistic look.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_10_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.883,
+          "category_id": "skin_texture",
+          "cam_score": 0.7653,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.8826,
+          "z_scores": {
+            "laplacian_variance": -1.9595,
+            "hf_energy": -3.1586,
+            "ela_intensity": 7.8977
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin shows a natural texture with visible pores and no plastic or waxy appearance. There is a slight variation in skin tone, which is typical for human skin, and no areas appear unnaturally smooth. The overall quality aligns with the subject's age.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_10_2.jpg",
+          "label": "Eyes & Pupils",
+          "activation_score": 0.863,
+          "category_id": "eyes_pupils",
+          "cam_score": 1.0,
+          "forensic_score": 0.7269,
+          "suspicion_score": 0.8634,
+          "z_scores": {
+            "laplacian_variance": -1.1041,
+            "hf_energy": -1.1327,
+            "ela_intensity": 2.9075
+          },
+          "category_label": "Eyes & Pupils",
+          "common_artifacts": [
+            "pupil shape asymmetry between left and right eye",
+            "unnatural glossiness or over-bright specular highlights",
+            "missing or blurred iris texture and limbal ring"
+          ],
+          "explanation": "Both eyes exhibit symmetrical pupil shapes and clear iris details, with no signs of glossiness or unnatural highlights. The limbal rings are well-defined, and the overall eye texture appears consistent and realistic. There are no blurs or distortions present.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.9
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image is classified as real with high confidence based on detailed analysis of facial regions.",
-          "detailed_analysis": "The highlighted regions show natural skin texture and consistent lighting, which are typical of authentic photographs. The edges around the facial features are smooth and well-defined, lacking any signs of digital alteration.",
-          "technical_notes": "The model achieved a confidence level of 98.9%, indicating strong reliability in its assessment. The GradCAM heatmap highlights areas of focus that correspond well with the natural features of the face. No anomalies were detected in the skin texture or boundaries.",
-          "processing_time_ms": 8062,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 5977,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model classified this as a real photograph with 98.9% confidence, focusing on the forehead, hairline, and right cheek as the most informative regions.",
-          "detailed_analysis": "The GradCAM heatmap shows strongest activation across the forehead and hairline, where natural skin texture, hair strands, and realistic lighting transitions are clearly visible. The right cheek region displays consistent skin tone and natural shadow gradients that match authentic facial geometry, with no visible blending artifacts or unnatural color shifts that would suggest generation or manipulation.",
-          "technical_notes": "EfficientNet-B4 assigned 98.9% real probability, with peak GradCAM activation in the upper face (forehead/hairline) and mid-face (right cheek). The model's focus on these regions suggests it recognized natural skin texture continuity and realistic hair-skin boundaries as strong authenticity cues. No anomalous JPEG re-compression or edge discontinuities detected in highlighted areas.",
-          "processing_time_ms": 5976,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as authentic with 99% confidence.",
-          "detailed_analysis": "The model assigned 99% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region, Forehead and hairline region, Right cheek region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 1.1%, P(real): 98.9%  |  log-odds: -4.526\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The analysis indicates the image is real with high confidence.",
+          "detailed_analysis": "The facial features appear natural and consistent with typical human characteristics. The skin texture and details around the eyes and eyebrows show no signs of artificial enhancement or blending, reinforcing the classification as real.",
+          "technical_notes": "Model confidence is at 90.3%, indicating strong agreement with the real classification. No significant artifacts were detected in the ELA map. GradCAM highlights areas consistent with natural human features.",
+          "processing_time_ms": 17235,
           "error": null
         }
       }
     },
     "11": {
-      "deepfake_score": 0.001,
+      "deepfake_score": 0.1684,
       "classification": "real",
-      "confidence": 0.999,
+      "confidence": 0.8316,
       "gradcam_url": "/quiz-heatmaps/heatmap_11.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_11.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_11_0.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 0.905,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 0.8336,
+          "forensic_score": 0.9766,
+          "suspicion_score": 0.9051,
+          "z_scores": {
+            "laplacian_variance": -1.7486,
+            "hf_energy": -2.358,
+            "ela_intensity": 3.9064
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows have a natural texture with visible individual hairs, showing slight irregularity in thickness. There is no merging into a uniform block, indicating authenticity. The shape and density appear consistent with natural growth.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.85
+        },
+        {
+          "url": "/quiz-heatmaps/region_11_1.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.845,
+          "category_id": "skin_texture",
+          "cam_score": 0.6899,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.845,
+          "z_scores": {
+            "laplacian_variance": -2.4137,
+            "hf_energy": -3.1328,
+            "ela_intensity": 6.0384
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin shows a realistic texture with visible pores and slight imperfections, which is typical for the subject's age. There is no waxy or overly smooth appearance, reinforcing the authenticity of the image. The gradients in skin tone are natural and consistent.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_11_2.jpg",
+          "label": "Mouth & Teeth",
+          "activation_score": 0.691,
+          "category_id": "mouth_teeth",
+          "cam_score": 1.0,
+          "forensic_score": 0.3816,
+          "suspicion_score": 0.6908,
+          "z_scores": {
+            "laplacian_variance": -1.3839,
+            "hf_energy": -1.5264,
+            "ela_intensity": 0.806
+          },
+          "category_label": "Mouth & Teeth",
+          "common_artifacts": [
+            "overlapping or fused tooth geometry",
+            "blurred or missing gum-to-tooth boundary",
+            "inconsistent tooth count or irregular spacing"
+          ],
+          "explanation": "The mouth appears natural with well-defined lips and no blurring at the gum-to-tooth boundary. The spacing between the teeth is consistent, and there are no irregularities in tooth geometry. The overall appearance aligns with typical human features.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.88
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image is classified as real with high confidence based on the analysis of highlighted regions.",
-          "detailed_analysis": "The forehead and hairline region shows natural skin texture and consistent hairline details, while the eye and nose bridge region displays clear boundaries and realistic reflections in the eyes. These features contribute to the overall authenticity of the image.",
-          "technical_notes": "The model achieved a 99.9% confidence in its classification. The GradCAM heatmap indicates strong attention to facial features. The skin texture appears uniform without any noticeable artifacts.",
-          "processing_time_ms": 8147,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 5945,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model identified this as a real photograph with 99.9% confidence, with strongest attention to the forehead/hairline and eye/nose bridge regions showing natural facial geometry and lighting.",
-          "detailed_analysis": "The GradCAM heatmap shows concentrated activation around the eyes and upper face, which are regions where the model reliably detects authentic facial structure. The natural skin texture, consistent lighting across the face, and proper eye-glass interaction all reinforce the real classification\u2014there are no telltale blending artifacts or unnatural color shifts that would suggest image manipulation.",
-          "technical_notes": "EfficientNet-B4 assigned 99.9% real probability with minimal fake signal (0.1%). GradCAM peaks in the periocular and forehead regions, consistent with genuine face verification. No ELA hotspots or compression anomalies noted in the original photo.",
-          "processing_time_ms": 5943,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as authentic with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region, Eye and nose bridge region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 0.1%, P(real): 99.9%  |  log-odds: -6.938\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The image appears to be real with a high confidence level of 83.2%.",
+          "detailed_analysis": "The GradCAM heatmap shows focus on the facial features, particularly around the eyes and mouth, indicating a natural appearance. The ELA map does not show significant anomalies, supporting the classification as real.",
+          "technical_notes": "Model confidence is 83.2%, with a fake probability of 16.8%. The analysis did not reveal significant compression artifacts in the ELA map. The facial regions examined showed consistent texture and detail.",
+          "processing_time_ms": 21209,
           "error": null
         }
       }
     },
     "12": {
-      "deepfake_score": 0.0004,
+      "deepfake_score": 0.0224,
       "classification": "real",
-      "confidence": 0.9996,
+      "confidence": 0.9776,
       "gradcam_url": "/quiz-heatmaps/heatmap_12.jpg",
+      "ela_heatmap_url": "/quiz-heatmaps/ela_12.png",
+      "evidence_regions": [
+        {
+          "url": "/quiz-heatmaps/region_12_0.jpg",
+          "label": "Eyebrows & Eyelashes",
+          "activation_score": 1.0,
+          "category_id": "eyebrows_eyelashes",
+          "cam_score": 1.0,
+          "forensic_score": 1.0,
+          "suspicion_score": 1.0,
+          "z_scores": {
+            "laplacian_variance": -1.6922,
+            "hf_energy": -2.1586,
+            "ela_intensity": 7.5881
+          },
+          "category_label": "Eyebrows & Eyelashes",
+          "common_artifacts": [
+            "individual strands merged into a uniform block",
+            "left-right shape or density asymmetry",
+            "unnaturally uniform thickness along the brow arc"
+          ],
+          "explanation": "The eyebrows have a natural shape with individual hairs visible, showing no signs of being overly uniform or artificially thick. The density is consistent across both brows, with no left-right asymmetry. The edges appear soft and blend well with the surrounding skin.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_12_1.jpg",
+          "label": "Eyes & Pupils",
+          "activation_score": 0.855,
+          "category_id": "eyes_pupils",
+          "cam_score": 0.9493,
+          "forensic_score": 0.7598,
+          "suspicion_score": 0.8546,
+          "z_scores": {
+            "laplacian_variance": -1.2279,
+            "hf_energy": -1.0281,
+            "ela_intensity": 3.0392
+          },
+          "category_label": "Eyes & Pupils",
+          "common_artifacts": [
+            "pupil shape asymmetry between left and right eye",
+            "unnatural glossiness or over-bright specular highlights",
+            "missing or blurred iris texture and limbal ring"
+          ],
+          "explanation": "Both pupils are symmetrical in shape and size, with a natural gloss that reflects light realistically. The iris texture is clear, and the limbal ring is well-defined, showing no blurring or unnatural highlights. The overall appearance of the eyes is consistent with natural human features.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.9
+        },
+        {
+          "url": "/quiz-heatmaps/region_12_2.jpg",
+          "label": "Skin Texture",
+          "activation_score": 0.84,
+          "category_id": "skin_texture",
+          "cam_score": 0.6798,
+          "forensic_score": 1.0,
+          "suspicion_score": 0.8399,
+          "z_scores": {
+            "laplacian_variance": -2.2565,
+            "hf_energy": -3.1845,
+            "ela_intensity": 10.8958
+          },
+          "category_label": "Skin Texture",
+          "common_artifacts": [
+            "plastic or waxy surface appearance",
+            "absent or overly uniform pore pattern",
+            "unnatural smoothness inconsistent with subject age"
+          ],
+          "explanation": "The skin exhibits a realistic texture with visible pores and slight imperfections, typical for the subject's age. There is no waxy or overly smooth appearance, and the skin tone is consistent throughout. The gradients in skin color are natural, without any signs of digital alteration.",
+          "evidence_type": "visual",
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.9
+        }
+      ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis confirms the image is real with high confidence.",
-          "detailed_analysis": "The GradCAM heatmap highlights areas of the forehead and mid-face, showing natural skin texture and consistent lighting. The edges around the features are smooth and well-defined, indicating no signs of alteration.",
-          "technical_notes": "Model confidence is at 100%, with a fake probability of 0%. The EfficientNet-B4 model effectively identifies authentic facial characteristics. No anomalies detected in highlighted regions.",
-          "processing_time_ms": 8088,
-          "error": null
-        },
-        "google": {
-          "provider": "google",
-          "model": "gemini-2.5-flash",
-          "summary": "Explanation unavailable: Gemini API error (503)",
-          "detailed_analysis": "The explanation service encountered an error. The detection result above is still valid.",
-          "technical_notes": null,
-          "processing_time_ms": 6658,
-          "error": null
-        },
-        "anthropic": {
-          "provider": "anthropic",
-          "model": "claude-haiku-4-5-20251001",
-          "summary": "The model classified this image as real with 100% confidence, with strongest attention to the forehead/hairline and nose/mid-face regions where natural skin texture and lighting are consistent.",
-          "detailed_analysis": "The GradCAM heatmap shows peak activation across the central face, particularly the nose and forehead, where the model detected natural skin texture and consistent lighting gradients. The skin shows authentic pore structure, subtle color variation, and realistic shadow transitions that are difficult to replicate in generated images. The absence of blurring or artifact patterns in these high-attention areas supports the real classification.",
-          "technical_notes": "GradCAM activation concentrated in mid-face and upper face regions (nose, forehead, eyes). Model confidence at 100% indicates no synthetic markers detected in texture or boundary regions. Skin texture consistency across highlighted zones suggests natural photographic capture rather than algorithmic generation. No anomalous compression or edge artifacts visible in high-activation areas.",
-          "processing_time_ms": 6656,
-          "error": null
-        },
-        "rule_based": {
-          "provider": "rule_based",
-          "model": "rule-based-v1",
-          "summary": "The detection model classified this image as authentic with 100% confidence.",
-          "detailed_analysis": "The model assigned 100% probability to this image being authentic. The attention pattern showed no localised anomalies consistent with known deepfake manipulation signatures.\n\nThe model examined: Forehead and hairline region, Nose and mid-face region. None showed activation patterns indicative of manipulation.\n\nThe absence of localised high-activation anomalies supports the authenticity classification. Note that sophisticated manipulations targeting regions outside the model's attention may not be detected.",
-          "technical_notes": "Architecture: EfficientNet-B4\nSoftmax output \u2014 P(fake): 0.0%, P(real): 100.0%  |  log-odds: -7.957\nSaliency method: Gradient-weighted Class Activation Mapping (GradCAM) on final convolutional feature map of EfficientNet-B4.\nExplanation pipeline: deterministic rule-based inference \u2014 no vision-language model invoked. Output is fully reproducible given identical inputs.",
-          "processing_time_ms": 0,
+          "summary": "The image appears to be real with high confidence based on the analysis.",
+          "detailed_analysis": "The facial features show natural texture and detail, particularly in the skin and hair. There are no significant anomalies in the eye reflections or brow structure that would suggest manipulation. Overall, the image maintains a consistent appearance across all regions examined.",
+          "technical_notes": "Model confidence is at 97.8%, indicating strong reliability in the classification. The GradCAM heatmap shows focus on the forehead and eyes, while the ELA map does not reveal any concerning compression artifacts. The analysis of facial regions supports the classification of authenticity.",
+          "processing_time_ms": 34094,
           "error": null
         }
       }
