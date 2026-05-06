@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle, Loader2, XCircle } from 'lucide-react';
-import { studyAnalyzeImage, saveStudyResults, type StudyAnalysisResult } from '@/lib/api';
+import {
+  studyAnalyzeImage,
+  saveStudyResults,
+  type DetectionResult,
+  type StudyAnalysisResult,
+} from '@/lib/api';
+import { AnalysisResultBody } from '@/components/AnalysisResultBody';
 
 // ============================================
 // Study images
@@ -13,18 +19,18 @@ interface StudyImage {
 }
 
 const ALL_IMAGES: StudyImage[] = [
-  { id: 1, url: '/quiz-images/Fake1.jpg', label: 'fake' },
-  { id: 2, url: '/quiz-images/Fake2.jpg', label: 'fake' },
-  { id: 3, url: '/quiz-images/Fake3.jpg', label: 'fake' },
-  { id: 4, url: '/quiz-images/Fake4.jpg', label: 'fake' },
-  { id: 5, url: '/quiz-images/Fake5.jpg', label: 'fake' },
-  { id: 6, url: '/quiz-images/Fake6.jpg', label: 'fake' },
-  { id: 7, url: '/quiz-images/Real1.jpg', label: 'real' },
-  { id: 8, url: '/quiz-images/Real2.jpg', label: 'real' },
-  { id: 9, url: '/quiz-images/Real3.jpg', label: 'real' },
-  { id: 10, url: '/quiz-images/Real4.jpg', label: 'real' },
-  { id: 11, url: '/quiz-images/Real5.jpg', label: 'real' },
-  { id: 12, url: '/quiz-images/Real6.jpg', label: 'real' },
+  { id: 1, url: '/quiz-images/sg3_psi070_seed0002378.webp', label: 'fake' },
+  { id: 2, url: '/quiz-images/sg3_psi070_seed0002384.webp', label: 'fake' },
+  { id: 3, url: '/quiz-images/sg3_psi070_seed0002763.webp', label: 'fake' },
+  { id: 4, url: '/quiz-images/sg3_psi070_seed0003361.webp', label: 'fake' },
+  { id: 5, url: '/quiz-images/sg3_psi070_seed0003379.webp', label: 'fake' },
+  { id: 6, url: '/quiz-images/sg3_psi070_seed0003409.webp', label: 'fake' },
+  { id: 7, url: '/quiz-images/00093.webp', label: 'real' },
+  { id: 8, url: '/quiz-images/00408.webp', label: 'real' },
+  { id: 9, url: '/quiz-images/00764.webp', label: 'real' },
+  { id: 10, url: '/quiz-images/00818.webp', label: 'real' },
+  { id: 11, url: '/quiz-images/01770.webp', label: 'real' },
+  { id: 12, url: '/quiz-images/02213.webp', label: 'real' },
 ];
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -52,27 +58,30 @@ type StudyPhase =
   | 'survey'
   | 'complete';
 
+type UsefulComponent =
+  | 'heatmap_only'
+  | 'text_only'
+  | 'facial_regions_only'
+  | 'heatmap_text'
+  | 'text_facial_regions'
+  | 'heatmap_facial_regions'
+  | 'everything';
+
+const PHASE_2_MAX_IMAGES = 3;
+
 interface ClassificationRecord {
   image: StudyImage;
   answer: 'real' | 'fake';
   isCorrect: boolean;
 }
 
-interface ProviderAssignment {
-  A: string;
-  B: string;
-  C: string;
-  D: string;
-}
-
 interface ExplanationItem {
   image: StudyImage;
   userAnswer: 'real' | 'fake';
   analysis: StudyAnalysisResult | null;
-  assignment: ProviderAssignment;
-  preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none' | null;
+  provider: string;
+  mostUsefulComponent: UsefulComponent | null;
   understandingRating: number | null;
-  mostUsefulPart: 'heatmap' | 'text' | 'confidence' | null;
 }
 
 // ============================================
@@ -145,7 +154,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
               {
                 step: '2',
                 title: 'Explanation Evaluation',
-                desc: 'For images you got wrong, compare four AI explanations and rate their usefulness.',
+                desc: 'For up to 3 images you got wrong, see the full AI explanation and rate what helped most.',
               },
               {
                 step: '3',
@@ -307,7 +316,7 @@ function AnalyzingScreen({ done, total }: { done: number; total: number }) {
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-xade-blue" />
         <h2 className="mt-6 text-xl font-semibold text-xade-charcoal">Analysing your responses</h2>
         <p className="mt-2 text-sm text-xade-charcoal/50">
-          Running our AI model and generating explanations for each image you got wrong.
+          Preparing AI explanations for your misclassified images.
           {total > 0 && (
             <>
               {' '}
@@ -324,6 +333,38 @@ function AnalyzingScreen({ done, total }: { done: number; total: number }) {
 // ============================================
 // Phase: Explanation evaluation (Phase 2)
 // ============================================
+function studyAnalysisToDetectionResult(
+  item: ExplanationItem
+): DetectionResult {
+  const { analysis, provider } = item;
+  const fakeScore = analysis?.deepfake_score ?? 0;
+  const explanation = analysis?.explanations[provider] ?? null;
+  const prediction: 'fake' | 'real' = analysis?.classification === 'fake' ? 'fake' : 'real';
+  const isFake = prediction === 'fake';
+
+  return {
+    prediction,
+    confidence: isFake ? fakeScore : 1 - fakeScore,
+    probabilities: { fake: fakeScore, real: 1 - fakeScore },
+    model: 'EfficientNet-B4',
+    accuracy: '98.48%',
+    gradcam_heatmap_url: analysis?.gradcam_url ?? null,
+    ela_heatmap_url: analysis?.ela_heatmap_url ?? null,
+    evidence_regions: analysis?.evidence_regions ?? [],
+    explanation: explanation
+      ? {
+          summary: explanation.summary,
+          detailed_analysis: explanation.detailed_analysis,
+          technical_notes: explanation.technical_notes,
+          provider: explanation.provider,
+          model: explanation.model,
+          processing_time_ms: explanation.processing_time_ms,
+          estimated_cost_usd: 0,
+        }
+      : null,
+  };
+}
+
 function ExplanationScreen({
   item,
   current,
@@ -334,36 +375,26 @@ function ExplanationScreen({
   current: number;
   total: number;
   onSubmit: (answers: {
-    preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none';
+    mostUsefulComponent: UsefulComponent;
     understandingRating: number;
-    mostUsefulPart: 'heatmap' | 'text' | 'confidence';
   }) => void;
 }) {
-  const [preferred, setPreferred] = useState<'A' | 'B' | 'C' | 'D' | 'all' | 'none' | null>(null);
+  const [usefulComponent, setUsefulComponent] = useState<UsefulComponent | null>(null);
   const [understanding, setUnderstanding] = useState<number | null>(null);
-  const [usefulPart, setUsefulPart] = useState<'heatmap' | 'text' | 'confidence' | null>(null);
 
-  const canSubmit = preferred !== null && understanding !== null && usefulPart !== null;
-  const { analysis, assignment } = item;
+  const canSubmit = usefulComponent !== null && understanding !== null;
 
-  function explanationText(label: 'A' | 'B' | 'C' | 'D') {
-    const providerId = assignment[label];
-    const exp = analysis?.explanations[providerId];
-    if (!exp) return { summary: 'Unavailable.', detailed: '' };
-    return { summary: exp.summary, detailed: exp.detailed_analysis };
-  }
-
-  const gradcamUrl = analysis?.gradcam_url ?? null;
-
-  const fakeScore = analysis ? Math.round(analysis.deepfake_score * 100) : null;
+  const detectionResult = studyAnalysisToDetectionResult(item);
+  const userSaidLabel = item.userAnswer === 'fake' ? 'FAKE' : 'REAL';
+  const actualLabel = item.image.label === 'fake' ? 'FAKE' : 'REAL';
 
   return (
     <div className="min-h-screen bg-xade-cream px-6 py-8">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
+      <div className="mx-auto max-w-4xl">
+        {/* Progress */}
         <div className="mb-2 flex items-center justify-between text-xs text-xade-charcoal/40">
           <span>
-            Incorrect image {current} of {total}
+            Explanation {current} of {total}
           </span>
           <span>{Math.round((current / total) * 100)}%</span>
         </div>
@@ -378,171 +409,47 @@ function ExplanationScreen({
           Phase 2 — Explanation Evaluation
         </p>
 
-        {/* Image row: original + heatmap + confidence */}
-        <div className="grid grid-cols-3 gap-4">
-          {/* Original image */}
-          <div className="rounded-xl border border-xade-charcoal/6 bg-white p-3 shadow-sm">
-            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/40">
-              Original
-            </p>
-            <img
-              src={item.image.url}
-              alt="Original"
-              className="aspect-square w-full rounded-lg object-cover"
-            />
-            <p className="mt-2 text-center text-xs text-xade-charcoal/50">
-              Was:{' '}
-              <span
-                className={
-                  item.image.label === 'fake'
-                    ? 'font-semibold text-red-500'
-                    : 'font-semibold text-green-600'
-                }
-              >
-                {item.image.label}
-              </span>{' '}
-              · You said:{' '}
-              <span className="font-semibold text-xade-charcoal/70">{item.userAnswer}</span>
-            </p>
-          </div>
-
-          {/* Grad-CAM heatmap */}
-          <div className="rounded-xl border border-xade-charcoal/6 bg-white p-3 shadow-sm">
-            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/40">
-              Grad-CAM Heatmap
-            </p>
-            {gradcamUrl ? (
-              <img
-                src={gradcamUrl}
-                alt="Grad-CAM heatmap"
-                className="aspect-square w-full rounded-lg object-cover"
-              />
-            ) : (
-              <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-xade-charcoal/5 text-xs text-xade-charcoal/30">
-                Unavailable
-              </div>
-            )}
-            <p className="mt-2 text-center text-[10px] leading-relaxed text-xade-charcoal/40">
-              Highlighted areas are where the model focused most
-            </p>
-          </div>
-
-          {/* Confidence score */}
-          <div className="flex flex-col rounded-xl border border-xade-charcoal/6 bg-white p-3 shadow-sm">
-            <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wider text-xade-charcoal/40">
-              AI Confidence
-            </p>
-            <div className="flex flex-1 flex-col items-center justify-center gap-3">
-              {fakeScore !== null ? (
-                <>
-                  <p className="text-4xl font-bold text-xade-charcoal">{fakeScore}%</p>
-                  <p className="text-xs text-xade-charcoal/50">probability of being fake</p>
-                  <div className="w-full">
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-xade-charcoal/10">
-                      <div
-                        className="h-2.5 rounded-full bg-red-400 transition-all"
-                        style={{ width: `${fakeScore}%` }}
-                      />
-                    </div>
-                    <div className="mt-1 flex justify-between text-[10px] text-xade-charcoal/30">
-                      <span>Real</span>
-                      <span>Fake</span>
-                    </div>
-                  </div>
-                  <p className="text-xs font-medium text-xade-charcoal/70">
-                    Classified as:{' '}
-                    <span
-                      className={
-                        analysis?.classification === 'fake' ? 'text-red-500' : 'text-green-600'
-                      }
-                    >
-                      {analysis?.classification}
-                    </span>
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-xade-charcoal/30">Unavailable</p>
-              )}
-            </div>
-          </div>
+        {/* Correction banner */}
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4">
+          <XCircle className="h-5 w-5 shrink-0 text-red-400" />
+          <p className="text-sm text-red-700">
+            You said this was <span className="font-bold">{userSaidLabel}</span> — it was actually{' '}
+            <span
+              className={`font-bold ${item.image.label === 'fake' ? 'text-red-600' : 'text-green-700'}`}
+            >
+              {actualLabel}
+            </span>
+            . Here is what our AI detected.
+          </p>
         </div>
 
-        {/* Four explanations */}
-        <div className="mt-6 grid grid-cols-4 gap-4">
-          {(['A', 'B', 'C', 'D'] as const).map((label) => {
-            const { summary } = explanationText(label);
-            return (
-              <div
-                key={label}
-                className="rounded-xl border border-xade-charcoal/6 bg-white p-4 shadow-sm"
-              >
-                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-xade-blue">
-                  Explanation {label}
-                </p>
-                <p className="text-xs font-medium leading-relaxed text-xade-charcoal/80">
-                  {summary}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+        {/* Shared layout from the production result view */}
+        <AnalysisResultBody result={detectionResult} previewUrl={item.image.url} />
 
         {/* Questions */}
-        <div className="mt-6 rounded-2xl border border-xade-charcoal/6 bg-white px-6 py-6 shadow-sm">
+        <div className="mt-4 mb-6 rounded-2xl border border-xade-charcoal/6 bg-white px-6 py-6 shadow-sm">
           {/* Q1 */}
           <div className="mb-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              1. Which explanation helped you understand the detection decision best?
+              1. Which combination of evidence helped you understand the detection decision best?
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {(['A', 'B', 'C', 'D', 'all', 'none'] as const).map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => setPreferred(opt)}
-                  className={`rounded-lg border-2 px-4 py-2 text-xs font-semibold transition-colors ${
-                    preferred === opt
-                      ? 'border-xade-blue bg-xade-blue text-white'
-                      : 'border-xade-charcoal/15 text-xade-charcoal/60 hover:border-xade-blue/40'
-                  }`}
-                >
-                  {opt === 'all' ? 'All equally' : opt === 'none' ? 'None' : `Explanation ${opt}`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Q2 */}
-          <div className="mb-6">
-            <p className="text-sm font-medium text-xade-charcoal">
-              2. How well do you now understand the detection decision?
-            </p>
-            <div className="mt-3">
-              <RatingButtons
-                value={understanding}
-                onChange={setUnderstanding}
-                labels={['Not at all', 'Completely']}
-              />
-            </div>
-          </div>
-
-          {/* Q3 */}
-          <div>
-            <p className="text-sm font-medium text-xade-charcoal">
-              3. Which part of the explanation did you find most useful?
-            </p>
-            <div className="mt-3 flex gap-2">
               {(
                 [
-                  { value: 'heatmap', label: 'Heatmap' },
-                  { value: 'text', label: 'Text description' },
-                  { value: 'confidence', label: 'Confidence score' },
+                  { value: 'heatmap_only', label: 'Heatmap only' },
+                  { value: 'text_only', label: 'Text only' },
+                  { value: 'facial_regions_only', label: 'Facial regions only' },
+                  { value: 'heatmap_text', label: 'Heatmap + Text' },
+                  { value: 'text_facial_regions', label: 'Text + Facial regions' },
+                  { value: 'heatmap_facial_regions', label: 'Heatmap + Facial regions' },
+                  { value: 'everything', label: 'Everything together' },
                 ] as const
               ).map(({ value, label }) => (
                 <button
                   key={value}
-                  onClick={() => setUsefulPart(value)}
+                  onClick={() => setUsefulComponent(value)}
                   className={`rounded-lg border-2 px-4 py-2 text-xs font-semibold transition-colors ${
-                    usefulPart === value
+                    usefulComponent === value
                       ? 'border-xade-blue bg-xade-blue text-white'
                       : 'border-xade-charcoal/15 text-xade-charcoal/60 hover:border-xade-blue/40'
                   }`}
@@ -552,6 +459,20 @@ function ExplanationScreen({
               ))}
             </div>
           </div>
+
+          {/* Q2 */}
+          <div>
+            <p className="text-sm font-medium text-xade-charcoal">
+              2. How well do you now understand why the AI made this decision?
+            </p>
+            <div className="mt-3">
+              <RatingButtons
+                value={understanding}
+                onChange={setUnderstanding}
+                labels={['Not at all', 'Completely']}
+              />
+            </div>
+          </div>
         </div>
 
         <button
@@ -559,12 +480,11 @@ function ExplanationScreen({
           onClick={() =>
             canSubmit &&
             onSubmit({
-              preferredExplanation: preferred!,
+              mostUsefulComponent: usefulComponent!,
               understandingRating: understanding!,
-              mostUsefulPart: usefulPart!,
             })
           }
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
         >
           {current < total ? 'Next image' : 'Continue to survey'}
           <ArrowRight className="h-4 w-4" />
@@ -799,23 +719,23 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       return;
     }
 
+    // Sample up to PHASE_2_MAX_IMAGES randomly so participants don't see all misclassified images
+    const sample = shuffleArray(wrong).slice(0, PHASE_2_MAX_IMAGES);
+
     const hasPrecomputed = precomputed !== null && precomputed !== 'unavailable';
 
     if (!hasPrecomputed) {
       // Fallback: live analysis (slow — researcher should run /precompute first)
-      setAnalyzeProgress({ done: 0, total: wrong.length });
+      setAnalyzeProgress({ done: 0, total: sample.length });
       setPhase('analyzing');
     }
 
+    const allProviders = ['openai'];
     const items: ExplanationItem[] = [];
-    for (const record of wrong) {
-      const providers = shuffleArray(['openai', 'google', 'anthropic', 'rule_based']);
-      const assignment: ProviderAssignment = {
-        A: providers[0],
-        B: providers[1],
-        C: providers[2],
-        D: providers[3],
-      };
+
+    for (const record of sample) {
+      // Pick one provider at random; updated to best performer after #99 smoke test
+      const provider = allProviders[Math.floor(Math.random() * allProviders.length)];
 
       let analysis: StudyAnalysisResult | null = null;
 
@@ -835,10 +755,9 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         image: record.image,
         userAnswer: record.answer,
         analysis,
-        assignment,
-        preferredExplanation: null,
+        provider,
+        mostUsefulComponent: null,
         understandingRating: null,
-        mostUsefulPart: null,
       });
     }
 
@@ -863,9 +782,8 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
 
   // ---- Explanation answer ----
   function handleExplanationSubmit(answers: {
-    preferredExplanation: 'A' | 'B' | 'C' | 'D' | 'all' | 'none';
+    mostUsefulComponent: UsefulComponent;
     understandingRating: number;
-    mostUsefulPart: 'heatmap' | 'text' | 'confidence';
   }) {
     const updated = explanationItems.map((item, i) =>
       i === currentExplanationIndex ? { ...item, ...answers } : item
@@ -897,10 +815,9 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         image_id: item.image.id,
         image_label: item.image.label,
         user_answer: item.userAnswer,
-        assignment: item.assignment,
-        preferred_explanation: item.preferredExplanation,
+        provider: item.provider,
+        most_useful_component: item.mostUsefulComponent,
         understanding_rating: item.understandingRating,
-        most_useful_part: item.mostUsefulPart,
       })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
