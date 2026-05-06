@@ -47,7 +47,9 @@ RUN mkdir -p /app/models && \
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
 
 ENV HF_HOME=/app/.cache/huggingface
+# Railway injects PORT; default to 8000 for local docker run
+ENV PORT=8000
 
-EXPOSE 8000
+EXPOSE ${PORT}
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
