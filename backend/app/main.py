@@ -3,6 +3,7 @@ XADE Backend API
 eXplainable Automated Deepfake Evaluation
 """
 
+import os
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -93,13 +94,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Base origins always allowed (local dev)
+_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8081",
+]
+
+# CORS_ORIGINS env var: comma-separated list of additional allowed origins.
+# Set this in Railway/Vercel to the production + preview URLs, e.g.:
+#   https://xade.vercel.app,https://xade-git-main-viktorahnstrom.vercel.app
+_extra = os.getenv("CORS_ORIGINS", "")
+if _extra:
+    _CORS_ORIGINS.extend(o.strip() for o in _extra.split(",") if o.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8081",
-    ],
+    allow_origins=_CORS_ORIGINS,
+    allow_origin_regex=r"https://xade.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -129,6 +141,7 @@ async def read_root():
 
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health_check():
     """Health check endpoint."""
 
