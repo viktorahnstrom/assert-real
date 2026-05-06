@@ -328,6 +328,8 @@ export interface StudyAnalysisResult {
   classification: string;
   confidence: number;
   gradcam_url: string | null;
+  ela_heatmap_url?: string | null;
+  evidence_regions?: EvidenceRegion[];
   explanations: Record<string, StudyExplanation>;
 }
 

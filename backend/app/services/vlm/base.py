@@ -75,6 +75,7 @@ class RegionWithCategory:
     category_id: str
     category_label: str
     common_artifacts: tuple[str, ...]
+    activation_score: float = 0.0
 
 
 @dataclass
