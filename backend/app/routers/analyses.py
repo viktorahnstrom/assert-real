@@ -586,6 +586,7 @@ async def create_analysis(request: AnalysisRequest):
                                 category_id=face_cat.id,
                                 category_label=face_cat.label,
                                 common_artifacts=face_cat.common_artifacts[:3],
+                                activation_score=ev_region.get("activation_score", 0.0),
                             )
                         )
 

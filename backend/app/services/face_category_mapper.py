@@ -83,6 +83,7 @@ class CategorizedRegion:
             category_id=self.category_id,
             category_label=self.category_label,
             common_artifacts=artifacts,
+            activation_score=self.activation_score,
         )
 
 
