@@ -1,130 +1,175 @@
-# XADE Backend — Deployment Guide (Railway)
+# Deployment
 
-## Overview
+The user study deploys to **Vercel** as a static SPA. Participant results
+write **directly to Supabase** with the public anon key — no backend is
+required to run the study.
 
-The XADE backend is a FastAPI app containerised with Docker. It runs the full
-grounded pipeline: EfficientNet-B4 detection → LayerCAM → BiSeNet face parsing
-→ forensic features → VLM explanation. All ML weights are lazy-downloaded on
-first request; no weights are baked into the image.
+```
+┌──────────────────────────────────────────┐         ┌─────────────────────┐
+│ Vercel (static SPA)                      │         │ Supabase            │
+│  - Vite web build                        │  HTTPS  │  - study_results    │
+│  - bundled study-analyses.json + assets  │  ────►  │    table (anon RLS) │
+│  - VITE_STUDY_ONLY=true (default)        │         │                     │
+└──────────────────────────────────────────┘         └─────────────────────┘
+```
 
-**Hosting choice: Railway** (~$5–10/mo, shared CPU, 2 GB RAM)
-Hugging Face Spaces is the fallback if cost becomes an issue (free, ~30 s cold
-start after idle).
+The full app (auth + image upload + post-study product trial) needs the
+FastAPI backend on Railway / HF Spaces, but those paths are **not** part
+of the deployed user study. Backend deployment is covered separately in
+this doc as a follow-up for the thesis defence demo.
 
 ---
 
-## First Deploy
+## Vercel — first-time setup
 
-### 1. Create a Railway project
+1. Go to [vercel.com](https://vercel.com) → **New Project** → import the
+   GitHub repo.
+2. Build settings auto-fill from [`vercel.json`](../vercel.json):
+   - Build: `npm --prefix desktop run build:web`
+   - Output: `desktop/dist`
+   - Install: `npm --prefix desktop install`
+   - SPA rewrites: every path → `/index.html`
+3. **Environment Variables** (Vercel → Settings → Environment Variables —
+   inlined at build time, so changes need a redeploy):
 
-1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from
-   GitHub repo** → select `XADE`.
-2. Set the **Root Directory** to `backend/`.
-3. Railway auto-detects the `Dockerfile` — no extra build config needed.
+   | Key | Required | Source |
+   |---|---|---|
+   | `VITE_SUPABASE_URL` | yes | Supabase project settings → API |
+   | `VITE_SUPABASE_ANON_KEY` | yes | Supabase project settings → API → anon key |
+   | `VITE_STUDY_ONLY` | optional, defaults to `true` | set to `false` to ship the full app instead of just the study |
 
-### 2. Set environment variables in Railway
-
-In the Railway project → **Variables**, add:
-
-| Variable | Value |
-|---|---|
-| `ANTHROPIC_API_KEY` | your Anthropic key |
-| `OPENAI_API_KEY` | your OpenAI key |
-| `GOOGLE_GEMINI_API_KEY` | your Gemini key |
-| `SUPABASE_URL` | your Supabase project URL |
-| `SUPABASE_KEY` | Supabase **service role** key (not the anon key) |
-| `CORS_ORIGINS` | comma-separated Vercel URLs (see below) |
-| `VLM_DEFAULT_PROVIDER` | `google` |
-
-**CORS_ORIGINS example** (fill in your real Vercel domain once known):
-```
-https://xade.vercel.app,https://xade-git-main-viktorahnstrom.vercel.app
-```
-All `https://xade*.vercel.app` preview URLs are also allowed automatically via
-regex — no need to add every PR preview individually.
-
-### 3. Deploy
-
-Railway deploys automatically on every push to `main`. The first deploy
-downloads BiSeNet weights (~50 MB) and the MediaPipe model (~6 MB) at startup.
-Allow ~3–5 min for the first cold build; subsequent deploys are faster.
-
-### 4. Record the URL
-
-Once deployed, copy the Railway public URL (e.g.
-`https://xade-backend-production.up.railway.app`) and:
-
-- Add it to `docs/user_study_plan.md`.
-- Set `VITE_API_BASE_URL` to this URL in the Vercel project environment
-  variables so the frontend hits the live backend for post-study product trials.
+   See [`desktop/.env.example`](../desktop/.env.example) for local-dev
+   reference.
+4. Deploy. PRs against `main` get preview URLs automatically; production
+   deploys from `main`.
+5. Smoke-test the production URL: completing the study should land on the
+   "You are now done with the user study" screen and the Supabase
+   `study_results` table should show one new row per participant.
 
 ---
 
-## Verifying a deploy
+## Supabase — minimum setup for results writes
 
-```bash
-# Should return 200 within 2 s on a warm container
-curl https://<your-railway-url>/api/v1/health
+The study writes participant data straight to Supabase using the anon
+key. The `study_results` table needs an RLS policy that allows anonymous
+inserts (and **only** inserts — no reads from public).
+
+```sql
+create table study_results (
+  id uuid primary key default gen_random_uuid(),
+  participant_id text not null,
+  self_confidence_rating int,
+  baseline_accuracy float,
+  total_images int,
+  correct_count int,
+  incorrect_count int,
+  explanation_answers jsonb,
+  trust_rating int,
+  willingness_to_use text,
+  comments text,
+  completed_at timestamptz,
+  saved_at timestamptz default now()
+);
+
+alter table study_results enable row level security;
+
+create policy "anon can insert" on study_results
+  for insert to anon with check (true);
 ```
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "database": "healthy",
-  "detection_model": "loaded",
-  "vlm_service": "initialized"
-}
-```
+Read access stays restricted — pull data via the service role key from
+the Supabase dashboard or a private analysis script.
 
 ---
 
 ## Redeploy
 
-Railway redeploys automatically on every push to `main`. To trigger a manual
-redeploy (e.g. after rotating a secret): Railway dashboard → **Deployments** →
-**Redeploy**.
+| Trigger | What happens |
+|---|---|
+| Push to `main` | Vercel auto-deploys production. |
+| Open a PR against `main` | Vercel builds a preview URL. |
+| Updated study assets (regenerated `study-analyses.json` or `quiz-heatmaps/`) | Commit them and push. Vercel rebuilds. Vercel can't run `/study/precompute` itself — run it locally against your dev backend, commit the output, push. |
 
----
-
-## Secret rotation
-
-1. Update the variable value in Railway → **Variables**.
-2. Click **Redeploy** to pick up the new value.
-3. Never commit secrets to the repo — `.env` is gitignored.
-
----
-
-## Switching to Hugging Face Spaces (fallback)
-
-If Railway cost is a problem after the study:
-
-1. Create a new Space at [huggingface.co/spaces](https://huggingface.co/spaces)
-   → **Docker** SDK.
-2. Push the `backend/` directory as the Space repo.
-3. Set the same environment variables in the Space **Settings → Repository
-   secrets**.
-4. Update `VITE_API_BASE_URL` in Vercel to the new Space URL.
-
-Note: HF Spaces free tier has a ~30 s cold start after idle. For the thesis
-defence demo this is acceptable; for an active study window consider the
-persistent paid tier ($9/mo).
-
----
-
-## Rebuilding study assets
-
-If the 12 study images or VLM explanations change, regenerate and redeploy:
+### Re-running `/study/precompute`
 
 ```bash
-# From backend/ with venv active and backend running locally
-curl -X POST http://localhost:8000/api/v1/study/precompute
-
-# Commit the updated files
-git add desktop/public/study-analyses.json desktop/public/quiz-heatmaps/
-git commit -m "chore: regenerate study assets"
-git push
+# Local backend with OPENAI_API_KEY in backend/.env
+cd backend
+uvicorn app.main:app --reload &
+curl -X POST http://localhost:8000/api/v1/study/precompute --max-time 1800
 ```
 
-Vercel redeploys automatically; Railway is not involved (study assets are
-served as static files from the Vercel bundle).
+The endpoint writes
+[`desktop/public/study-analyses.json`](../desktop/public/study-analyses.json)
+and per-image assets under
+[`desktop/public/quiz-heatmaps/`](../desktop/public/quiz-heatmaps/).
+
+---
+
+## Cost
+
+- **Vercel Hobby:** $0. ~40 MB of bundled study assets is well inside
+  the limit.
+- **Supabase Free tier:** $0. The study_results table will hold a few
+  dozen JSON rows — orders of magnitude under the free tier ceiling.
+
+Total deployment cost for the study window: **$0**.
+
+---
+
+## Pulling participant results
+
+Two options:
+
+1. **Supabase dashboard** → Table editor → `study_results` → Export CSV.
+2. **Service-role script** (for a private analysis script, never the
+   frontend):
+
+   ```python
+   import os
+   from supabase import create_client
+   client = create_client(
+       os.environ["SUPABASE_URL"],
+       os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+   )
+   rows = client.table("study_results").select("*").execute()
+   ```
+
+---
+
+## Backend deployment (optional, post-study)
+
+The full app (login + image upload + live grounded explanation) needs the
+FastAPI backend hosted somewhere. This is **not required for the study
+itself** but is needed for the thesis defence demo.
+
+Hosting options:
+
+| Option | Cost | Notes |
+|---|---|---|
+| **Railway** | ~$15–25/mo always-on | Best UX, no cold start. Stop the service when not actively demoing to save money. |
+| **Hugging Face Spaces** (free) | $0 | ~30 s cold start after idle. Workable for a scheduled defence demo if you warm it 5 min beforehand. |
+| **HF Spaces persistent CPU** | $9/mo | No cold start. |
+
+When you want the backend live:
+
+1. Set `VITE_STUDY_ONLY=false` in Vercel.
+2. Set `VITE_API_BASE_URL` in Vercel to your backend URL.
+3. On Railway / HF Spaces, set the same secrets the local
+   [`backend/.env`](../backend/.env) has — at minimum `OPENAI_API_KEY`,
+   `SUPABASE_URL`, `SUPABASE_KEY` (service role), `CORS_ORIGINS`.
+4. The backend Dockerfile and Railway config live in
+   [`backend/`](../backend/). Detailed step-by-step is on the
+   `feat/deploy-vercel-railway` branch (or wherever it ends up merged) —
+   look for `backend/railway.json` and `backend/Dockerfile`.
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Phase 2 shows "Unavailable" tiles | `study-analyses.json` is from before the ranker / ELA wiring. Re-run `/precompute` locally, commit, push. |
+| `study_results` table stays empty after a participant finishes | Anon RLS insert policy missing or wrong. Verify the policy from the SQL block above is active. |
+| Site loads but "Loading…" hangs forever | Supabase env vars wrong or missing in Vercel. Check `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set on the Production environment. |
+| Showing the auth page instead of "Thank you" after the study | `VITE_STUDY_ONLY` is set to `false` in Vercel. Either remove it or set to `true`. |
