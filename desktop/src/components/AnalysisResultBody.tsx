@@ -54,7 +54,7 @@ function TechnicalDetails({
 
       {open && (
         <div className="border-t border-xade-charcoal/10 px-6 py-5">
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-xade-charcoal/40">Model</p>
               <p className="mt-1 font-medium text-xade-charcoal">{result.model}</p>
@@ -154,8 +154,8 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
       {/* Row 1: Verdict */}
-      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-6">
-        <div className="flex items-center gap-8">
+      <div className="mb-4 rounded-2xl border border-black/[0.06] bg-white p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
           <div className="shrink-0">
             <p
               className={`text-[11px] font-semibold uppercase tracking-widest ${isFake ? 'text-red-400' : 'text-emerald-500'}`}
@@ -163,13 +163,13 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
               {isFake ? 'Deepfake detected' : 'Authentic'}
             </p>
             <p
-              className={`mt-0.5 text-6xl font-bold tabular-nums leading-none ${isFake ? 'text-red-500' : 'text-emerald-500'}`}
+              className={`mt-0.5 text-5xl font-bold tabular-nums leading-none sm:text-6xl ${isFake ? 'text-red-500' : 'text-emerald-500'}`}
             >
               {confidencePct}%
             </p>
             <p className="mt-1 text-sm text-xade-charcoal/40">confidence</p>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <div className="h-2 w-full overflow-hidden rounded-full bg-xade-charcoal/8">
               <div
                 className={`h-full rounded-full ${isFake ? 'bg-red-400' : 'bg-emerald-400'}`}
@@ -189,7 +189,7 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
           Visual Analysis
         </p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {/* Original */}
           <div>
             <p className="mb-1.5 text-xs text-xade-charcoal/40">Original</p>
@@ -322,10 +322,13 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
                   : 'bg-emerald-50 text-emerald-600';
 
               return (
-                <div key={idx} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 py-4 first:pt-0 last:pb-0 sm:gap-4"
+                >
                   {/* Zoomed crop */}
                   <div
-                    className="h-24 w-24 shrink-0 cursor-zoom-in overflow-hidden rounded-xl border border-black/[0.06]"
+                    className="h-16 w-16 shrink-0 cursor-zoom-in overflow-hidden rounded-xl border border-black/[0.06] sm:h-24 sm:w-24"
                     onClick={() => setLightboxSrc(region.url)}
                   >
                     <img

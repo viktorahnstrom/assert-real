@@ -1046,6 +1046,36 @@ function AuthenticatedApp() {
   );
 }
 
+function ThankYouScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-6">
+      <div className="w-full max-w-md text-center">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">XADE</h1>
+          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.2em] text-xade-charcoal/40">
+            Deepfake Detection · User Study
+          </p>
+        </div>
+        <div className="rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-10 shadow-lg shadow-xade-charcoal/4">
+          <h2 className="text-xl font-semibold text-xade-charcoal">
+            You are now done with the user study
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-xade-charcoal/60">
+            Thanks for participating! You can now close the window.
+          </p>
+          <p className="mt-6 text-xs text-xade-charcoal/40">
+            Your responses have been recorded anonymously.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Production deploys the study-only experience. Set VITE_STUDY_ONLY=false
+// in a local .env to access the full app (auth + upload) for dev work.
+const STUDY_ONLY = import.meta.env.VITE_STUDY_ONLY !== 'false';
+
 function AppRouter() {
   const { user, loading } = useAuth();
   const [testCompleted, setTestCompleted] = useState(
@@ -1075,6 +1105,10 @@ function AppRouter() {
         />
       </>
     );
+  }
+
+  if (STUDY_ONLY) {
+    return <ThankYouScreen />;
   }
 
   if (!user) {

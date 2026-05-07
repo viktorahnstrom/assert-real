@@ -662,7 +662,7 @@ function CompleteScreen({
             onClick={onContinue}
             className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark"
           >
-            Continue to XADE
+            Finish
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
