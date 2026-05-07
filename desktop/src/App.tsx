@@ -138,6 +138,11 @@ function DevToolbar({
 }: DevToolbarProps) {
   const [open, setOpen] = useState(false);
 
+  // Dev-only floating panel. Vite sets import.meta.env.DEV to false in
+  // production builds, so the toolbar drops out of the bundle entirely
+  // for the deployed user study.
+  if (!import.meta.env.DEV) return null;
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {open && (
