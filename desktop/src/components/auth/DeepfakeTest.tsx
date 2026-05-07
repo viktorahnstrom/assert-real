@@ -188,16 +188,6 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-
-        <button
-          onClick={() => {
-            localStorage.setItem('xade-test-completed', 'skipped');
-            window.location.reload();
-          }}
-          className="mt-4 block w-full text-center text-xs text-xade-charcoal/30 hover:text-xade-charcoal/50"
-        >
-          Skip for now
-        </button>
       </div>
     </div>
   );
