@@ -140,26 +140,26 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         <div className="rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-8 shadow-lg shadow-xade-charcoal/4">
           <h2 className="text-xl font-semibold text-xade-charcoal">Welcome to the study</h2>
           <p className="mt-2 text-sm leading-relaxed text-xade-charcoal/60">
-            This study evaluates how well AI-generated explanations help people understand deepfake
-            detection decisions. It takes approximately <strong>10–15 minutes</strong>.
+            This study tests how well AI explanations help people understand why an image is real or
+            fake. It takes about <strong>10 to 15 minutes</strong>.
           </p>
 
           <div className="mt-6 space-y-4">
             {[
               {
                 step: '1',
-                title: 'Baseline Classification',
-                desc: 'Classify 12 images as real or fake — no feedback or hints.',
+                title: 'Look at 12 images',
+                desc: 'For each image, choose if it is real or fake. You get no hints.',
               },
               {
                 step: '2',
-                title: 'Explanation Evaluation',
-                desc: 'For up to 3 images you got wrong, see the full AI explanation and rate what helped most.',
+                title: 'See the AI explanations',
+                desc: 'For up to 3 images you got wrong, see how the AI explains them. Tell us what helped you understand best.',
               },
               {
                 step: '3',
-                title: 'Closing Survey',
-                desc: 'Answer a short questionnaire about your overall experience.',
+                title: 'A few final questions',
+                desc: 'Answer a few short questions about your experience.',
               },
             ].map(({ step, title, desc }) => (
               <div key={step} className="flex gap-3">
@@ -175,16 +175,16 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
           </div>
 
           <div className="mt-6 rounded-lg bg-xade-charcoal/3 px-4 py-3 text-xs leading-relaxed text-xade-charcoal/50">
-            <strong className="text-xade-charcoal/70">Privacy:</strong> Participation is voluntary
-            and anonymous. No personally identifiable information is collected. Results are used
-            solely for academic research.
+            <strong className="text-xade-charcoal/70">Privacy:</strong> Joining is voluntary and
+            anonymous. We do not collect any personal information. Your answers are only used for
+            research.
           </div>
 
           <button
             onClick={onStart}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark"
           >
-            I understand — start the study
+            I understand. Start the study
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -217,10 +217,10 @@ function ConfidenceScreen({ onNext }: { onNext: (rating: number) => void }) {
             Before we start
           </p>
           <h2 className="mt-2 text-xl font-semibold text-xade-charcoal">
-            How confident are you at spotting deepfakes?
+            How good are you at spotting deepfakes?
           </h2>
           <p className="mt-2 text-sm text-xade-charcoal/50">
-            Be honest — there are no right or wrong answers here.
+            Be honest. There are no right or wrong answers.
           </p>
 
           <div className="mt-8">
@@ -314,9 +314,9 @@ function AnalyzingScreen({ done, total }: { done: number; total: number }) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
       <div className="w-full max-w-sm text-center">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-xade-blue" />
-        <h2 className="mt-6 text-xl font-semibold text-xade-charcoal">Analysing your responses</h2>
+        <h2 className="mt-6 text-xl font-semibold text-xade-charcoal">Looking at your answers</h2>
         <p className="mt-2 text-sm text-xade-charcoal/50">
-          Preparing AI explanations for your misclassified images.
+          Getting AI explanations ready for the images you got wrong.
           {total > 0 && (
             <>
               {' '}
@@ -324,7 +324,7 @@ function AnalyzingScreen({ done, total }: { done: number; total: number }) {
             </>
           )}
         </p>
-        <p className="mt-4 text-xs text-xade-charcoal/30">This may take up to a minute.</p>
+        <p className="mt-4 text-xs text-xade-charcoal/30">This can take up to a minute.</p>
       </div>
     </div>
   );
@@ -404,20 +404,20 @@ function ExplanationScreen({
         </div>
 
         <p className="mb-4 text-xs font-medium uppercase tracking-widest text-xade-blue/60">
-          Phase 2 — Explanation Evaluation
+          Phase 2: See the AI Explanation
         </p>
 
         {/* Correction banner */}
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4">
           <XCircle className="h-5 w-5 shrink-0 text-red-400" />
           <p className="text-sm text-red-700">
-            You said this was <span className="font-bold">{userSaidLabel}</span> — it was actually{' '}
+            You said this was <span className="font-bold">{userSaidLabel}</span>. It was actually{' '}
             <span
               className={`font-bold ${item.image.label === 'fake' ? 'text-red-600' : 'text-green-700'}`}
             >
               {actualLabel}
             </span>
-            . Here is what our AI detected.
+            . Here is what our AI saw.
           </p>
         </div>
 
@@ -429,7 +429,7 @@ function ExplanationScreen({
           {/* Q1 */}
           <div className="mb-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              1. Which combination of evidence helped you understand the detection decision best?
+              1. Which parts helped you understand the AI&apos;s choice best?
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {(
@@ -461,7 +461,7 @@ function ExplanationScreen({
           {/* Q2 */}
           <div>
             <p className="text-sm font-medium text-xade-charcoal">
-              2. How well do you now understand why the AI made this decision?
+              2. How well do you understand why the AI made this choice?
             </p>
             <div className="mt-3">
               <RatingButtons
@@ -484,7 +484,7 @@ function ExplanationScreen({
           }
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
         >
-          {current < total ? 'Next image' : 'Continue to survey'}
+          {current < total ? 'Next image' : 'Continue to the final questions'}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -511,17 +511,17 @@ function SurveyScreen({
       <div className="w-full max-w-lg">
         <div className="rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-8 shadow-lg shadow-xade-charcoal/4">
           <p className="text-xs font-medium uppercase tracking-widest text-xade-blue/60">
-            Phase 3 — Closing Survey
+            Phase 3: Final Questions
           </p>
           <h2 className="mt-2 text-xl font-semibold text-xade-charcoal">Almost done</h2>
           <p className="mt-1 text-sm text-xade-charcoal/50">
-            A few final questions about your overall experience.
+            A few last questions about your experience.
           </p>
 
           {/* Q1: Trust */}
           <div className="mt-8">
             <p className="text-sm font-medium text-xade-charcoal">
-              1. How much do you trust the XADE system&apos;s ability to detect deepfakes?
+              1. How much do you trust XADE to detect deepfakes?
             </p>
             <div className="mt-3">
               <RatingButtons
@@ -535,7 +535,7 @@ function SurveyScreen({
           {/* Q2: Willingness */}
           <div className="mt-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              2. Would you use a tool like XADE to check whether images are deepfakes?
+              2. Would you use a tool like XADE to check if images are deepfakes?
             </p>
             <div className="mt-3 flex gap-2">
               {(['yes', 'no', 'maybe'] as const).map((opt) => (
@@ -557,12 +557,15 @@ function SurveyScreen({
           {/* Q3: Open text */}
           <div className="mt-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              3. Any additional comments? (optional)
+              3. Any other comments? (optional)
+            </p>
+            <p className="mt-1 text-xs text-xade-charcoal/40">
+              You can write in Swedish if you prefer.
             </p>
             <textarea
               value={comments}
               onChange={(e) => setComments(e.target.value)}
-              placeholder="Share any thoughts about the explanations, the interface, or the study..."
+              placeholder="Tell us what you thought about the explanations, the design, or anything else. Svenska går bra."
               rows={4}
               className="mt-2 w-full rounded-lg border border-xade-charcoal/10 bg-white px-4 py-3 text-sm text-xade-charcoal placeholder:text-xade-charcoal/30 focus:border-xade-blue/40 focus:outline-none focus:ring-2 focus:ring-xade-blue/10"
             />
@@ -589,6 +592,12 @@ function SurveyScreen({
   );
 }
 
+// Production deploys the study-only experience. In that mode CompleteScreen
+// is the terminal state — no Finish button, the participant just closes
+// the window. Local dev with VITE_STUDY_ONLY=false keeps the button so
+// the full app (auth + upload) stays reachable.
+const STUDY_ONLY_MODE = import.meta.env.VITE_STUDY_ONLY !== 'false';
+
 // ============================================
 // Phase: Complete
 // ============================================
@@ -603,15 +612,22 @@ function CompleteScreen({
   const total = classificationRecords.length;
   const pct = Math.round((correct / total) * 100);
 
+  // In study-only mode the participant never clicks anything after this
+  // screen, so persist completion automatically. Refreshing the page lands
+  // them on ThankYouScreen instead of restarting the study.
+  useEffect(() => {
+    if (STUDY_ONLY_MODE) {
+      localStorage.setItem('xade-test-completed', 'true');
+    }
+  }, []);
+
   let message: string;
   if (pct >= 80) {
-    message = 'Impressive! But AI-generated deepfakes are getting harder to spot every day.';
+    message = 'Great score. AI-generated deepfakes are getting harder to spot every day.';
   } else if (pct >= 50) {
-    message =
-      "Not bad — but as you can see, it's tricky. That's exactly why tools like XADE exist.";
+    message = 'A solid result. As you saw, it is tricky. That is why tools like XADE exist.';
   } else {
-    message =
-      "Don't worry — most people struggle with this. Deepfakes are designed to fool the human eye.";
+    message = 'Most people find this hard. Deepfakes are made to fool the human eye.';
   }
 
   return (
@@ -623,14 +639,14 @@ function CompleteScreen({
             <h2 className="mt-4 text-xl font-semibold text-xade-charcoal">
               Thank you for participating!
             </h2>
-            <p className="mt-1 text-sm text-xade-charcoal/50">Your responses have been recorded.</p>
+            <p className="mt-1 text-sm text-xade-charcoal/50">Your answers have been saved.</p>
           </div>
 
           <div className="mt-6 text-center">
             <p className="text-5xl font-bold text-xade-blue">
               {correct}/{total}
             </p>
-            <p className="mt-1 text-sm text-xade-charcoal/50">{pct}% correct in Phase 1</p>
+            <p className="mt-1 text-sm text-xade-charcoal/50">{pct}% correct</p>
           </div>
 
           <p className="mt-4 text-center text-sm leading-relaxed text-xade-charcoal/60">
@@ -646,7 +662,7 @@ function CompleteScreen({
                 <span className="text-xade-charcoal/50">Image {i + 1}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-xade-charcoal/40">
-                    was {r.image.label} · you said {r.answer}
+                    was {r.image.label}, you said {r.answer}
                   </span>
                   {r.isCorrect ? (
                     <CheckCircle className="h-3.5 w-3.5 text-green-500" />
@@ -658,13 +674,19 @@ function CompleteScreen({
             ))}
           </div>
 
-          <button
-            onClick={onContinue}
-            className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark"
-          >
-            Finish
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          {STUDY_ONLY_MODE ? (
+            <p className="mt-8 text-center text-sm text-xade-charcoal/60">
+              You are done. You can now close this window.
+            </p>
+          ) : (
+            <button
+              onClick={onContinue}
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark"
+            >
+              Finish
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
