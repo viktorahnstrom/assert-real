@@ -189,7 +189,7 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-xade-charcoal/40">
           Visual Analysis
         </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           {/* Original */}
           <div>
             <p className="mb-1.5 text-xs text-xade-charcoal/40">Original</p>
@@ -218,7 +218,7 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
           <div>
             <p className="mb-1.5 text-xs text-xade-charcoal/40">
               Heatmap
-              <span className="ml-1 text-xade-charcoal/25">· red = focus</span>
+              <span className="ml-1 hidden text-xade-charcoal/25 sm:inline">· red = focus</span>
             </p>
             {result.gradcam_heatmap_url ? (
               <div
@@ -248,7 +248,9 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
           <div>
             <p className="mb-1.5 text-xs text-xade-charcoal/40">
               ELA
-              <span className="ml-1 text-xade-charcoal/25">· bright = tampered</span>
+              <span className="ml-1 hidden text-xade-charcoal/25 sm:inline">
+                · bright = tampered
+              </span>
             </p>
             {result.ela_heatmap_url ? (
               <div
@@ -324,7 +326,7 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
               return (
                 <div
                   key={idx}
-                  className="flex items-start gap-3 py-4 first:pt-0 last:pb-0 sm:gap-4"
+                  className="flex flex-wrap items-start gap-3 py-4 first:pt-0 last:pb-0 sm:flex-nowrap sm:gap-4"
                 >
                   {/* Zoomed crop */}
                   <div
@@ -341,8 +343,25 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
                     />
                   </div>
 
+                  {/* Activation — placed second in DOM so it sits next to the
+                      crop on mobile (top row), reordered to the right on
+                      desktop via sm:order-3. Content wraps below on mobile
+                      thanks to basis-full. */}
+                  <div className="ml-auto flex shrink-0 flex-col items-end gap-1.5 pt-0.5 sm:order-3 sm:ml-0">
+                    <span className="text-sm font-semibold tabular-nums text-xade-charcoal/60">
+                      {actPct}%
+                    </span>
+                    <div className="h-1 w-16 overflow-hidden rounded-full bg-xade-charcoal/8">
+                      <div
+                        className={`h-full rounded-full ${suspicious ? 'bg-red-400' : 'bg-xade-charcoal/20'}`}
+                        style={{ width: `${actPct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-xade-charcoal/30">activation</span>
+                  </div>
+
                   {/* Content */}
-                  <div className="flex flex-1 flex-col gap-1.5">
+                  <div className="flex basis-full flex-col gap-1.5 sm:order-2 sm:flex-1 sm:basis-auto">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {region.category_label && (
                         <span className="rounded-full bg-xade-blue/8 px-2 py-0.5 text-[11px] font-medium text-xade-blue">
@@ -420,20 +439,6 @@ export function AnalysisResultBody({ result, previewUrl }: AnalysisResultBodyPro
                         })}
                       </div>
                     )}
-                  </div>
-
-                  {/* Activation */}
-                  <div className="flex shrink-0 flex-col items-end gap-1.5 pt-0.5">
-                    <span className="text-sm font-semibold tabular-nums text-xade-charcoal/60">
-                      {actPct}%
-                    </span>
-                    <div className="h-1 w-16 overflow-hidden rounded-full bg-xade-charcoal/8">
-                      <div
-                        className={`h-full rounded-full ${suspicious ? 'bg-red-400' : 'bg-xade-charcoal/20'}`}
-                        style={{ width: `${actPct}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-xade-charcoal/30">activation</span>
                   </div>
                 </div>
               );
