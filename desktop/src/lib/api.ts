@@ -347,6 +347,9 @@ export interface StudyResultsPayload {
   retest_answers: object[];
   trust_rating: number;
   willingness_to_use: string;
+  // 1–5 rating shown only to participants who took Phase 3. null when
+  // the retest was skipped (no Phase 1 misclassifications).
+  explanations_helped_in_retest: number | null;
   comments: string;
   completed_at: string;
 }
@@ -389,6 +392,7 @@ export async function saveStudyResults(payload: StudyResultsPayload): Promise<vo
       retest_answers: payload.retest_answers,
       trust_rating: payload.trust_rating,
       willingness_to_use: payload.willingness_to_use,
+      explanations_helped_in_retest: payload.explanations_helped_in_retest,
       comments: payload.comments,
       completed_at: payload.completed_at,
     });

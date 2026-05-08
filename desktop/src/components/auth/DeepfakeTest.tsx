@@ -607,15 +607,28 @@ function RetestScreen({
 // Phase: Closing survey (Phase 4)
 // ============================================
 function SurveyScreen({
+  didRetest,
   onSubmit,
 }: {
-  onSubmit: (answers: { trustRating: number; willingnessToUse: string; comments: string }) => void;
+  didRetest: boolean;
+  onSubmit: (answers: {
+    trustRating: number;
+    willingnessToUse: string;
+    explanationsHelpedInRetest: number | null;
+    comments: string;
+  }) => void;
 }) {
   const [trust, setTrust] = useState<number | null>(null);
   const [willingness, setWillingness] = useState<string | null>(null);
+  // Only required when the participant actually took Phase 3.
+  const [helpedInRetest, setHelpedInRetest] = useState<number | null>(null);
   const [comments, setComments] = useState('');
 
-  const canSubmit = trust !== null && willingness !== null;
+  const canSubmit =
+    trust !== null && willingness !== null && (!didRetest || helpedInRetest !== null);
+
+  // Q-numbers shift by one when the retest question is hidden.
+  const commentsQNumber = didRetest ? 4 : 3;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
@@ -665,10 +678,27 @@ function SurveyScreen({
             </div>
           </div>
 
-          {/* Q3: Open text */}
+          {/* Q3: Did our explanations help in the retest? — only shown when
+              the participant actually took Phase 3. */}
+          {didRetest && (
+            <div className="mt-6">
+              <p className="text-sm font-medium text-xade-charcoal">
+                3. Did our explanations help you in the second round of images?
+              </p>
+              <div className="mt-3">
+                <RatingButtons
+                  value={helpedInRetest}
+                  onChange={setHelpedInRetest}
+                  labels={['Not at all', 'Definitely']}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Comments — Q3 if no retest, Q4 otherwise. */}
           <div className="mt-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              3. Any other comments? (optional)
+              {commentsQNumber}. Any other comments? (optional)
             </p>
             <p className="mt-1 text-xs text-xade-charcoal/40">
               You can write in Swedish if you prefer.
@@ -689,6 +719,7 @@ function SurveyScreen({
               onSubmit({
                 trustRating: trust!,
                 willingnessToUse: willingness!,
+                explanationsHelpedInRetest: didRetest ? helpedInRetest : null,
                 comments,
               })
             }
@@ -977,6 +1008,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   async function handleSurveySubmit(answers: {
     trustRating: number;
     willingnessToUse: string;
+    explanationsHelpedInRetest: number | null;
     comments: string;
   }) {
     const correct = classificationRecords.filter((r) => r.isCorrect).length;
@@ -1004,6 +1036,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
+      explanations_helped_in_retest: answers.explanationsHelpedInRetest,
       comments: answers.comments,
       completed_at: new Date().toISOString(),
     };
@@ -1064,7 +1097,10 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       />
     );
 
-  if (phase === 'survey') return <SurveyScreen onSubmit={handleSurveySubmit} />;
+  if (phase === 'survey')
+    return (
+      <SurveyScreen didRetest={retestRecords.length > 0} onSubmit={handleSurveySubmit} />
+    );
 
   return (
     <CompleteScreen
