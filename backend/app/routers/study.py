@@ -39,6 +39,23 @@ _STUDY_IMAGES = [
     {"id": 12, "filename": "02213.webp", "label": "real"},
 ]
 
+# Phase 3 retest image list — must match RETEST_IMAGES in DeepfakeTest.tsx.
+# These are shown ONLY to participants who misclassified at least one
+# Phase 1 image, after they've seen the Phase 2 explanations. Must be
+# disjoint from _STUDY_IMAGES so participants see them for the first time.
+# Retest images do NOT need precomputed explanations (no VLM analysis runs
+# on them), so they're not iterated by /api/v1/study/precompute.
+_RETEST_IMAGES = [
+    {"id": 13, "filename": "sg3_psi070_seed0001025.webp", "label": "fake"},
+    {"id": 14, "filename": "sg3_psi070_seed0001242.webp", "label": "fake"},
+    {"id": 15, "filename": "00999.webp", "label": "real"},
+]
+
+# Sanity-check at import time that the two image sets do not overlap.
+_overlap = {img["filename"] for img in _STUDY_IMAGES} & {img["filename"] for img in _RETEST_IMAGES}
+if _overlap:
+    raise RuntimeError(f"_STUDY_IMAGES and _RETEST_IMAGES must be disjoint, found: {_overlap}")
+
 # ============================================
 # Models
 # ============================================
@@ -72,6 +89,10 @@ class StudyResults(BaseModel):
     correct_count: int
     incorrect_count: int
     explanation_answers: list[dict]
+    # Phase 3 retest. Empty when the participant got 100% on Phase 1 and
+    # the retest was skipped. The #118 timer work will add per-entry
+    # time_ms / idle_discarded fields.
+    retest_answers: list[dict] = []
     trust_rating: int
     willingness_to_use: str  # "yes" | "no" | "maybe"
     comments: str

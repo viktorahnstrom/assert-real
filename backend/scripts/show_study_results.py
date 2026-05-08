@@ -78,6 +78,15 @@ def fmt_pct(num: float | None) -> str:
     return f"{round((num or 0) * 100)}%"
 
 
+def _retest_score(row: dict) -> tuple[int, int]:
+    """Return (correct, total) for the Phase 3 retest. (0, 0) when skipped."""
+    answers = row.get("retest_answers") or []
+    if not answers:
+        return (0, 0)
+    correct = sum(1 for a in answers if a.get("is_correct"))
+    return (correct, len(answers))
+
+
 def summary_table(rows: list[dict]) -> None:
     if not rows:
         print("No participants yet.")
@@ -85,7 +94,9 @@ def summary_table(rows: list[dict]) -> None:
 
     print(f"{len(rows)} participants in study_results\n")
 
-    header = f"{'ID':<14}{'Score':<8}{'Conf':<6}{'Trust':<7}{'Willing':<10}{'Comment'}"
+    header = (
+        f"{'ID':<14}{'Phase1':<9}{'Retest':<9}{'Conf':<6}{'Trust':<7}{'Willing':<10}{'Comment'}"
+    )
     print(header)
     print("-" * len(header))
 
@@ -94,12 +105,16 @@ def summary_table(rows: list[dict]) -> None:
         correct = r.get("correct_count", 0)
         total = r.get("total_images", 0)
         score = f"{correct}/{total}"
+        retest_correct, retest_total = _retest_score(r)
+        retest_str = f"{retest_correct}/{retest_total}" if retest_total else "-"
         conf = f"{r.get('self_confidence_rating', '?')}/5"
         trust = f"{r.get('trust_rating', '?')}/5"
         willing = (r.get("willingness_to_use") or "-")[:8]
         comment = r.get("comments") or ""
         comment_summary = f"{len(comment)} chars" if comment.strip() else "-"
-        print(f"{pid:<14}{score:<8}{conf:<6}{trust:<7}{willing:<10}{comment_summary}")
+        print(
+            f"{pid:<14}{score:<9}{retest_str:<9}{conf:<6}{trust:<7}{willing:<10}{comment_summary}"
+        )
 
 
 def aggregate_block(rows: list[dict]) -> None:
@@ -163,6 +178,29 @@ def aggregate_block(rows: list[dict]) -> None:
             f"Phase 2 comments:     {phase2_comment_count}/{phase2_answer_count} answers "
             f"(use --comments to dump)"
         )
+
+    # Phase 3 retest aggregation. Only consider participants who actually
+    # took the retest (had at least one Phase 1 misclassification).
+    retest_rows = [r for r in rows if (r.get("retest_answers") or [])]
+    if retest_rows:
+        baseline_pcts = []
+        retest_pcts = []
+        for r in retest_rows:
+            baseline_pcts.append(r.get("baseline_accuracy") or 0.0)
+            rc, rt = _retest_score(r)
+            if rt:
+                retest_pcts.append(rc / rt)
+
+        if retest_pcts:
+            avg_baseline = sum(baseline_pcts) / len(baseline_pcts)
+            avg_retest = sum(retest_pcts) / len(retest_pcts)
+            improvement = (avg_retest - avg_baseline) * 100
+            print("\nPhase 3 retest (participants who saw explanations)")
+            print("--------------------------------------------------")
+            print(f"  Participants in retest:    {len(retest_rows)}/{len(rows)}")
+            print(f"  Avg Phase 1 accuracy:      {fmt_pct(avg_baseline)}")
+            print(f"  Avg retest accuracy:       {fmt_pct(avg_retest)}")
+            print(f"  Improvement (retest − P1): {improvement:+.1f} pp")
 
 
 def dump_comments(rows: list[dict]) -> None:
