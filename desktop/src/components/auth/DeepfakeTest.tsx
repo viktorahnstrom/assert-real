@@ -159,6 +159,11 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
               },
               {
                 step: '3',
+                title: 'Try 3 more images',
+                desc: 'Now that you have seen our explanations, try classifying 3 new images.',
+              },
+              {
+                step: '4',
                 title: 'A few final questions',
                 desc: 'Answer a few short questions about your experience.',
               },
@@ -507,7 +512,7 @@ function ExplanationScreen({
 }
 
 // ============================================
-// Phase: Closing survey (Phase 3)
+// Phase: Closing survey (Phase 4)
 // ============================================
 function SurveyScreen({
   onSubmit,
@@ -525,7 +530,7 @@ function SurveyScreen({
       <div className="w-full max-w-lg">
         <div className="rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-8 shadow-lg shadow-xade-charcoal/4">
           <p className="text-xs font-medium uppercase tracking-widest text-xade-blue/60">
-            Phase 3: Final Questions
+            Phase 4: Final Questions
           </p>
           <h2 className="mt-2 text-xl font-semibold text-xade-charcoal">Almost done</h2>
           <p className="mt-1 text-sm text-xade-charcoal/50">
