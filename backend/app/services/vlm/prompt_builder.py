@@ -62,6 +62,23 @@ from the [FORENSIC EVIDENCE] block, cited by name (e.g. "the sharpness z-score \
 of -3.8" or "the ELA peak in the mouth area"). Do not invent metrics. Do not \
 contradict the numbers in the evidence block.
 
+VISIBILITY RULE — non-negotiable, especially important:
+- Only describe features that are actually visible in the image. The region \
+labels (e.g. "Mouth & Teeth", "Eyes & Pupils") are category names, NOT a \
+guarantee that every sub-feature is shown.
+- If the mouth is closed and no teeth are visible, do NOT describe teeth. \
+Talk about lip shape, lip texture, the corners of the mouth, or skin around \
+the lips instead. Saying "the teeth show irregular spacing" on a closed-mouth \
+image is a hallucination and a hard fail.
+- If the eyes are not clearly visible (covered by hair, shadowed, blinking, \
+profile angle), do not describe iris detail or pupil shape.
+- If the ears are not in frame, do not describe ear geometry.
+- When you cannot see the named sub-feature, describe what IS visible in that \
+region's crop. If absolutely nothing distinctive is visible, set the region's \
+confidence below 0.4 and write a short observation about why no claim can be \
+made (e.g. "The mouth is closed in this image, so nothing can be assessed \
+about tooth alignment.").
+
 QUALITY RULES:
 - Every sentence must reference something you can actually see, not a general pattern
 - Describe what things look like: smooth, blurry, sharp, plastic, flat, uneven, too clean
@@ -202,6 +219,23 @@ value, e.g. "sharpness_z=-3.8" or "ela_intensity_z=+2.9 in Mouth & Teeth".
 "GradCAM peak around the mouth" or "ELA hotspot on the jawline".
 - evidence_ref MAY be empty only when no specific anchor exists. If you set \
 confidence above 0.7 you MUST provide a non-empty evidence_ref.
+
+VISIBILITY RULE — equally non-negotiable:
+- Region labels like "Mouth & Teeth" or "Eyes & Pupils" are CATEGORY names, \
+NOT a guarantee that every sub-feature is visible in the image.
+- If the mouth is closed and no teeth are visible, do NOT describe teeth, \
+gum lines, or tooth spacing. Describe lips, lip corners, or skin around the \
+mouth instead. A claim like "the teeth show irregular spacing" on a \
+closed-mouth image is a hallucination — set confidence below 0.4 and write \
+"The mouth is closed in this image, so nothing can be assessed about tooth \
+alignment." instead.
+- Same applies to: eyes covered by hair or in profile (no iris/pupil claims), \
+ears out of frame (no ear geometry claims), eyebrows hidden behind hair (no \
+brow density claims).
+- When you cannot see the named sub-feature, describe what IS visible in the \
+region's crop, lower the confidence to reflect that uncertainty, and prefer \
+to drop the region entirely from the output if nothing visible there \
+contributes to the verdict.
 
 CONTENT RULES:
 - summary: one sentence stating what was found and where.

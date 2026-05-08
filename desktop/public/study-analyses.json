@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-06T12:51:21.419200+00:00",
+  "generated_at": "2026-05-08T08:00:49.611544+00:00",
   "analyses": {
     "1": {
       "deepfake_score": 0.8872,
@@ -27,10 +27,10 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin appears overly smooth with very few visible pores, creating a waxy look. There is an unnatural consistency in the skin tone, lacking the expected variations found in real skin. The texture around the cheeks and forehead does not show typical aging signs, such as fine lines or blemishes.",
+          "explanation": "The skin appears excessively smooth with a waxy finish and lacks the natural pore pattern expected in real skin. There are no visible pores or texture variations, which is inconsistent with typical human skin.",
           "evidence_type": "visual",
-          "evidence_ref": "skin texture in Image 4",
-          "claim_confidence": 0.9
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.85
         },
         {
           "url": "/quiz-heatmaps/region_1_1.jpg",
@@ -51,10 +51,10 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth exhibit irregular spacing, and the gum line is blurred, making it hard to distinguish between teeth and gums. The overall geometry of the teeth appears unnatural, as some teeth seem to overlap in a way that is not typical for a natural smile. The color of the teeth is also unusually uniform, lacking natural variations.",
+          "explanation": "The teeth show irregular spacing and the gum-to-tooth boundary is blurred, which is not typical for natural teeth. The overall geometry appears inconsistent, suggesting potential manipulation.",
           "evidence_type": "visual",
-          "evidence_ref": "mouth crop in Image 5",
-          "claim_confidence": 0.85
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.8
         },
         {
           "url": "/quiz-heatmaps/region_1_2.jpg",
@@ -75,20 +75,20 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows are too uniform in thickness and lack the individual hair detail that would normally be present. There is an asymmetry in the shape of the eyebrows, which is not typical for natural human features. The eyelashes appear merged into a single block rather than showing individual strands.",
+          "explanation": "The eyebrows appear unnaturally uniform in thickness and lack the individual hair strands that would normally be present. This uniformity suggests a lack of realism in the hair representation.",
           "evidence_type": "visual",
-          "evidence_ref": "eyebrow crop in Image 6",
-          "claim_confidence": 0.8
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.75
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates that the image is likely fake based on several visual cues.",
-          "detailed_analysis": "The skin texture appears unnaturally smooth and lacks the expected variation in pore size, suggesting a digital alteration. Additionally, the mouth shows irregularities in the tooth alignment and gum definition, which are not typical in natural images. The eyebrows and eyelashes appear overly uniform, lacking the natural variation expected in human features.",
-          "technical_notes": "The model's confidence in the image being fake is 88.7%. The skin texture shows a significant deviation from natural patterns, with a sharpness z-score indicating an unnatural smoothness. The mouth and teeth region exhibits irregularities in geometry and spacing, contributing to the overall classification.",
-          "processing_time_ms": 19096,
+          "summary": "The image shows signs of being fake, with an 88.7% confidence rating.",
+          "detailed_analysis": "The skin texture appears overly smooth and lacks natural variation, suggesting an artificial quality. Additionally, the mouth shows irregularities in the tooth alignment and blending, which are not typical for natural teeth. The eyebrows also exhibit an unnatural uniformity, lacking the individual strands usually found in real hair.",
+          "technical_notes": "The model's confidence in detecting manipulation is high at 88.7%. The skin texture crop shows a significant lack of pore detail, indicating potential digital alteration. The ELA map highlights areas of high re-compression, particularly around the mouth and eyes.",
+          "processing_time_ms": 17501,
           "error": null
         }
       }
@@ -119,9 +119,9 @@
             "asymmetric jaw contour relative to midline",
             "nose bridge width or curvature proportion anomaly"
           ],
-          "explanation": "The jawline appears unusually smooth, lacking the natural irregularities typically seen in human faces. There is an evident blending seam at the neck, which does not match the expected contour.",
+          "explanation": "The jawline appears unnaturally smooth, lacking the typical texture and definition expected in natural skin. There is also a noticeable blending seam at the face-neck junction, which is not characteristic of real human anatomy.",
           "evidence_type": "visual",
-          "evidence_ref": "jawline crop in Image 4",
+          "evidence_ref": "jawline area in Image 4",
           "claim_confidence": 0.85
         },
         {
@@ -143,10 +143,10 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin has a plastic-like appearance with an unnatural smoothness, lacking the expected pore detail for a child of this age. There are no visible skin imperfections, which is inconsistent with natural skin texture.",
+          "explanation": "The skin exhibits an overly uniform appearance, lacking the natural pore patterns and textures typically seen in real skin. This waxy surface quality is inconsistent with the subject's age, suggesting artificial enhancement.",
           "evidence_type": "visual",
-          "evidence_ref": "skin near the cheekbone in Image 5",
-          "claim_confidence": 0.9
+          "evidence_ref": "skin area in Image 5",
+          "claim_confidence": 0.8
         },
         {
           "url": "/quiz-heatmaps/region_2_2.jpg",
@@ -167,20 +167,20 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows appear as a uniform block without distinct hair strands, and there is a noticeable asymmetry in density between the left and right brows. This lack of detail contributes to an artificial look.",
+          "explanation": "The eyebrows appear unnaturally uniform in thickness and lack individual hair detail, creating a block-like appearance. This symmetry is atypical for natural eyebrows, indicating potential manipulation.",
           "evidence_type": "visual",
-          "evidence_ref": "eyebrow crop in Image 6",
-          "claim_confidence": 0.8
+          "evidence_ref": "eyebrow area in Image 6",
+          "claim_confidence": 0.75
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates that the image is likely fake based on various visual cues.",
-          "detailed_analysis": "The facial boundaries show unusual blending at the jawline, while the skin texture appears overly smooth and waxy. Additionally, the eyebrows lack individual hair definition, suggesting a lack of realism.",
-          "technical_notes": "The model assigned an 89.5% probability of being fake. Key regions showed significant activation, particularly in facial boundaries and skin texture. The GradCAM highlighted areas of concern that align with the ELA findings.",
-          "processing_time_ms": 13043,
+          "summary": "The image appears to be fake based on analysis of facial features and texture.",
+          "detailed_analysis": "The most notable cue is the unnatural blending at the jawline, suggesting manipulation. Additionally, the skin texture shows an overly smooth appearance inconsistent with natural aging, indicating potential digital alteration.",
+          "technical_notes": "The model assigned a fake probability of 89.5%. The GradCAM heatmap highlighted facial boundaries and skin texture as areas of concern. ELA analysis revealed high compression artifacts in these regions.",
+          "processing_time_ms": 16831,
           "error": null
         }
       }
@@ -211,7 +211,7 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin appears overly smooth with a waxy finish, lacking the natural variation in pore size and texture. There are no visible pores, which is unusual for the subject's age.",
+          "explanation": "The skin has an overly smooth appearance with minimal visible pores, which is not typical for natural skin. There are also signs of blending around the edges that contribute to an artificial look.",
           "evidence_type": "visual",
           "evidence_ref": "skin near the cheekbone in Image 4",
           "claim_confidence": 0.9
@@ -235,7 +235,7 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth show an unnatural alignment with some overlapping edges, and the gum-to-tooth boundary appears blurred. Additionally, the spacing between the teeth is inconsistent, which is atypical.",
+          "explanation": "The teeth appear unnaturally aligned with some overlapping, and the gum line is not clearly defined, leading to a blurred appearance. This irregularity raises suspicion about the authenticity of the mouth region.",
           "evidence_type": "visual",
           "evidence_ref": "mouth crop in Image 5",
           "claim_confidence": 0.85
@@ -259,7 +259,7 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows lack individual hair definition and appear as a solid block, indicating a lack of natural variation. The thickness is uniform along the entire brow, which is not typical for natural eyebrows.",
+          "explanation": "The eyebrows show an unnatural uniformity in thickness and lack distinct individual strands, which is atypical for natural hair. The overall shape appears too symmetrical, further suggesting manipulation.",
           "evidence_type": "visual",
           "evidence_ref": "eyebrow crop in Image 6",
           "claim_confidence": 0.8
@@ -269,10 +269,10 @@
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is likely fake, with a high confidence level of 95.6%.",
-          "detailed_analysis": "Key indicators of manipulation include an unnatural skin texture and inconsistencies in the mouth and teeth regions. The GradCAM heatmap highlights these areas, while the ELA map shows significant anomalies in the skin and mouth regions.",
-          "technical_notes": "The model's confidence in detecting fakeness is at 95.6%. The heatmap indicates high activation around the mouth and skin areas. ELA analysis reveals bright red pixels, suggesting re-compression artifacts.",
-          "processing_time_ms": 13348,
+          "summary": "The analysis indicates the image is likely fake based on multiple visual cues.",
+          "detailed_analysis": "The skin texture appears unnaturally smooth and lacks typical pore patterns, suggesting manipulation. Additionally, the mouth region shows irregularities in tooth alignment and blending that are inconsistent with natural human features.",
+          "technical_notes": "The model detected a 95.6% probability of the image being fake. Key regions showed high activation, particularly in skin and mouth areas. The GradCAM heatmap indicated significant focus on facial features, aligning with the ELA map findings.",
+          "processing_time_ms": 13058,
           "error": null
         }
       }
@@ -303,7 +303,7 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth appear unnaturally uniform in spacing, and the gum-to-tooth boundary is blurred. There is a lack of detail in the gums, which typically would show more texture. The overall appearance lacks the natural irregularities found in real teeth.",
+          "explanation": "The teeth appear overly uniform in size and spacing, with some areas showing a blurred boundary between the gums and teeth. The overall alignment of the teeth seems irregular, suggesting possible digital alteration.",
           "evidence_type": "visual",
           "evidence_ref": "crop from Image 4",
           "claim_confidence": 0.8
@@ -327,9 +327,9 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin has an overly smooth appearance, lacking the natural pores and texture expected for the subject's age. There are areas that appear waxy, which is not typical for human skin. The uniformity of the skin tone is also suspicious.",
+          "explanation": "The skin has an unnaturally smooth appearance, lacking the expected texture and variation in pore size. There are no visible pores or skin imperfections, which is inconsistent with typical human skin.",
           "evidence_type": "visual",
-          "evidence_ref": "crop from Image 5",
+          "evidence_ref": "skin area in Image 5",
           "claim_confidence": 0.75
         },
         {
@@ -351,20 +351,20 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows appear to have an unnatural thickness and lack individual strands, creating a block-like appearance. There is also noticeable asymmetry in the shape and density of the eyebrows. The eyelashes do not show the expected variation in length or density.",
+          "explanation": "The eyebrows appear to lack individual hair detail, merging into a uniform shape that does not reflect natural hair growth patterns. The density and thickness are unusually consistent across the brow, which is atypical.",
           "evidence_type": "visual",
-          "evidence_ref": "crop from Image 6",
-          "claim_confidence": 0.7
+          "evidence_ref": "eyebrow area in Image 6",
+          "claim_confidence": 0.65
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is likely fake, with a 73.5% confidence rating.",
-          "detailed_analysis": "The most notable feature is the unnatural blending around the mouth and teeth, which appears overly smooth and lacks the expected detail. Additionally, the skin texture shows signs of being too uniform, suggesting possible manipulation. The eyebrow and eyelash regions also exhibit irregularities in thickness and density.",
-          "technical_notes": "Model confidence is at 73.5%. The analysis highlights discrepancies in facial features, particularly around the mouth and skin texture. Activation percentages suggest significant focus on the mouth and teeth region.",
-          "processing_time_ms": 37593,
+          "summary": "The image appears to be fake with a confidence level of 73.5%.",
+          "detailed_analysis": "The most notable issue is the unnatural smoothness of the skin texture, which lacks the expected variation in pore size and detail. Additionally, the mouth region shows irregularities in tooth alignment that are inconsistent with natural human anatomy.",
+          "technical_notes": "Model confidence was 73.5%, indicating a significant likelihood of manipulation. GradCAM highlights the mouth and skin areas, where anomalies were detected. ELA analysis reveals high compression artifacts around the mouth.",
+          "processing_time_ms": 43744,
           "error": null
         }
       }
@@ -395,9 +395,9 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin appears unnaturally smooth with a lack of visible pores, which is inconsistent with typical human skin. There are also signs of a waxy appearance, especially around the cheeks and forehead.",
+          "explanation": "The skin appears excessively smooth with a plastic-like quality, lacking the natural pore detail expected in real skin. There are no visible pores, and the surface texture is unnaturally uniform, suggesting manipulation.",
           "evidence_type": "visual",
-          "evidence_ref": "skin texture in Image 4",
+          "evidence_ref": "skin near the cheekbone in Image 4",
           "claim_confidence": 0.9
         },
         {
@@ -419,10 +419,10 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth show a blurred boundary with the gums, and the spacing between the teeth is irregular, which is not typical for natural dentition. Additionally, the overall geometry of the mouth appears inconsistent.",
+          "explanation": "The lips are well-defined, but the boundary between the gums and teeth is blurred, creating an unnatural appearance. Additionally, the teeth show an unusually uniform spacing that does not align with typical human anatomy.",
           "evidence_type": "visual",
-          "evidence_ref": "mouth crop in Image 5",
-          "claim_confidence": 0.85
+          "evidence_ref": "Mouth crop in Image 5",
+          "claim_confidence": 0.8
         },
         {
           "url": "/quiz-heatmaps/region_5_2.jpg",
@@ -443,20 +443,20 @@
             "wispy or floating stray hair strands with no follicle origin",
             "asymmetric ear geometry or missing helix detail"
           ],
-          "explanation": "The hairline shows blending artifacts where it meets the skin, and there are stray hairs that lack a clear follicle origin. The ear also appears asymmetric with some missing details in the helix area.",
+          "explanation": "The hairline shows blending artifacts where it meets the skin, and there are stray hair strands that appear to lack a natural follicle origin. The ear geometry appears slightly asymmetric, which is unusual.",
           "evidence_type": "visual",
-          "evidence_ref": "hairline and ear crop in Image 6",
-          "claim_confidence": 0.8
+          "evidence_ref": "hairline area in Image 6",
+          "claim_confidence": 0.7
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates that the image is likely fake based on several visual cues.",
-          "detailed_analysis": "The skin texture appears overly smooth and lacks the natural variation typically seen in real skin, suggesting manipulation. Additionally, the mouth and teeth show irregularities, such as blurred boundaries and inconsistent spacing, which are not characteristic of natural human features.",
-          "technical_notes": "The model assigned a 96.5% probability of the image being fake. Key regions showed high activation, particularly in the areas of the mouth and skin texture. The ELA map revealed bright anomalies indicating potential re-compression artifacts.",
-          "processing_time_ms": 45235,
+          "summary": "The analysis indicates the image is likely fake with a high confidence of 96.5%.",
+          "detailed_analysis": "The most notable feature is the unnatural smoothness of the skin texture, which appears overly uniform and lacks realistic pore patterns. Additionally, the mouth region shows signs of blending that are inconsistent with natural anatomy, further supporting the classification as fake.",
+          "technical_notes": "The model's confidence in the fake classification is at 96.5%. The GradCAM heatmap highlights significant attention on the skin and mouth areas. ELA analysis reveals bright red pixels indicating high re-compression in these regions.",
+          "processing_time_ms": 28412,
           "error": null
         }
       }
@@ -487,10 +487,10 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth appear unusually uniform in spacing and shape, lacking the natural irregularities typically found in human dentition. The gum-to-tooth boundary is blurred, which is not characteristic of real teeth. Additionally, the overall texture around the mouth seems overly smooth.",
+          "explanation": "The mouth appears closed with a smooth surface, lacking visible texture or definition around the lips. There are no visible teeth or gum lines, making it difficult to assess the typical characteristics of the mouth. The blending of the lip edges is somewhat unnatural.",
           "evidence_type": "visual",
-          "evidence_ref": "crop from Image 4",
-          "claim_confidence": 0.8
+          "evidence_ref": "Image 4",
+          "claim_confidence": 0.5
         },
         {
           "url": "/quiz-heatmaps/region_6_1.jpg",
@@ -511,10 +511,10 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin shows an unnatural smoothness with very few visible pores, which is inconsistent with the subject's age. There are areas that appear waxy, lacking the natural variation in texture. This smoothness suggests possible digital alteration.",
+          "explanation": "The skin shows an unnaturally smooth appearance with minimal visible pores, which is not typical for human skin. There is a lack of variation in skin texture, suggesting a plastic-like quality. The overall skin tone appears overly uniform.",
           "evidence_type": "visual",
-          "evidence_ref": "crop from Image 5",
-          "claim_confidence": 0.75
+          "evidence_ref": "Image 5",
+          "claim_confidence": 0.7
         },
         {
           "url": "/quiz-heatmaps/region_6_2.jpg",
@@ -535,20 +535,20 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows appear to be unnaturally thick and uniform, lacking individual hair detail. There is also a noticeable asymmetry in the shape and density of the eyebrows. The eyelashes seem to blend into the skin rather than standing out distinctly.",
+          "explanation": "The eyebrows are uniform in thickness and lack individual hair definition, appearing more like a solid shape than natural hair. There is a noticeable asymmetry in the shape of the eyebrows, which is not typical for natural brows. The blending at the edges of the eyebrows is also inconsistent with natural hair growth.",
           "evidence_type": "visual",
-          "evidence_ref": "crop from Image 6",
-          "claim_confidence": 0.7
+          "evidence_ref": "Image 6",
+          "claim_confidence": 0.6
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image analysis indicates it is likely a fake with a 66.2% confidence level.",
-          "detailed_analysis": "The most notable feature is the unnatural blending around the mouth and teeth, which appears inconsistent with natural human anatomy. Additionally, the skin texture lacks the expected variation and detail, suggesting artificial smoothing. Overall, these cues contribute to the classification as fake.",
-          "technical_notes": "The model's confidence score is 66.2%, indicating a moderate likelihood of manipulation. The GradCAM heatmap highlights the mouth area as a focal point, while the ELA map shows significant anomalies. The skin texture appears overly uniform, which is atypical for natural skin.",
-          "processing_time_ms": 31172,
+          "summary": "The image appears to be fake based on the analysis of facial features.",
+          "detailed_analysis": "The mouth region shows unusual blending and lack of clarity, suggesting irregularities. The skin texture appears overly smooth and lacks natural pore detail, which is inconsistent with typical human skin. Additionally, the eyebrows exhibit an unnatural uniformity in thickness, indicating possible manipulation.",
+          "technical_notes": "The model detected a 66.2% probability of the image being fake. Key regions of concern include the mouth, skin texture, and eyebrows. The GradCAM heatmap highlighted these areas, correlating with the findings from the ELA map.",
+          "processing_time_ms": 41471,
           "error": null
         }
       }
@@ -579,9 +579,9 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin shows a natural texture with visible pores and slight imperfections, consistent with typical human skin. There is no waxy or overly smooth appearance, indicating authenticity. The color gradient is also natural without abrupt changes.",
+          "explanation": "The skin has a natural appearance with visible pores and slight imperfections. There is no waxy or overly smooth texture, consistent with typical human skin. The gradients in skin tone are also realistic, showing variations in color.",
           "evidence_type": "visual",
-          "evidence_ref": "skin near the cheekbone in Image 1",
+          "evidence_ref": "skin near the cheekbone in Image 4",
           "claim_confidence": 0.9
         },
         {
@@ -603,9 +603,9 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows have individual hair strands that are not merged into a uniform block, maintaining a natural look. The density and shape appear consistent across both sides, with no signs of artificial uniformity. The eyelashes are also distinct and not overly thick.",
+          "explanation": "The eyebrows display individual hair strands without merging, maintaining a natural shape and density. There is no evidence of uniform thickness along the brow arc, which supports the authenticity of the image. The eyelashes are also distinct and not overly thick.",
           "evidence_type": "visual",
-          "evidence_ref": "eyebrow crop in Image 5",
+          "evidence_ref": "eyebrow area in Image 5",
           "claim_confidence": 0.85
         },
         {
@@ -627,9 +627,9 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The teeth are well-defined with clear boundaries between gums and teeth, showing no signs of blurring or fusion. The spacing between the teeth appears normal, and the overall geometry is consistent with a natural smile. There are no irregularities in the gum line.",
+          "explanation": "The mouth appears natural with a clear gum-to-tooth boundary and no overlapping or fused teeth. The spacing between the teeth is consistent, and the lips show normal texture without blurring. Overall, the mouth's appearance aligns with typical human features.",
           "evidence_type": "visual",
-          "evidence_ref": "mouth crop in Image 6",
+          "evidence_ref": "mouth area in Image 6",
           "claim_confidence": 0.88
         }
       ],
@@ -637,10 +637,10 @@
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is real with high confidence.",
-          "detailed_analysis": "The facial features exhibit natural textures and details, particularly in the skin and hair. There are no signs of unnatural smoothness or blending that would suggest manipulation. The overall appearance aligns well with typical human characteristics.",
-          "technical_notes": "Model confidence is at 91.6%, with a low fake probability of 8.4%. The analysis focused on texture and detail in key facial regions. No significant anomalies were detected in the ELA map.",
-          "processing_time_ms": 36054,
+          "summary": "The image is classified as real with high confidence.",
+          "detailed_analysis": "The skin texture appears natural with visible pores and no signs of unnatural smoothness. The eyebrows and eyelashes maintain individual strands without merging into a block, and the mouth shows a consistent tooth alignment. Overall, the facial features exhibit realistic characteristics.",
+          "technical_notes": "Model confidence is 91.6%, indicating a strong likelihood of authenticity. The GradCAM heatmap highlights key facial regions, while the ELA map shows no significant anomalies. No areas of high re-compression were detected.",
+          "processing_time_ms": 37516,
           "error": null
         }
       }
@@ -671,7 +671,7 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows show individual strands with a natural thickness and shape, lacking any uniformity that would suggest manipulation. There is a clear distinction between the eyebrow hairs and the skin, indicating realistic texture.",
+          "explanation": "The eyebrows show individual hair strands with a natural density and shape. There is no evidence of merging or unnatural uniformity in thickness along the brow arc.",
           "evidence_type": "visual",
           "evidence_ref": "Image 4",
           "claim_confidence": 0.9
@@ -695,7 +695,7 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin has a natural appearance with visible pores and slight imperfections, which are consistent with the subject's age. There is no waxy or overly smooth surface, reinforcing the authenticity of the image.",
+          "explanation": "The skin appears to have a natural texture with visible pores and slight imperfections, consistent with the subject's age. There is no waxy or overly smooth appearance present.",
           "evidence_type": "visual",
           "evidence_ref": "Image 5",
           "claim_confidence": 0.85
@@ -719,20 +719,20 @@
             "asymmetric jaw contour relative to midline",
             "nose bridge width or curvature proportion anomaly"
           ],
-          "explanation": "The jawline is well-defined with no signs of blending or smoothing at the face-neck junction. The contours appear symmetrical and proportional, which is typical for a natural face.",
+          "explanation": "The jawline appears well-defined without any smoothing or blending seams at the face-neck junction. The contours are symmetrical and proportionate, showing no anomalies.",
           "evidence_type": "visual",
           "evidence_ref": "Image 6",
-          "claim_confidence": 0.88
+          "claim_confidence": 0.8
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates that the image is real with a high confidence level of 92.7%.",
-          "detailed_analysis": "The facial features appear natural, with no signs of artificial blending or texture anomalies. The skin texture shows realistic variations, and the facial boundaries are well-defined without any unusual smoothing.",
-          "technical_notes": "Model confidence is high at 92.7%. GradCAM highlights significant attention on facial features, particularly around the eyes and mouth. ELA shows no major anomalies in compression patterns.",
-          "processing_time_ms": 42999,
+          "summary": "The image is classified as real with high confidence.",
+          "detailed_analysis": "The facial features exhibit natural textures and details, particularly in the skin and eye regions. There are no signs of artificial blending or smoothing that would typically indicate manipulation.",
+          "technical_notes": "Model confidence is at 92.7%, with a low fake probability of 7.3%. The analysis shows consistent skin texture and facial boundaries without irregularities. Activation was highest in the eyebrow and eyelash region, followed closely by skin texture.",
+          "processing_time_ms": 31303,
           "error": null
         }
       }
@@ -763,9 +763,9 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows show individual strands with a natural density and shape, without any merging into a uniform block. There is a slight asymmetry in thickness, but it is within normal variation. The eyelashes appear well-defined and consistent with typical human features.",
+          "explanation": "The eyebrows show natural hair density and individual strands without any merging into a uniform block. They maintain a consistent shape and thickness along the brow arc, typical for human features.",
           "evidence_type": "visual",
-          "evidence_ref": "Image 4",
+          "evidence_ref": "eyebrow area in Image 4",
           "claim_confidence": 0.9
         },
         {
@@ -787,9 +787,9 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin texture is consistent with typical human characteristics, showing natural pores and slight imperfections. There is no waxy or overly smooth appearance, and the skin tone is even across the face. The texture appears realistic, with variations that align with the subject's age.",
+          "explanation": "The skin appears to have a realistic texture with visible pores and slight imperfections, consistent with natural human skin. There is no plastic or waxy appearance, and the surface shows appropriate variations in tone.",
           "evidence_type": "visual",
-          "evidence_ref": "Image 5",
+          "evidence_ref": "skin area in Image 5",
           "claim_confidence": 0.85
         },
         {
@@ -811,9 +811,9 @@
             "unnatural glossiness or over-bright specular highlights",
             "missing or blurred iris texture and limbal ring"
           ],
-          "explanation": "The eyes display a natural glossiness with well-defined pupils and visible iris texture. There is no asymmetry in pupil shape, and the limbal ring is clearly visible, contributing to a lifelike appearance. The reflections in the eyes are consistent with lighting conditions.",
+          "explanation": "The eyes exhibit clear iris texture and a natural limbal ring, with no signs of glossiness or artificial brightness. Both pupils are symmetrical, and the overall eye appearance is consistent with human characteristics.",
           "evidence_type": "visual",
-          "evidence_ref": "Image 6",
+          "evidence_ref": "eye area in Image 6",
           "claim_confidence": 0.9
         }
       ],
@@ -821,10 +821,10 @@
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image appears to be real with a high confidence level of 99.7%.",
-          "detailed_analysis": "The facial features exhibit natural textures and details, with no signs of digital manipulation. The skin, eyes, and hair all show consistent characteristics typical of a genuine photograph.",
-          "technical_notes": "Model confidence is at 99.7%, with a fake probability of only 0.3%. The analysis utilized EfficientNet-B4 for detection. No significant anomalies were found in the ELA or heatmap overlays.",
-          "processing_time_ms": 30199,
+          "summary": "The analysis confirms the image is real with high confidence.",
+          "detailed_analysis": "The facial features exhibit natural textures and variations, particularly in the skin and hair. There are no signs of digital manipulation, such as unnatural glossiness or blending issues. The overall appearance aligns well with typical human characteristics.",
+          "technical_notes": "Model confidence is at 99.7%, indicating strong reliability in the assessment. The fake probability is only 0.3%. GradCAM highlights the central facial region, supporting the real classification.",
+          "processing_time_ms": 14389,
           "error": null
         }
       }
@@ -855,10 +855,10 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows have a natural shape with individual strands visible, avoiding any blocky appearance. The density and thickness are consistent across both brows, showing no asymmetry. The edges are well-defined, contributing to a realistic look.",
+          "explanation": "The eyebrows exhibit a natural shape with individual hairs visible, showing no signs of merging into a uniform block. The density appears consistent and realistic across both brows.",
           "evidence_type": "visual",
           "evidence_ref": "Image 4",
-          "claim_confidence": 0.9
+          "claim_confidence": 0.85
         },
         {
           "url": "/quiz-heatmaps/region_10_1.jpg",
@@ -879,10 +879,10 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin shows a natural texture with visible pores and no plastic or waxy appearance. There is a slight variation in skin tone, which is typical for human skin, and no areas appear unnaturally smooth. The overall quality aligns with the subject's age.",
+          "explanation": "The skin texture shows a natural appearance with visible pores and a healthy glow, lacking any waxy or overly smooth characteristics. There are no signs of an unnatural or uniform pore pattern.",
           "evidence_type": "visual",
           "evidence_ref": "Image 5",
-          "claim_confidence": 0.85
+          "claim_confidence": 0.9
         },
         {
           "url": "/quiz-heatmaps/region_10_2.jpg",
@@ -903,20 +903,20 @@
             "unnatural glossiness or over-bright specular highlights",
             "missing or blurred iris texture and limbal ring"
           ],
-          "explanation": "Both eyes exhibit symmetrical pupil shapes and clear iris details, with no signs of glossiness or unnatural highlights. The limbal rings are well-defined, and the overall eye texture appears consistent and realistic. There are no blurs or distortions present.",
+          "explanation": "The eyes display clear iris texture and a balanced pupil shape, with no blurring or unnatural highlights. The limbal ring is distinct, contributing to the overall realism of the gaze.",
           "evidence_type": "visual",
           "evidence_ref": "Image 6",
-          "claim_confidence": 0.9
+          "claim_confidence": 0.88
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The analysis indicates the image is real with high confidence.",
-          "detailed_analysis": "The facial features appear natural and consistent with typical human characteristics. The skin texture and details around the eyes and eyebrows show no signs of artificial enhancement or blending, reinforcing the classification as real.",
-          "technical_notes": "Model confidence is at 90.3%, indicating strong agreement with the real classification. No significant artifacts were detected in the ELA map. GradCAM highlights areas consistent with natural human features.",
-          "processing_time_ms": 17235,
+          "summary": "The image is classified as real with high confidence.",
+          "detailed_analysis": "The skin texture appears natural, with visible pores and no signs of artificial smoothing. The eyebrows and eyelashes show individual strands without any unnatural uniformity. The eyes maintain a realistic glossiness and clear iris texture, consistent with a genuine photograph.",
+          "technical_notes": "Model confidence is 90.3%, indicating a strong likelihood of authenticity. The fake probability is low at 9.7%. No significant anomalies were detected in the ELA map.",
+          "processing_time_ms": 26487,
           "error": null
         }
       }
@@ -947,10 +947,10 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows have a natural texture with visible individual hairs, showing slight irregularity in thickness. There is no merging into a uniform block, indicating authenticity. The shape and density appear consistent with natural growth.",
+          "explanation": "The eyebrows display a natural shape with individual strands visible, showing slight irregularities in density. The edges are soft and blend seamlessly into the skin, indicating no artificial uniformity.",
           "evidence_type": "visual",
           "evidence_ref": "Image 4",
-          "claim_confidence": 0.85
+          "claim_confidence": 0.8
         },
         {
           "url": "/quiz-heatmaps/region_11_1.jpg",
@@ -971,10 +971,10 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin shows a realistic texture with visible pores and slight imperfections, which is typical for the subject's age. There is no waxy or overly smooth appearance, reinforcing the authenticity of the image. The gradients in skin tone are natural and consistent.",
+          "explanation": "The skin has a realistic texture with visible pores and slight variations in tone, consistent with natural human skin. There is no waxy or overly smooth appearance, reinforcing the authenticity of the image.",
           "evidence_type": "visual",
           "evidence_ref": "Image 5",
-          "claim_confidence": 0.9
+          "claim_confidence": 0.85
         },
         {
           "url": "/quiz-heatmaps/region_11_2.jpg",
@@ -995,20 +995,20 @@
             "blurred or missing gum-to-tooth boundary",
             "inconsistent tooth count or irregular spacing"
           ],
-          "explanation": "The mouth appears natural with well-defined lips and no blurring at the gum-to-tooth boundary. The spacing between the teeth is consistent, and there are no irregularities in tooth geometry. The overall appearance aligns with typical human features.",
+          "explanation": "The lips are well-defined with natural contours and no signs of blurring or irregular spacing. The mouth is closed, and the skin around it shows a consistent texture without any anomalies.",
           "evidence_type": "visual",
           "evidence_ref": "Image 6",
-          "claim_confidence": 0.88
+          "claim_confidence": 0.75
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image appears to be real with a high confidence level of 83.2%.",
-          "detailed_analysis": "The GradCAM heatmap shows focus on the facial features, particularly around the eyes and mouth, indicating a natural appearance. The ELA map does not show significant anomalies, supporting the classification as real.",
-          "technical_notes": "Model confidence is 83.2%, with a fake probability of 16.8%. The analysis did not reveal significant compression artifacts in the ELA map. The facial regions examined showed consistent texture and detail.",
-          "processing_time_ms": 21209,
+          "summary": "The analysis indicates the image is real with high confidence.",
+          "detailed_analysis": "The facial features exhibit natural textures and details, particularly in the skin and eyebrows. There are no signs of digital manipulation, as the skin texture appears consistent with typical human characteristics.",
+          "technical_notes": "Model confidence in authenticity is 83.2%. GradCAM highlights the facial regions without any significant anomalies. ELA map shows no bright hotspots indicating re-compression artifacts.",
+          "processing_time_ms": 34184,
           "error": null
         }
       }
@@ -1039,7 +1039,7 @@
             "left-right shape or density asymmetry",
             "unnaturally uniform thickness along the brow arc"
           ],
-          "explanation": "The eyebrows have a natural shape with individual hairs visible, showing no signs of being overly uniform or artificially thick. The density is consistent across both brows, with no left-right asymmetry. The edges appear soft and blend well with the surrounding skin.",
+          "explanation": "The eyebrows are well-defined with individual hairs visible, showing a natural density and shape. There is no merging into a uniform block, and the left-right symmetry appears consistent.",
           "evidence_type": "visual",
           "evidence_ref": "Image 4",
           "claim_confidence": 0.9
@@ -1063,7 +1063,7 @@
             "unnatural glossiness or over-bright specular highlights",
             "missing or blurred iris texture and limbal ring"
           ],
-          "explanation": "Both pupils are symmetrical in shape and size, with a natural gloss that reflects light realistically. The iris texture is clear, and the limbal ring is well-defined, showing no blurring or unnatural highlights. The overall appearance of the eyes is consistent with natural human features.",
+          "explanation": "Both eyes exhibit clear pupil shapes with no visible asymmetry or unnatural glossiness. The iris texture is intact, and the limbal ring is well-defined, contributing to a natural appearance.",
           "evidence_type": "visual",
           "evidence_ref": "Image 5",
           "claim_confidence": 0.9
@@ -1087,20 +1087,20 @@
             "absent or overly uniform pore pattern",
             "unnatural smoothness inconsistent with subject age"
           ],
-          "explanation": "The skin exhibits a realistic texture with visible pores and slight imperfections, typical for the subject's age. There is no waxy or overly smooth appearance, and the skin tone is consistent throughout. The gradients in skin color are natural, without any signs of digital alteration.",
+          "explanation": "The skin shows a realistic texture with visible pores and no signs of a plastic or waxy appearance. The surface has natural variations in tone and texture consistent with typical human skin.",
           "evidence_type": "visual",
           "evidence_ref": "Image 6",
-          "claim_confidence": 0.9
+          "claim_confidence": 0.85
         }
       ],
       "explanations": {
         "openai": {
           "provider": "openai",
           "model": "gpt-4o-mini",
-          "summary": "The image appears to be real with high confidence based on the analysis.",
-          "detailed_analysis": "The facial features show natural texture and detail, particularly in the skin and hair. There are no significant anomalies in the eye reflections or brow structure that would suggest manipulation. Overall, the image maintains a consistent appearance across all regions examined.",
-          "technical_notes": "Model confidence is at 97.8%, indicating strong reliability in the classification. The GradCAM heatmap shows focus on the forehead and eyes, while the ELA map does not reveal any concerning compression artifacts. The analysis of facial regions supports the classification of authenticity.",
-          "processing_time_ms": 34094,
+          "summary": "The analysis indicates the image is real with high confidence.",
+          "detailed_analysis": "The most distinctive feature is the natural texture of the skin and facial hair, which shows no signs of artificial smoothing or blending. The eyebrows and eyelashes appear well-defined, maintaining individual strands without any unnatural uniformity.",
+          "technical_notes": "Model confidence is at 97.8%, suggesting strong alignment with typical human facial features. The GradCAM heatmap highlights areas around the eyes and eyebrows, indicating focus on these regions. ELA map shows no significant anomalies in compression.",
+          "processing_time_ms": 28748,
           "error": null
         }
       }
