@@ -202,6 +202,20 @@ def aggregate_block(rows: list[dict]) -> None:
             print(f"  Avg retest accuracy:       {fmt_pct(avg_retest)}")
             print(f"  Improvement (retest − P1): {improvement:+.1f} pp")
 
+        # Self-reported "did the explanations help" — only meaningful for
+        # participants who took the retest, so filter on retest_rows.
+        helped_vals = [
+            r.get("explanations_helped_in_retest")
+            for r in retest_rows
+            if r.get("explanations_helped_in_retest") is not None
+        ]
+        if helped_vals:
+            avg_helped = sum(helped_vals) / len(helped_vals)
+            print(
+                f"  Self-reported help rating: avg {avg_helped:.1f}/5  "
+                f"({len(helped_vals)} participants)"
+            )
+
 
 def dump_comments(rows: list[dict]) -> None:
     print("\nFinal-survey comments")

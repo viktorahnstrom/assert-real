@@ -95,6 +95,9 @@ class StudyResults(BaseModel):
     retest_answers: list[dict] = []
     trust_rating: int
     willingness_to_use: str  # "yes" | "no" | "maybe"
+    # 1–5 rating shown only to participants who took the retest. None
+    # when the retest was skipped.
+    explanations_helped_in_retest: int | None = None
     comments: str
     completed_at: str
 
