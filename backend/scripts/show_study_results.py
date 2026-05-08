@@ -133,14 +133,19 @@ def aggregate_block(rows: list[dict]) -> None:
     # Phase 2 most-useful-component aggregation
     component_counter: Counter[str] = Counter()
     understanding_vals: list[int] = []
+    phase2_comment_count = 0
+    phase2_answer_count = 0
     for r in rows:
         for ans in r.get("explanation_answers") or []:
+            phase2_answer_count += 1
             comp = ans.get("most_useful_component")
             if comp:
                 component_counter[comp] += 1
             u = ans.get("understanding_rating")
             if u is not None:
                 understanding_vals.append(u)
+            if (ans.get("most_useful_comment") or "").strip():
+                phase2_comment_count += 1
 
     if component_counter:
         print("\nMost useful evidence (Phase 2)")
@@ -153,21 +158,44 @@ def aggregate_block(rows: list[dict]) -> None:
         avg_u = sum(understanding_vals) / len(understanding_vals)
         print(f"\nUnderstanding rating: avg {avg_u:.1f}/5  ({len(understanding_vals)} answers)")
 
+    if phase2_answer_count:
+        print(
+            f"Phase 2 comments:     {phase2_comment_count}/{phase2_answer_count} answers "
+            f"(use --comments to dump)"
+        )
+
 
 def dump_comments(rows: list[dict]) -> None:
-    print("\nComments")
-    print("--------")
-    any_comment = False
+    print("\nFinal-survey comments")
+    print("---------------------")
+    any_final = False
     for r in rows:
         comment = (r.get("comments") or "").strip()
         if not comment:
             continue
-        any_comment = True
+        any_final = True
         pid = r.get("participant_id") or "?"
         print(f"\n[{pid}]")
         print(comment)
-    if not any_comment:
-        print("(no participants left comments)")
+    if not any_final:
+        print("(no participants left final comments)")
+
+    print("\nPhase 2 per-image comments")
+    print("--------------------------")
+    any_phase2 = False
+    for r in rows:
+        pid = r.get("participant_id") or "?"
+        for ans in r.get("explanation_answers") or []:
+            comment = (ans.get("most_useful_comment") or "").strip()
+            if not comment:
+                continue
+            any_phase2 = True
+            image_id = ans.get("image_id", "?")
+            provider = ans.get("provider", "?")
+            print(f"\n[{pid}] image {image_id} (provider: {provider})")
+            print(comment)
+    if not any_phase2:
+        print("(no per-image comments yet)")
 
 
 def detail_one(rows: list[dict], participant_id: str) -> None:
