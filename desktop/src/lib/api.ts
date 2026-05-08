@@ -343,8 +343,8 @@ export interface StudyResultsPayload {
   classification_records: object[];
   explanation_answers: object[];
   // Phase 3 — empty array when the participant got 100% on Phase 1 and
-  // the retest was skipped. Each entry carries the per-image answer; the
-  // #118 timer work will additionally include time_ms and idle_discarded.
+  // the retest was skipped. Each entry carries the per-image answer plus
+  // time_ms and idle_discarded.
   retest_answers: object[];
   trust_rating: number;
   willingness_to_use: string;
