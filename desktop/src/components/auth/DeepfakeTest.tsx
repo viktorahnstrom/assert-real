@@ -82,6 +82,7 @@ interface ExplanationItem {
   provider: string;
   mostUsefulComponent: UsefulComponent | null;
   understandingRating: number | null;
+  mostUsefulComment: string | null;
 }
 
 // ============================================
@@ -365,10 +366,12 @@ function ExplanationScreen({
   onSubmit: (answers: {
     mostUsefulComponent: UsefulComponent;
     understandingRating: number;
+    mostUsefulComment: string | null;
   }) => void;
 }) {
   const [usefulComponent, setUsefulComponent] = useState<UsefulComponent | null>(null);
   const [understanding, setUnderstanding] = useState<number | null>(null);
+  const [comment, setComment] = useState('');
 
   const canSubmit = usefulComponent !== null && understanding !== null;
 
@@ -449,7 +452,7 @@ function ExplanationScreen({
           </div>
 
           {/* Q2 */}
-          <div>
+          <div className="mb-6">
             <p className="text-sm font-medium text-xade-charcoal">
               2. How well do you understand why the AI made this choice?
             </p>
@@ -461,17 +464,38 @@ function ExplanationScreen({
               />
             </div>
           </div>
+
+          {/* Q3 — optional free-text comment */}
+          <div>
+            <p className="text-sm font-medium text-xade-charcoal">
+              3. Anything specific about why this combination helped most?{' '}
+              <span className="font-normal text-xade-charcoal/50">(optional)</span>
+            </p>
+            <p className="mt-1 text-xs text-xade-charcoal/40">
+              You can write in Swedish if you prefer.
+            </p>
+            <input
+              type="text"
+              value={comment}
+              maxLength={200}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="e.g. the heatmap pointed straight at the eyes…"
+              className="mt-3 w-full rounded-lg border-2 border-xade-charcoal/15 bg-white px-3 py-2 text-sm text-xade-charcoal placeholder:text-xade-charcoal/30 focus:border-xade-blue focus:outline-none"
+            />
+          </div>
         </div>
 
         <button
           disabled={!canSubmit}
-          onClick={() =>
-            canSubmit &&
+          onClick={() => {
+            if (!canSubmit) return;
             onSubmit({
               mostUsefulComponent: usefulComponent!,
               understandingRating: understanding!,
-            })
-          }
+              mostUsefulComment: comment.trim() ? comment.trim() : null,
+            });
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
         >
           {current < total ? 'Next image' : 'Continue to the final questions'}
@@ -768,6 +792,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         provider,
         mostUsefulComponent: null,
         understandingRating: null,
+        mostUsefulComment: null,
       });
     }
 
@@ -794,6 +819,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   function handleExplanationSubmit(answers: {
     mostUsefulComponent: UsefulComponent;
     understandingRating: number;
+    mostUsefulComment: string | null;
   }) {
     const updated = explanationItems.map((item, i) =>
       i === currentExplanationIndex ? { ...item, ...answers } : item
@@ -828,6 +854,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         provider: item.provider,
         most_useful_component: item.mostUsefulComponent,
         understanding_rating: item.understandingRating,
+        most_useful_comment: item.mostUsefulComment,
       })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
