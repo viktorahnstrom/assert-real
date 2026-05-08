@@ -271,8 +271,7 @@ def timing_block(rows: list[dict]) -> None:
         avg = sum(samples) / len(samples)
         med = median(samples)
         print(
-            f"  {label:<{label_width}}"
-            f"avg {_fmt_ms(avg):<8}median {_fmt_ms(med):<8}n={len(samples)}"
+            f"  {label:<{label_width}}avg {_fmt_ms(avg):<8}median {_fmt_ms(med):<8}n={len(samples)}"
         )
 
     # Idle-discarded counts: per-section flag in the JSONB arrays + any
