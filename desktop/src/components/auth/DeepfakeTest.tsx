@@ -7,6 +7,14 @@ import {
   type StudyAnalysisResult,
 } from '@/lib/api';
 import { AnalysisResultBody } from '@/components/AnalysisResultBody';
+import { IdleStillTherePrompt } from '@/components/IdleStillTherePrompt';
+import {
+  useSectionTimer,
+  IDLE_THRESHOLD_PHASE_1_MS,
+  IDLE_THRESHOLD_PHASE_2_MS,
+  IDLE_THRESHOLD_PHASE_4_MS,
+  type SectionTimerSnapshot,
+} from '@/lib/useSectionTimer';
 
 // ============================================
 // Study images
@@ -73,6 +81,8 @@ interface ClassificationRecord {
   image: StudyImage;
   answer: 'real' | 'fake';
   isCorrect: boolean;
+  timeMs: number;
+  idleDiscarded: boolean;
 }
 
 interface ExplanationItem {
@@ -83,6 +93,8 @@ interface ExplanationItem {
   mostUsefulComponent: UsefulComponent | null;
   understandingRating: number | null;
   mostUsefulComment: string | null;
+  timeMs: number | null;
+  idleDiscarded: boolean;
 }
 
 // ============================================
@@ -178,7 +190,9 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
           <div className="mt-6 rounded-lg bg-xade-charcoal/3 px-4 py-3 text-xs leading-relaxed text-xade-charcoal/50">
             <strong className="text-xade-charcoal/70">Privacy:</strong> Joining is voluntary and
             anonymous. We do not collect any personal information. Your answers are only used for
-            research.
+            research. We also record how long each part of the study takes you, so we can understand
+            how much effort it costs people. We never link this to any identifying information about
+            you.
           </div>
 
           <button
@@ -248,8 +262,14 @@ function ClassificationScreen({
   image: StudyImage;
   current: number;
   total: number;
-  onAnswer: (answer: 'real' | 'fake') => void;
+  onAnswer: (answer: 'real' | 'fake', timing: SectionTimerSnapshot) => void;
 }) {
+  const timer = useSectionTimer(`classification-${image.id}`, IDLE_THRESHOLD_PHASE_1_MS);
+
+  const handleAnswer = (answer: 'real' | 'fake') => {
+    onAnswer(answer, timer.finalize());
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
       <div className="w-full max-w-lg">
@@ -280,19 +300,24 @@ function ClassificationScreen({
 
         <div className="mt-3 flex gap-3">
           <button
-            onClick={() => onAnswer('real')}
+            onClick={() => handleAnswer('real')}
             className="flex-1 rounded-lg border-2 border-green-200 bg-white px-6 py-3.5 text-sm font-semibold text-green-600 transition-colors hover:border-green-400 hover:bg-green-50"
           >
             Real
           </button>
           <button
-            onClick={() => onAnswer('fake')}
+            onClick={() => handleAnswer('fake')}
             className="flex-1 rounded-lg border-2 border-red-200 bg-white px-6 py-3.5 text-sm font-semibold text-red-500 transition-colors hover:border-red-400 hover:bg-red-50"
           >
             Fake
           </button>
         </div>
       </div>
+      <IdleStillTherePrompt
+        open={timer.isIdleModalOpen}
+        onContinue={timer.confirmStillThere}
+        onDiscard={timer.markDiscarded}
+      />
     </div>
   );
 }
@@ -363,15 +388,19 @@ function ExplanationScreen({
   item: ExplanationItem;
   current: number;
   total: number;
-  onSubmit: (answers: {
-    mostUsefulComponent: UsefulComponent;
-    understandingRating: number;
-    mostUsefulComment: string | null;
-  }) => void;
+  onSubmit: (
+    answers: {
+      mostUsefulComponent: UsefulComponent;
+      understandingRating: number;
+      mostUsefulComment: string | null;
+    },
+    timing: SectionTimerSnapshot
+  ) => void;
 }) {
   const [usefulComponent, setUsefulComponent] = useState<UsefulComponent | null>(null);
   const [understanding, setUnderstanding] = useState<number | null>(null);
   const [comment, setComment] = useState('');
+  const timer = useSectionTimer(`explanation-${item.image.id}`, IDLE_THRESHOLD_PHASE_2_MS);
 
   const canSubmit = usefulComponent !== null && understanding !== null;
 
@@ -489,11 +518,14 @@ function ExplanationScreen({
           disabled={!canSubmit}
           onClick={() => {
             if (!canSubmit) return;
-            onSubmit({
-              mostUsefulComponent: usefulComponent!,
-              understandingRating: understanding!,
-              mostUsefulComment: comment.trim() ? comment.trim() : null,
-            });
+            onSubmit(
+              {
+                mostUsefulComponent: usefulComponent!,
+                understandingRating: understanding!,
+                mostUsefulComment: comment.trim() ? comment.trim() : null,
+              },
+              timer.finalize()
+            );
             window.scrollTo({ top: 0, behavior: 'instant' });
           }}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
@@ -502,6 +534,11 @@ function ExplanationScreen({
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
+      <IdleStillTherePrompt
+        open={timer.isIdleModalOpen}
+        onContinue={timer.confirmStillThere}
+        onDiscard={timer.markDiscarded}
+      />
     </div>
   );
 }
@@ -512,11 +549,15 @@ function ExplanationScreen({
 function SurveyScreen({
   onSubmit,
 }: {
-  onSubmit: (answers: { trustRating: number; willingnessToUse: string; comments: string }) => void;
+  onSubmit: (
+    answers: { trustRating: number; willingnessToUse: string; comments: string },
+    timing: SectionTimerSnapshot
+  ) => void;
 }) {
   const [trust, setTrust] = useState<number | null>(null);
   const [willingness, setWillingness] = useState<string | null>(null);
   const [comments, setComments] = useState('');
+  const timer = useSectionTimer('survey', IDLE_THRESHOLD_PHASE_4_MS);
 
   const canSubmit = trust !== null && willingness !== null;
 
@@ -589,11 +630,14 @@ function SurveyScreen({
             disabled={!canSubmit}
             onClick={() =>
               canSubmit &&
-              onSubmit({
-                trustRating: trust!,
-                willingnessToUse: willingness!,
-                comments,
-              })
+              onSubmit(
+                {
+                  trustRating: trust!,
+                  willingnessToUse: willingness!,
+                  comments,
+                },
+                timer.finalize()
+              )
             }
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
           >
@@ -602,6 +646,11 @@ function SurveyScreen({
           </button>
         </div>
       </div>
+      <IdleStillTherePrompt
+        open={timer.isIdleModalOpen}
+        onContinue={timer.confirmStillThere}
+        onDiscard={timer.markDiscarded}
+      />
     </div>
   );
 }
@@ -732,6 +781,20 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   const [currentExplanationIndex, setCurrentExplanationIndex] = useState(0);
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 });
 
+  // Session-level timing. totalIdleDiscardedMs accumulates idle-pause
+  // durations across every section plus the active time of any section
+  // the participant chose to discard. total_time_ms is the sum of
+  // per-section active times for non-discarded sections, computed at
+  // submit time.
+  const totalIdleDiscardedMsRef = useRef(0);
+
+  function accumulateIdleDiscarded(timing: SectionTimerSnapshot) {
+    totalIdleDiscardedMsRef.current += timing.idlePausedMs;
+    if (timing.idleDiscarded) {
+      totalIdleDiscardedMsRef.current += timing.timeMs;
+    }
+  }
+
   // Precomputed analyses — loaded at mount, null means not yet checked
   const [precomputed, setPrecomputed] = useState<PrecomputedData | null | 'unavailable'>(
     'unavailable'
@@ -793,6 +856,8 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         mostUsefulComponent: null,
         understandingRating: null,
         mostUsefulComment: null,
+        timeMs: null,
+        idleDiscarded: false,
       });
     }
 
@@ -802,10 +867,20 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   }
 
   // ---- Classification answer ----
-  function handleClassificationAnswer(answer: 'real' | 'fake') {
+  function handleClassificationAnswer(answer: 'real' | 'fake', timing: SectionTimerSnapshot) {
     const image = images[currentImageIndex];
     const isCorrect = answer === image.label;
-    const newRecords = [...classificationRecords, { image, answer, isCorrect }];
+    accumulateIdleDiscarded(timing);
+    const newRecords = [
+      ...classificationRecords,
+      {
+        image,
+        answer,
+        isCorrect,
+        timeMs: timing.timeMs,
+        idleDiscarded: timing.idleDiscarded,
+      },
+    ];
     setClassificationRecords(newRecords);
 
     if (currentImageIndex + 1 < images.length) {
@@ -816,13 +891,24 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   }
 
   // ---- Explanation answer ----
-  function handleExplanationSubmit(answers: {
-    mostUsefulComponent: UsefulComponent;
-    understandingRating: number;
-    mostUsefulComment: string | null;
-  }) {
+  function handleExplanationSubmit(
+    answers: {
+      mostUsefulComponent: UsefulComponent;
+      understandingRating: number;
+      mostUsefulComment: string | null;
+    },
+    timing: SectionTimerSnapshot
+  ) {
+    accumulateIdleDiscarded(timing);
     const updated = explanationItems.map((item, i) =>
-      i === currentExplanationIndex ? { ...item, ...answers } : item
+      i === currentExplanationIndex
+        ? {
+            ...item,
+            ...answers,
+            timeMs: timing.timeMs,
+            idleDiscarded: timing.idleDiscarded,
+          }
+        : item
     );
     setExplanationItems(updated);
 
@@ -834,12 +920,29 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   }
 
   // ---- Survey submit ----
-  async function handleSurveySubmit(answers: {
-    trustRating: number;
-    willingnessToUse: string;
-    comments: string;
-  }) {
+  async function handleSurveySubmit(
+    answers: {
+      trustRating: number;
+      willingnessToUse: string;
+      comments: string;
+    },
+    surveyTiming: SectionTimerSnapshot
+  ) {
+    accumulateIdleDiscarded(surveyTiming);
+
     const correct = classificationRecords.filter((r) => r.isCorrect).length;
+
+    const phase1ActiveMs = classificationRecords.reduce(
+      (sum, r) => sum + (r.idleDiscarded ? 0 : r.timeMs),
+      0
+    );
+    const phase2ActiveMs = explanationItems.reduce(
+      (sum, item) => sum + (item.idleDiscarded ? 0 : (item.timeMs ?? 0)),
+      0
+    );
+    const phase4TimeMs = surveyTiming.idleDiscarded ? 0 : surveyTiming.timeMs;
+    const totalTimeMs = phase1ActiveMs + phase2ActiveMs + phase4TimeMs;
+
     const payload = {
       participant_id: participantId.current,
       self_confidence_rating: selfConfidence ?? 0,
@@ -847,6 +950,14 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       total_images: classificationRecords.length,
       correct_count: correct,
       incorrect_count: classificationRecords.length - correct,
+      classification_records: classificationRecords.map((r) => ({
+        image_id: r.image.id,
+        image_label: r.image.label,
+        user_answer: r.answer,
+        is_correct: r.isCorrect,
+        time_ms: r.timeMs,
+        idle_discarded: r.idleDiscarded,
+      })),
       explanation_answers: explanationItems.map((item) => ({
         image_id: item.image.id,
         image_label: item.image.label,
@@ -855,10 +966,15 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         most_useful_component: item.mostUsefulComponent,
         understanding_rating: item.understandingRating,
         most_useful_comment: item.mostUsefulComment,
+        time_ms: item.timeMs,
+        idle_discarded: item.idleDiscarded,
       })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
       comments: answers.comments,
+      phase4_time_ms: phase4TimeMs,
+      total_time_ms: totalTimeMs,
+      total_idle_discarded_ms: totalIdleDiscardedMsRef.current,
       completed_at: new Date().toISOString(),
     };
 

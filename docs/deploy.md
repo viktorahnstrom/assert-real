@@ -63,10 +63,14 @@ create table study_results (
   total_images int,
   correct_count int,
   incorrect_count int,
+  classification_records jsonb,
   explanation_answers jsonb,
   trust_rating int,
   willingness_to_use text,
   comments text,
+  phase4_time_ms float8,
+  total_time_ms float8,
+  total_idle_discarded_ms float8,
   completed_at timestamptz,
   saved_at timestamptz default now()
 );

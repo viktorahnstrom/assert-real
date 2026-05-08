@@ -340,10 +340,14 @@ export interface StudyResultsPayload {
   total_images: number;
   correct_count: number;
   incorrect_count: number;
+  classification_records: object[];
   explanation_answers: object[];
   trust_rating: number;
   willingness_to_use: string;
   comments: string;
+  phase4_time_ms: number;
+  total_time_ms: number;
+  total_idle_discarded_ms: number;
   completed_at: string;
 }
 
@@ -381,10 +385,14 @@ export async function saveStudyResults(payload: StudyResultsPayload): Promise<vo
       total_images: payload.total_images,
       correct_count: payload.correct_count,
       incorrect_count: payload.incorrect_count,
+      classification_records: payload.classification_records,
       explanation_answers: payload.explanation_answers,
       trust_rating: payload.trust_rating,
       willingness_to_use: payload.willingness_to_use,
       comments: payload.comments,
+      phase4_time_ms: payload.phase4_time_ms,
+      total_time_ms: payload.total_time_ms,
+      total_idle_discarded_ms: payload.total_idle_discarded_ms,
       completed_at: payload.completed_at,
     });
     if (error) console.warn('[XADE study] Supabase insert failed:', error.message);
