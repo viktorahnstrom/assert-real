@@ -1098,9 +1098,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     );
 
   if (phase === 'survey')
-    return (
-      <SurveyScreen didRetest={retestRecords.length > 0} onSubmit={handleSurveySubmit} />
-    );
+    return <SurveyScreen didRetest={retestRecords.length > 0} onSubmit={handleSurveySubmit} />;
 
   return (
     <CompleteScreen
