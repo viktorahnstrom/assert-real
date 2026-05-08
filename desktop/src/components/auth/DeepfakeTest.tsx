@@ -33,6 +33,14 @@ const ALL_IMAGES: StudyImage[] = [
   { id: 12, url: '/quiz-images/02213.webp', label: 'real' },
 ];
 
+// Phase 3 retest images. Must be disjoint from ALL_IMAGES so participants
+// see them for the first time after Phase 2 explanations.
+const RETEST_IMAGES: StudyImage[] = [
+  { id: 13, url: '/quiz-images/sg3_psi070_seed0001025.webp', label: 'fake' },
+  { id: 14, url: '/quiz-images/sg3_psi070_seed0001242.webp', label: 'fake' },
+  { id: 15, url: '/quiz-images/00999.webp', label: 'real' },
+];
+
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -55,6 +63,7 @@ type StudyPhase =
   | 'classification'
   | 'analyzing'
   | 'explanation'
+  | 'retest'
   | 'survey'
   | 'complete';
 
@@ -70,6 +79,19 @@ type UsefulComponent =
 const PHASE_2_MAX_IMAGES = 3;
 
 interface ClassificationRecord {
+  image: StudyImage;
+  answer: 'real' | 'fake';
+  isCorrect: boolean;
+}
+
+// Phase 3 — retest classification records. Same shape as
+// ClassificationRecord; kept as a separate type so saveStudyResults can
+// distinguish Phase 1 baseline answers from Phase 3 post-explanation
+// answers when writing to Supabase.
+//
+// Schema agreement (#118 timer work will extend each entry):
+//   { image_id, image_label, user_answer, is_correct, time_ms?, idle_discarded? }
+interface RetestRecord {
   image: StudyImage;
   answer: 'real' | 'fake';
   isCorrect: boolean;
@@ -512,6 +534,76 @@ function ExplanationScreen({
 }
 
 // ============================================
+// Phase: Retest classification (Phase 3)
+// ============================================
+function RetestScreen({
+  image,
+  current,
+  total,
+  onAnswer,
+}: {
+  image: StudyImage;
+  current: number;
+  total: number;
+  onAnswer: (answer: 'real' | 'fake') => void;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
+      <div className="w-full max-w-lg">
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-xade-blue/60">
+          Phase 3: Try Again
+        </p>
+        {current === 1 && (
+          <div className="mb-5 rounded-xl border border-xade-blue/20 bg-xade-blue/5 px-5 py-4 text-sm leading-relaxed text-xade-charcoal/70">
+            Now that you have seen our explanations, try classifying these 3 new images.
+          </div>
+        )}
+
+        <div className="mb-2 flex items-center justify-between text-xs text-xade-charcoal/40">
+          <span>
+            Image {current} of {total}
+          </span>
+          <span>{Math.round((current / total) * 100)}%</span>
+        </div>
+        <div className="mb-6 h-1.5 w-full rounded-full bg-xade-charcoal/10">
+          <div
+            className="h-1.5 rounded-full bg-xade-blue transition-all duration-300"
+            style={{ width: `${(current / total) * 100}%` }}
+          />
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-xade-charcoal/6 bg-white shadow-lg shadow-xade-charcoal/4">
+          <img
+            src={image.url}
+            alt={`Retest image ${current}`}
+            className="aspect-square w-full object-cover"
+          />
+        </div>
+
+        <p className="mt-4 text-center text-xs text-xade-charcoal/40">
+          Is this image real or a deepfake?
+        </p>
+
+        <div className="mt-3 flex gap-3">
+          <button
+            onClick={() => onAnswer('real')}
+            className="flex-1 rounded-lg border-2 border-green-200 bg-white px-6 py-3.5 text-sm font-semibold text-green-600 transition-colors hover:border-green-400 hover:bg-green-50"
+          >
+            Real
+          </button>
+          <button
+            onClick={() => onAnswer('fake')}
+            className="flex-1 rounded-lg border-2 border-red-200 bg-white px-6 py-3.5 text-sm font-semibold text-red-500 transition-colors hover:border-red-400 hover:bg-red-50"
+          >
+            Fake
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // Phase: Closing survey (Phase 4)
 // ============================================
 function SurveyScreen({
@@ -622,14 +714,19 @@ const STUDY_ONLY_MODE = import.meta.env.VITE_STUDY_ONLY !== 'false';
 // ============================================
 function CompleteScreen({
   classificationRecords,
+  retestRecords,
   onContinue,
 }: {
   classificationRecords: ClassificationRecord[];
+  retestRecords: RetestRecord[];
   onContinue: () => void;
 }) {
   const correct = classificationRecords.filter((r) => r.isCorrect).length;
   const total = classificationRecords.length;
   const pct = Math.round((correct / total) * 100);
+
+  const retestCorrect = retestRecords.filter((r) => r.isCorrect).length;
+  const retestTotal = retestRecords.length;
 
   // In study-only mode the participant never clicks anything after this
   // screen, so persist completion automatically. Refreshing the page lands
@@ -667,6 +764,18 @@ function CompleteScreen({
             </p>
             <p className="mt-1 text-sm text-xade-charcoal/50">{pct}% correct</p>
           </div>
+
+          {retestTotal > 0 && (
+            <div className="mt-5 rounded-lg bg-xade-blue/5 px-4 py-3 text-center">
+              <p className="text-[11px] font-medium uppercase tracking-widest text-xade-blue/60">
+                After our explanations
+              </p>
+              <p className="mt-1 text-2xl font-bold text-xade-blue">
+                {retestCorrect}/{retestTotal}
+              </p>
+              <p className="mt-0.5 text-xs text-xade-charcoal/50">on 3 new images</p>
+            </div>
+          )}
 
           <p className="mt-4 text-center text-sm leading-relaxed text-xade-charcoal/60">
             {message}
@@ -736,6 +845,13 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   const [explanationItems, setExplanationItems] = useState<ExplanationItem[]>([]);
   const [currentExplanationIndex, setCurrentExplanationIndex] = useState(0);
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 });
+
+  // Phase 3 retest state. Shuffled per session so participants don't
+  // discuss the order with each other. Only populated when the user had
+  // at least one Phase 1 misclassification (see handleExplanationSubmit).
+  const [retestImages] = useState<StudyImage[]>(() => shuffleArray(RETEST_IMAGES));
+  const [currentRetestIndex, setCurrentRetestIndex] = useState(0);
+  const [retestRecords, setRetestRecords] = useState<RetestRecord[]>([]);
 
   // Precomputed analyses — loaded at mount, null means not yet checked
   const [precomputed, setPrecomputed] = useState<PrecomputedData | null | 'unavailable'>(
@@ -834,6 +950,25 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     if (currentExplanationIndex + 1 < explanationItems.length) {
       setCurrentExplanationIndex(currentExplanationIndex + 1);
     } else {
+      // Phase 2 done → Phase 3 retest. The retest only runs for
+      // participants who had at least one Phase 1 misclassification,
+      // which is enforced upstream in startAnalysis (it routes to
+      // 'survey' directly when wrong.length === 0, so explanation phase
+      // never starts and we never reach this code path).
+      setPhase('retest');
+    }
+  }
+
+  // ---- Retest answer (Phase 3) ----
+  function handleRetestAnswer(answer: 'real' | 'fake') {
+    const image = retestImages[currentRetestIndex];
+    const isCorrect = answer === image.label;
+    const newRecords = [...retestRecords, { image, answer, isCorrect }];
+    setRetestRecords(newRecords);
+
+    if (currentRetestIndex + 1 < retestImages.length) {
+      setCurrentRetestIndex(currentRetestIndex + 1);
+    } else {
       setPhase('survey');
     }
   }
@@ -860,6 +995,12 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         most_useful_component: item.mostUsefulComponent,
         understanding_rating: item.understandingRating,
         most_useful_comment: item.mostUsefulComment,
+      })),
+      retest_answers: retestRecords.map((r) => ({
+        image_id: r.image.id,
+        image_label: r.image.label,
+        user_answer: r.answer,
+        is_correct: r.isCorrect,
       })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
@@ -913,9 +1054,23 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       />
     );
 
+  if (phase === 'retest')
+    return (
+      <RetestScreen
+        image={retestImages[currentRetestIndex]}
+        current={currentRetestIndex + 1}
+        total={retestImages.length}
+        onAnswer={handleRetestAnswer}
+      />
+    );
+
   if (phase === 'survey') return <SurveyScreen onSubmit={handleSurveySubmit} />;
 
   return (
-    <CompleteScreen classificationRecords={classificationRecords} onContinue={handleComplete} />
+    <CompleteScreen
+      classificationRecords={classificationRecords}
+      retestRecords={retestRecords}
+      onContinue={handleComplete}
+    />
   );
 }
