@@ -41,6 +41,14 @@ const ALL_IMAGES: StudyImage[] = [
   { id: 12, url: '/quiz-images/02213.webp', label: 'real' },
 ];
 
+// Phase 3 retest images. Must be disjoint from ALL_IMAGES so participants
+// see them for the first time after Phase 2 explanations.
+const RETEST_IMAGES: StudyImage[] = [
+  { id: 13, url: '/quiz-images/sg3_psi070_seed0001025.webp', label: 'fake' },
+  { id: 14, url: '/quiz-images/sg3_psi070_seed0001242.webp', label: 'fake' },
+  { id: 15, url: '/quiz-images/00999.webp', label: 'real' },
+];
+
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -63,6 +71,7 @@ type StudyPhase =
   | 'classification'
   | 'analyzing'
   | 'explanation'
+  | 'retest'
   | 'survey'
   | 'complete';
 
@@ -78,6 +87,21 @@ type UsefulComponent =
 const PHASE_2_MAX_IMAGES = 3;
 
 interface ClassificationRecord {
+  image: StudyImage;
+  answer: 'real' | 'fake';
+  isCorrect: boolean;
+  timeMs: number;
+  idleDiscarded: boolean;
+}
+
+// Phase 3 — retest classification records. Same shape as
+// ClassificationRecord; kept as a separate type so saveStudyResults can
+// distinguish Phase 1 baseline answers from Phase 3 post-explanation
+// answers when writing to Supabase.
+//
+// Schema (extended in #118):
+//   { image_id, image_label, user_answer, is_correct, time_ms, idle_discarded }
+interface RetestRecord {
   image: StudyImage;
   answer: 'real' | 'fake';
   isCorrect: boolean;
@@ -171,6 +195,11 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
               },
               {
                 step: '3',
+                title: 'Try 3 more images',
+                desc: 'Now that you have seen our explanations, try classifying 3 new images.',
+              },
+              {
+                step: '4',
                 title: 'A few final questions',
                 desc: 'Answer a few short questions about your experience.',
               },
@@ -544,29 +573,125 @@ function ExplanationScreen({
 }
 
 // ============================================
-// Phase: Closing survey (Phase 3)
+// Phase: Retest classification (Phase 3)
+// ============================================
+function RetestScreen({
+  image,
+  current,
+  total,
+  onAnswer,
+}: {
+  image: StudyImage;
+  current: number;
+  total: number;
+  onAnswer: (answer: 'real' | 'fake', timing: SectionTimerSnapshot) => void;
+}) {
+  // Phase 3 reuses the Phase 1 idle threshold — this is also rapid
+  // image classification, just with the explanations now in mind.
+  const timer = useSectionTimer(`retest-${image.id}`, IDLE_THRESHOLD_PHASE_1_MS);
+
+  const handleAnswer = (answer: 'real' | 'fake') => {
+    onAnswer(answer, timer.finalize());
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
+      <div className="w-full max-w-lg">
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-xade-blue/60">
+          Phase 3: Try Again
+        </p>
+        {current === 1 && (
+          <div className="mb-5 rounded-xl border border-xade-blue/20 bg-xade-blue/5 px-5 py-4 text-sm leading-relaxed text-xade-charcoal/70">
+            Now that you have seen our explanations, try classifying these 3 new images.
+          </div>
+        )}
+
+        <div className="mb-2 flex items-center justify-between text-xs text-xade-charcoal/40">
+          <span>
+            Image {current} of {total}
+          </span>
+          <span>{Math.round((current / total) * 100)}%</span>
+        </div>
+        <div className="mb-6 h-1.5 w-full rounded-full bg-xade-charcoal/10">
+          <div
+            className="h-1.5 rounded-full bg-xade-blue transition-all duration-300"
+            style={{ width: `${(current / total) * 100}%` }}
+          />
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-xade-charcoal/6 bg-white shadow-lg shadow-xade-charcoal/4">
+          <img
+            src={image.url}
+            alt={`Retest image ${current}`}
+            className="aspect-square w-full object-cover"
+          />
+        </div>
+
+        <p className="mt-4 text-center text-xs text-xade-charcoal/40">
+          Is this image real or a deepfake?
+        </p>
+
+        <div className="mt-3 flex gap-3">
+          <button
+            onClick={() => handleAnswer('real')}
+            className="flex-1 rounded-lg border-2 border-green-200 bg-white px-6 py-3.5 text-sm font-semibold text-green-600 transition-colors hover:border-green-400 hover:bg-green-50"
+          >
+            Real
+          </button>
+          <button
+            onClick={() => handleAnswer('fake')}
+            className="flex-1 rounded-lg border-2 border-red-200 bg-white px-6 py-3.5 text-sm font-semibold text-red-500 transition-colors hover:border-red-400 hover:bg-red-50"
+          >
+            Fake
+          </button>
+        </div>
+      </div>
+      <IdleStillTherePrompt
+        open={timer.isIdleModalOpen}
+        onContinue={timer.confirmStillThere}
+        onDiscard={timer.markDiscarded}
+      />
+    </div>
+  );
+}
+
+// ============================================
+// Phase: Closing survey (Phase 4)
 // ============================================
 function SurveyScreen({
+  didRetest,
   onSubmit,
 }: {
+  didRetest: boolean;
   onSubmit: (
-    answers: { trustRating: number; willingnessToUse: string; comments: string },
+    answers: {
+      trustRating: number;
+      willingnessToUse: string;
+      explanationsHelpedInRetest: number | null;
+      comments: string;
+    },
     timing: SectionTimerSnapshot
   ) => void;
 }) {
   const [trust, setTrust] = useState<number | null>(null);
   const [willingness, setWillingness] = useState<string | null>(null);
+  // Only required when the participant actually took Phase 3.
+  const [helpedInRetest, setHelpedInRetest] = useState<number | null>(null);
   const [comments, setComments] = useState('');
   const timer = useSectionTimer('survey', IDLE_THRESHOLD_PHASE_4_MS);
 
-  const canSubmit = trust !== null && willingness !== null;
+  const canSubmit =
+    trust !== null && willingness !== null && (!didRetest || helpedInRetest !== null);
+
+  // Q-numbers shift by one when the retest question is hidden.
+  const commentsQNumber = didRetest ? 4 : 3;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
       <div className="w-full max-w-lg">
         <div className="rounded-2xl border border-xade-charcoal/6 bg-white px-8 py-8 shadow-lg shadow-xade-charcoal/4">
           <p className="text-xs font-medium uppercase tracking-widest text-xade-blue/60">
-            Phase 3: Final Questions
+            Phase 4: Final Questions
           </p>
           <h2 className="mt-2 text-xl font-semibold text-xade-charcoal">Almost done</h2>
           <p className="mt-1 text-sm text-xade-charcoal/50">
@@ -609,10 +734,27 @@ function SurveyScreen({
             </div>
           </div>
 
-          {/* Q3: Open text */}
+          {/* Q3: Did our explanations help in the retest? — only shown when
+              the participant actually took Phase 3. */}
+          {didRetest && (
+            <div className="mt-6">
+              <p className="text-sm font-medium text-xade-charcoal">
+                3. Did our explanations help you in the second round of images?
+              </p>
+              <div className="mt-3">
+                <RatingButtons
+                  value={helpedInRetest}
+                  onChange={setHelpedInRetest}
+                  labels={['Not at all', 'Definitely']}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Comments — Q3 if no retest, Q4 otherwise. */}
           <div className="mt-6">
             <p className="text-sm font-medium text-xade-charcoal">
-              3. Any other comments? (optional)
+              {commentsQNumber}. Any other comments? (optional)
             </p>
             <p className="mt-1 text-xs text-xade-charcoal/40">
               You can write in Swedish if you prefer.
@@ -634,6 +776,7 @@ function SurveyScreen({
                 {
                   trustRating: trust!,
                   willingnessToUse: willingness!,
+                  explanationsHelpedInRetest: didRetest ? helpedInRetest : null,
                   comments,
                 },
                 timer.finalize()
@@ -666,14 +809,19 @@ const STUDY_ONLY_MODE = import.meta.env.VITE_STUDY_ONLY !== 'false';
 // ============================================
 function CompleteScreen({
   classificationRecords,
+  retestRecords,
   onContinue,
 }: {
   classificationRecords: ClassificationRecord[];
+  retestRecords: RetestRecord[];
   onContinue: () => void;
 }) {
   const correct = classificationRecords.filter((r) => r.isCorrect).length;
   const total = classificationRecords.length;
   const pct = Math.round((correct / total) * 100);
+
+  const retestCorrect = retestRecords.filter((r) => r.isCorrect).length;
+  const retestTotal = retestRecords.length;
 
   // In study-only mode the participant never clicks anything after this
   // screen, so persist completion automatically. Refreshing the page lands
@@ -711,6 +859,18 @@ function CompleteScreen({
             </p>
             <p className="mt-1 text-sm text-xade-charcoal/50">{pct}% correct</p>
           </div>
+
+          {retestTotal > 0 && (
+            <div className="mt-5 rounded-lg bg-xade-blue/5 px-4 py-3 text-center">
+              <p className="text-[11px] font-medium uppercase tracking-widest text-xade-blue/60">
+                After our explanations
+              </p>
+              <p className="mt-1 text-2xl font-bold text-xade-blue">
+                {retestCorrect}/{retestTotal}
+              </p>
+              <p className="mt-0.5 text-xs text-xade-charcoal/50">on 3 new images</p>
+            </div>
+          )}
 
           <p className="mt-4 text-center text-sm leading-relaxed text-xade-charcoal/60">
             {message}
@@ -780,6 +940,13 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   const [explanationItems, setExplanationItems] = useState<ExplanationItem[]>([]);
   const [currentExplanationIndex, setCurrentExplanationIndex] = useState(0);
   const [analyzeProgress, setAnalyzeProgress] = useState({ done: 0, total: 0 });
+
+  // Phase 3 retest state. Shuffled per session so participants don't
+  // discuss the order with each other. Only populated when the user had
+  // at least one Phase 1 misclassification (see handleExplanationSubmit).
+  const [retestImages] = useState<StudyImage[]>(() => shuffleArray(RETEST_IMAGES));
+  const [currentRetestIndex, setCurrentRetestIndex] = useState(0);
+  const [retestRecords, setRetestRecords] = useState<RetestRecord[]>([]);
 
   // Session-level timing. totalIdleDiscardedMs accumulates idle-pause
   // durations across every section plus the active time of any section
@@ -915,6 +1082,35 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     if (currentExplanationIndex + 1 < explanationItems.length) {
       setCurrentExplanationIndex(currentExplanationIndex + 1);
     } else {
+      // Phase 2 done → Phase 3 retest. The retest only runs for
+      // participants who had at least one Phase 1 misclassification,
+      // which is enforced upstream in startAnalysis (it routes to
+      // 'survey' directly when wrong.length === 0, so explanation phase
+      // never starts and we never reach this code path).
+      setPhase('retest');
+    }
+  }
+
+  // ---- Retest answer (Phase 3) ----
+  function handleRetestAnswer(answer: 'real' | 'fake', timing: SectionTimerSnapshot) {
+    const image = retestImages[currentRetestIndex];
+    const isCorrect = answer === image.label;
+    accumulateIdleDiscarded(timing);
+    const newRecords = [
+      ...retestRecords,
+      {
+        image,
+        answer,
+        isCorrect,
+        timeMs: timing.timeMs,
+        idleDiscarded: timing.idleDiscarded,
+      },
+    ];
+    setRetestRecords(newRecords);
+
+    if (currentRetestIndex + 1 < retestImages.length) {
+      setCurrentRetestIndex(currentRetestIndex + 1);
+    } else {
       setPhase('survey');
     }
   }
@@ -924,6 +1120,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     answers: {
       trustRating: number;
       willingnessToUse: string;
+      explanationsHelpedInRetest: number | null;
       comments: string;
     },
     surveyTiming: SectionTimerSnapshot
@@ -940,8 +1137,12 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       (sum, item) => sum + (item.idleDiscarded ? 0 : (item.timeMs ?? 0)),
       0
     );
+    const phase3ActiveMs = retestRecords.reduce(
+      (sum, r) => sum + (r.idleDiscarded ? 0 : r.timeMs),
+      0
+    );
     const phase4TimeMs = surveyTiming.idleDiscarded ? 0 : surveyTiming.timeMs;
-    const totalTimeMs = phase1ActiveMs + phase2ActiveMs + phase4TimeMs;
+    const totalTimeMs = phase1ActiveMs + phase2ActiveMs + phase3ActiveMs + phase4TimeMs;
 
     const payload = {
       participant_id: participantId.current,
@@ -969,8 +1170,17 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
         time_ms: item.timeMs,
         idle_discarded: item.idleDiscarded,
       })),
+      retest_answers: retestRecords.map((r) => ({
+        image_id: r.image.id,
+        image_label: r.image.label,
+        user_answer: r.answer,
+        is_correct: r.isCorrect,
+        time_ms: r.timeMs,
+        idle_discarded: r.idleDiscarded,
+      })),
       trust_rating: answers.trustRating,
       willingness_to_use: answers.willingnessToUse,
+      explanations_helped_in_retest: answers.explanationsHelpedInRetest,
       comments: answers.comments,
       phase4_time_ms: phase4TimeMs,
       total_time_ms: totalTimeMs,
@@ -1024,9 +1234,24 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
       />
     );
 
-  if (phase === 'survey') return <SurveyScreen onSubmit={handleSurveySubmit} />;
+  if (phase === 'retest')
+    return (
+      <RetestScreen
+        image={retestImages[currentRetestIndex]}
+        current={currentRetestIndex + 1}
+        total={retestImages.length}
+        onAnswer={handleRetestAnswer}
+      />
+    );
+
+  if (phase === 'survey')
+    return <SurveyScreen didRetest={retestRecords.length > 0} onSubmit={handleSurveySubmit} />;
 
   return (
-    <CompleteScreen classificationRecords={classificationRecords} onContinue={handleComplete} />
+    <CompleteScreen
+      classificationRecords={classificationRecords}
+      retestRecords={retestRecords}
+      onContinue={handleComplete}
+    />
   );
 }

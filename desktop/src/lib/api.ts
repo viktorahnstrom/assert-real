@@ -342,8 +342,15 @@ export interface StudyResultsPayload {
   incorrect_count: number;
   classification_records: object[];
   explanation_answers: object[];
+  // Phase 3 — empty array when the participant got 100% on Phase 1 and
+  // the retest was skipped. Each entry carries the per-image answer; the
+  // #118 timer work will additionally include time_ms and idle_discarded.
+  retest_answers: object[];
   trust_rating: number;
   willingness_to_use: string;
+  // 1–5 rating shown only to participants who took Phase 3. null when
+  // the retest was skipped (no Phase 1 misclassifications).
+  explanations_helped_in_retest: number | null;
   comments: string;
   phase4_time_ms: number;
   total_time_ms: number;
@@ -387,8 +394,10 @@ export async function saveStudyResults(payload: StudyResultsPayload): Promise<vo
       incorrect_count: payload.incorrect_count,
       classification_records: payload.classification_records,
       explanation_answers: payload.explanation_answers,
+      retest_answers: payload.retest_answers,
       trust_rating: payload.trust_rating,
       willingness_to_use: payload.willingness_to_use,
+      explanations_helped_in_retest: payload.explanations_helped_in_retest,
       comments: payload.comments,
       phase4_time_ms: payload.phase4_time_ms,
       total_time_ms: payload.total_time_ms,
