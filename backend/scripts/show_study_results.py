@@ -27,6 +27,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from pathlib import Path
+from statistics import median
 
 
 def load_env(env_path: Path) -> dict[str, str]:
@@ -215,6 +216,86 @@ def aggregate_block(rows: list[dict]) -> None:
                 f"  Self-reported help rating: avg {avg_helped:.1f}/5  "
                 f"({len(helped_vals)} participants)"
             )
+
+    timing_block(rows)
+
+
+def _fmt_ms(ms: float | None) -> str:
+    if ms is None:
+        return "-"
+    secs = ms / 1000.0
+    if secs < 60:
+        return f"{secs:.1f}s"
+    return f"{secs / 60:.1f}m"
+
+
+def _phase_per_item_times(rows: list[dict], jsonb_key: str) -> list[float]:
+    """Collect time_ms values from a JSONB array, skipping idle-discarded entries."""
+    out: list[float] = []
+    for r in rows:
+        for entry in r.get(jsonb_key) or []:
+            if entry.get("idle_discarded"):
+                continue
+            t = entry.get("time_ms")
+            if t is None:
+                continue
+            out.append(float(t))
+    return out
+
+
+def timing_block(rows: list[dict]) -> None:
+    if not rows:
+        return
+
+    p1 = _phase_per_item_times(rows, "classification_records")
+    p2 = _phase_per_item_times(rows, "explanation_answers")
+    p3 = _phase_per_item_times(rows, "retest_answers")
+    p4 = [float(r["phase4_time_ms"]) for r in rows if r.get("phase4_time_ms") is not None]
+    total = [float(r["total_time_ms"]) for r in rows if r.get("total_time_ms") is not None]
+
+    if not (p1 or p2 or p3 or p4 or total):
+        return
+
+    print("\nTiming (excludes idle-discarded sections)")
+    print("-----------------------------------------")
+    label_width = 42
+    for label, samples in (
+        ("Phase 1 classification (per image)", p1),
+        ("Phase 2 explanation (per image)", p2),
+        ("Phase 3 retest (per image)", p3),
+        ("Phase 4 survey (per participant)", p4),
+        ("Total session (per participant)", total),
+    ):
+        if not samples:
+            continue
+        avg = sum(samples) / len(samples)
+        med = median(samples)
+        print(
+            f"  {label:<{label_width}}avg {_fmt_ms(avg):<8}median {_fmt_ms(med):<8}n={len(samples)}"
+        )
+
+    # Idle-discarded counts: per-section flag in the JSONB arrays + any
+    # non-zero total_idle_discarded_ms at the top level.
+    idle_section_count = 0
+    participants_with_idle = 0
+    for r in rows:
+        flagged_here = 0
+        for entry in (
+            (r.get("classification_records") or [])
+            + (r.get("explanation_answers") or [])
+            + (r.get("retest_answers") or [])
+        ):
+            if entry.get("idle_discarded"):
+                flagged_here += 1
+        idle_section_count += flagged_here
+        if flagged_here or (r.get("total_idle_discarded_ms") or 0) > 0:
+            participants_with_idle += 1
+
+    if idle_section_count or participants_with_idle:
+        print(
+            f"  Idle-discarded sections: {idle_section_count}  "
+            f"(across {participants_with_idle}/{len(rows)} participants)"
+        )
 
 
 def dump_comments(rows: list[dict]) -> None:
