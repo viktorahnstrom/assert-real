@@ -5,9 +5,9 @@ interface IdleStillTherePromptProps {
 }
 
 // Shown when useSectionTimer detects the participant has been idle past
-// the configured threshold. "Yes, continue" resumes the timer; "I'm done"
-// marks this section's time as discarded but lets the participant keep
-// going through the study.
+// the configured threshold. Both buttons let the participant continue
+// the study; the second one tells us their time on this section was not
+// active engagement, so analysis can exclude it.
 export function IdleStillTherePrompt({ open, onContinue, onDiscard }: IdleStillTherePromptProps) {
   if (!open) return null;
 
@@ -23,8 +23,8 @@ export function IdleStillTherePrompt({ open, onContinue, onDiscard }: IdleStillT
           Are you still there?
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-xade-charcoal/60">
-          We paused the timer because you have been inactive. If you are still here, click continue
-          and we will pick up where you left off.
+          We paused the timer because there was no activity. Click continue when you are ready, or
+          let us know you stepped away so we do not count this section&apos;s time.
         </p>
 
         <div className="mt-6 flex flex-col gap-2">
@@ -32,13 +32,13 @@ export function IdleStillTherePrompt({ open, onContinue, onDiscard }: IdleStillT
             onClick={onContinue}
             className="flex w-full items-center justify-center rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark"
           >
-            Yes, continue
+            Yes, I am still here
           </button>
           <button
             onClick={onDiscard}
             className="flex w-full items-center justify-center rounded-lg border border-xade-charcoal/15 bg-white px-4 py-3 text-sm font-medium text-xade-charcoal/70 transition-colors hover:bg-xade-charcoal/3"
           >
-            I&apos;m done — discard this section&apos;s time
+            I stepped away briefly
           </button>
         </div>
       </div>
