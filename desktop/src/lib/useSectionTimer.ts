@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Idle thresholds per phase (configurable via the optional argument).
-export const IDLE_THRESHOLD_PHASE_1_MS = 3 * 60 * 1000;
-export const IDLE_THRESHOLD_PHASE_2_MS = 4 * 60 * 1000;
-export const IDLE_THRESHOLD_PHASE_4_MS = 5 * 60 * 1000;
+// Phase 1 and Phase 3 are rapid binary classification, so 2 min is plenty.
+// Phase 2 (denser reading) and Phase 4 (survey writing) get 3 min.
+export const IDLE_THRESHOLD_PHASE_1_MS = 2 * 60 * 1000;
+export const IDLE_THRESHOLD_PHASE_2_MS = 3 * 60 * 1000;
+export const IDLE_THRESHOLD_PHASE_4_MS = 3 * 60 * 1000;
 
 const ACTIVITY_EVENTS = ['mousemove', 'click', 'keydown', 'touchstart', 'scroll'] as const;
 const IDLE_TICK_MS = 1000;
