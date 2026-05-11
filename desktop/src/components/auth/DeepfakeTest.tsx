@@ -678,6 +678,10 @@ function SurveyScreen({
   // Only required when the participant actually took Phase 3.
   const [helpedInRetest, setHelpedInRetest] = useState<number | null>(null);
   const [comments, setComments] = useState('');
+  // Flips true the moment Submit is clicked. Disables the button +
+  // changes its label so the participant sees something happened and
+  // doesn't click again during the saveStudyResults await.
+  const [submitting, setSubmitting] = useState(false);
   const timer = useSectionTimer('survey', IDLE_THRESHOLD_PHASE_4_MS);
 
   const canSubmit =
@@ -769,9 +773,10 @@ function SurveyScreen({
           </div>
 
           <button
-            disabled={!canSubmit}
-            onClick={() =>
-              canSubmit &&
+            disabled={!canSubmit || submitting}
+            onClick={() => {
+              if (!canSubmit || submitting) return;
+              setSubmitting(true);
               onSubmit(
                 {
                   trustRating: trust!,
@@ -780,12 +785,12 @@ function SurveyScreen({
                   comments,
                 },
                 timer.finalize()
-              )
-            }
+              );
+            }}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-xade-blue px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-xade-blue-dark disabled:opacity-40"
           >
-            Submit
-            <ArrowRight className="h-4 w-4" />
+            {submitting ? 'Saving…' : 'Submit'}
+            {!submitting && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
       </div>
@@ -931,6 +936,12 @@ interface PrecomputedData {
 
 export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   const participantId = useRef(generateParticipantId());
+  // Guards against duplicate Phase 4 submits. The Submit button stays
+  // clickable during the saveStudyResults await; if a participant clicks
+  // twice (or taps Submit and then hits Enter), each click hits the
+  // Supabase insert separately. We've seen 3-4 dupe rows per participant
+  // in production from this. Ref-based so it fires synchronously.
+  const submittingRef = useRef(false);
   const [images] = useState<StudyImage[]>(() => shuffleArray(ALL_IMAGES));
 
   const [phase, setPhase] = useState<StudyPhase>('intro');
@@ -1125,6 +1136,13 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
     },
     surveyTiming: SectionTimerSnapshot
   ) {
+    // Bail out if the submit already started — prevents the duplicate
+    // Supabase rows we saw at N=10 (p-svvo83jz had 4 rows, p-yx3gq8j7
+    // had 3). The ref check is synchronous so it catches the second
+    // click even before React re-renders the disabled button below.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+
     accumulateIdleDiscarded(surveyTiming);
 
     const correct = classificationRecords.filter((r) => r.isCorrect).length;
