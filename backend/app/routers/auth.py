@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
 
-from app.dependencies.auth import require_auth
+from app.dependencies.auth import AuthenticatedUser, require_auth
 
 load_dotenv()
 
@@ -170,14 +170,15 @@ async def forgot_password(request: ForgotPasswordRequest):
 
 
 @router.get("/me")
-async def get_current_user(current_user: dict = Depends(require_auth)):
+async def get_current_user(user: AuthenticatedUser = Depends(require_auth)):
     """
     Returns the authenticated user's profile.
     Requires a valid Bearer token — returns 401 otherwise.
     """
+    raw = user._raw
     return {
-        "user_id": current_user.get("id"),
-        "email": current_user.get("email"),
-        "display_name": current_user.get("user_metadata", {}).get("display_name"),
-        "email_confirmed": current_user.get("email_confirmed_at") is not None,
+        "user_id": user.id,
+        "email": raw.get("email"),
+        "display_name": raw.get("user_metadata", {}).get("display_name"),
+        "email_confirmed": raw.get("email_confirmed_at") is not None,
     }

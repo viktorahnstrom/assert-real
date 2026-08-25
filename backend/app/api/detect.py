@@ -124,7 +124,7 @@ def load_detection_model():
 @router.post("/detect", response_model=DetectionResponse)
 async def detect_deepfake(
     file: UploadFile = File(...),
-    current_user: dict = Depends(require_auth),  # 🔒 requires valid JWT
+    _user=Depends(require_auth),
 ):
     """
     Detect if an uploaded image is a deepfake.
@@ -170,7 +170,7 @@ async def detect_deepfake(
 
 
 @router.get("/model-info")
-async def get_model_info(current_user: dict = Depends(require_auth)):  # 🔒 also protected
+async def get_model_info(_user=Depends(require_auth)):
     """Get information about the loaded detection model."""
     if model is None:
         return {

@@ -1,23 +1,27 @@
 """
-Image upload and management routes for XADE.
+Image upload and management routes.
 """
 
 import hashlib
+import logging
 import os
 import uuid
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.dependencies.auth import AuthenticatedUser, require_auth
+
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/images", tags=["Images"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # Allowed image types
 ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
@@ -44,21 +48,19 @@ class ImageListResponse(BaseModel):
 # ============================================
 # Helper functions
 # ============================================
-def get_storage_headers(access_token: str | None = None):
-    """Headers for Supabase Storage API."""
-    token = access_token or SUPABASE_SERVICE_ROLE_KEY
+def get_storage_headers(access_token: str) -> dict:
+    """Headers for Supabase Storage API using the caller's JWT."""
     return {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {access_token}",
     }
 
 
-def get_db_headers(access_token: str | None = None):
-    """Headers for Supabase Database API."""
-    token = access_token or SUPABASE_SERVICE_ROLE_KEY
+def get_db_headers(access_token: str) -> dict:
+    """Headers for Supabase Database API using the caller's JWT."""
     return {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Prefer": "return=representation",
     }
@@ -75,7 +77,7 @@ def calculate_checksum(data: bytes) -> str:
 @router.post("/upload", response_model=ImageResponse)
 async def upload_image(
     file: UploadFile = File(...),
-    user_id: str | None = None,  # Will come from auth token later
+    user: AuthenticatedUser = Depends(require_auth),
 ):
     """
     Upload an image for deepfake analysis.
@@ -83,6 +85,8 @@ async def upload_image(
     - Uploads to Supabase Storage
     - Saves metadata to database
     """
+    logger.info("Image upload by user=%s filename=%s", user.id, file.filename)
+
     # Validate file type
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
@@ -108,17 +112,12 @@ async def upload_image(
     # Calculate checksum for deduplication
     checksum = calculate_checksum(content)
 
-    # For now, use a placeholder user_id if not provided
-    # In production, this comes from the authenticated user
-    if not user_id:
-        user_id = "00000000-0000-0000-0000-000000000000"
-
     async with httpx.AsyncClient() as client:
         # Upload to Supabase Storage
         upload_response = await client.post(
             f"{SUPABASE_URL}/storage/v1/object/images/{storage_path}",
             headers={
-                **get_storage_headers(),
+                **get_storage_headers(user.access_token),
                 "Content-Type": file.content_type,
             },
             content=content,
@@ -133,7 +132,7 @@ async def upload_image(
 
         # Save metadata to database
         image_data = {
-            "user_id": user_id,
+            "user_id": user.id,
             "storage_path": storage_path,
             "original_filename": file.filename or "unknown",
             "file_size_bytes": len(content),
@@ -143,7 +142,7 @@ async def upload_image(
 
         db_response = await client.post(
             f"{SUPABASE_URL}/rest/v1/images",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
             json=image_data,
         )
 
@@ -151,7 +150,7 @@ async def upload_image(
             # Try to clean up the uploaded file
             await client.delete(
                 f"{SUPABASE_URL}/storage/v1/object/images/{storage_path}",
-                headers=get_storage_headers(),
+                headers=get_storage_headers(user.access_token),
             )
             error = db_response.json()
             raise HTTPException(
@@ -172,15 +171,12 @@ async def upload_image(
 
 
 @router.get("/", response_model=ImageListResponse)
-async def list_images(user_id: str | None = None):
-    """List all images for a user."""
+async def list_images(user: AuthenticatedUser = Depends(require_auth)):
+    """List the authenticated user's images. RLS restricts rows to owner."""
     async with httpx.AsyncClient() as client:
-        # Build query
         url = f"{SUPABASE_URL}/rest/v1/images?select=*&order=uploaded_at.desc"
-        if user_id:
-            url += f"&user_id=eq.{user_id}"
 
-        response = await client.get(url, headers=get_db_headers())
+        response = await client.get(url, headers=get_db_headers(user.access_token))
 
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail="Failed to fetch images")
@@ -203,12 +199,12 @@ async def list_images(user_id: str | None = None):
 
 
 @router.get("/{image_id}", response_model=ImageResponse)
-async def get_image(image_id: str):
-    """Get a specific image by ID."""
+async def get_image(image_id: str, user: AuthenticatedUser = Depends(require_auth)):
+    """Get a specific image by ID. Returns 404 if the image doesn't exist or isn't owned by caller."""
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{image_id}&select=*",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if response.status_code != 200:
@@ -230,13 +226,14 @@ async def get_image(image_id: str):
 
 
 @router.delete("/{image_id}")
-async def delete_image(image_id: str):
-    """Delete an image and its storage file."""
+async def delete_image(image_id: str, user: AuthenticatedUser = Depends(require_auth)):
+    """Delete an image and its storage file. Returns 404 if not found or not owned by caller."""
+    logger.info("Deleting image=%s user=%s", image_id, user.id)
     async with httpx.AsyncClient() as client:
-        # First, get the image to find storage path
+        # First, get the image to find storage path (RLS restricts to owner)
         get_response = await client.get(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{image_id}&select=*",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if get_response.status_code != 200:
@@ -253,13 +250,13 @@ async def delete_image(image_id: str):
         # Delete from storage
         await client.delete(
             f"{SUPABASE_URL}/storage/v1/object/images/{storage_path}",
-            headers=get_storage_headers(),
+            headers=get_storage_headers(user.access_token),
         )
 
         # Delete from database
         db_response = await client.delete(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{image_id}",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if db_response.status_code not in [200, 204]:

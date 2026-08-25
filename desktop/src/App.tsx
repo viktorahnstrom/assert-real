@@ -549,7 +549,7 @@ function UploadView({ onResult, apiMode, vlmProvider }: UploadViewProps) {
     try {
       let data: DetectionResult;
       if (apiMode === 'analyses') {
-        data = await analyzeImage(selectedFile, vlmProvider, user?.id);
+        data = await analyzeImage(selectedFile, vlmProvider);
       } else {
         data = await detectDeepfake(selectedFile, vlmProvider);
       }
@@ -955,11 +955,11 @@ function AuthenticatedApp() {
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
 
-  function loadHistory(userId: string, showLoading = false) {
+  function loadHistory(showLoading = false) {
     if (showLoading) setHistoryLoading(true);
     Promise.all([
-      fetchUserAnalyses(userId).then(setAnalyses),
-      fetchUserImages(userId).then((images) => {
+      fetchUserAnalyses().then(setAnalyses),
+      fetchUserImages().then((images) => {
         const map: Record<string, ImageRecord> = {};
         images.forEach((img) => {
           map[img.id] = img;
@@ -972,7 +972,7 @@ function AuthenticatedApp() {
   }
 
   useEffect(() => {
-    if (user?.id) loadHistory(user.id, true);
+    if (user?.id) loadHistory(true);
     else setHistoryLoading(false);
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -983,7 +983,7 @@ function AuthenticatedApp() {
     setBackToView('upload');
     setView('result');
     // Refresh history in background without clearing the existing list
-    if (user?.id) loadHistory(user.id);
+    if (user?.id) loadHistory();
   }
 
   function handleBack() {
@@ -1033,7 +1033,7 @@ function AuthenticatedApp() {
             loading={historyLoading}
             onNewAnalysis={handleNewAnalysis}
             onSelectAnalysis={handleSelectAnalysis}
-            onRefresh={() => user?.id && loadHistory(user.id, true)}
+            onRefresh={() => user?.id && loadHistory(true)}
           />
         ) : view === 'statistics' ? (
           <StatisticsView analyses={analyses} loading={historyLoading} />

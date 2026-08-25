@@ -1,13 +1,18 @@
 """
-Authentication dependency for XADE.
+Authentication dependency for assert-real.
 
 Provides a reusable FastAPI dependency that validates a Supabase JWT
-on every request. Import `require_auth` and add it as a Depends() argument
-to any endpoint that should be protected.
+on every request. Import ``require_auth`` and add it as a ``Depends()``
+argument to any endpoint that should be protected.
+
+The dependency returns an ``AuthenticatedUser`` carrying both the
+validated user id and the raw access token.  Passing the access token
+(not the service-role key) to Supabase lets RLS enforce row ownership.
 """
 
 import logging
 import os
+from dataclasses import dataclass
 
 import httpx
 from fastapi import Depends, HTTPException, status
@@ -18,18 +23,29 @@ logger = logging.getLogger(__name__)
 _security = HTTPBearer()
 
 
+@dataclass(frozen=True, slots=True)
+class AuthenticatedUser:
+    """Validated caller identity returned by ``require_auth``."""
+
+    id: str
+    access_token: str
+    # Full Supabase user payload for endpoints that need profile fields.
+    _raw: dict
+
+
 async def require_auth(
     credentials: HTTPAuthorizationCredentials = Depends(_security),
-) -> dict:
+) -> AuthenticatedUser:
     """
     FastAPI dependency — validates a Bearer token against Supabase Auth.
 
-    Usage:
-        @router.post("/my-endpoint")
-        async def my_endpoint(current_user: dict = Depends(require_auth)):
-            user_id = current_user["id"]
+    Usage::
 
-    Returns the Supabase user payload dict on success.
+        @router.post("/my-endpoint")
+        async def my_endpoint(user: AuthenticatedUser = Depends(require_auth)):
+            user.id           # UUID of the authenticated user
+            user.access_token # raw JWT for forwarding to Supabase
+
     Raises HTTP 401 if the token is missing, expired, or invalid.
     """
     supabase_url = os.getenv("SUPABASE_URL")
@@ -67,4 +83,5 @@ async def require_auth(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return response.json()
+    payload = response.json()
+    return AuthenticatedUser(id=payload["id"], access_token=token, _raw=payload)

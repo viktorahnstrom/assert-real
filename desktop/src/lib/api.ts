@@ -100,17 +100,7 @@ export type ApiMode = 'detect' | 'analyses';
 import { supabase } from './supabase';
 
 export async function detectDeepfake(file: File, _vlmProvider?: string): Promise<DetectionResult> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    const error: ApiError = {
-      type: 'network',
-      message: 'Not authenticated. Please log in.',
-    };
-    throw error;
-  }
+  const token = await getAccessToken();
 
   const formData = new FormData();
   formData.append('file', file);
@@ -120,15 +110,13 @@ export async function detectDeepfake(file: File, _vlmProvider?: string): Promise
   try {
     response = await fetch(`${API_BASE_URL}/api/detect`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      headers: authHeaders(token),
       body: formData,
     });
   } catch {
     const error: ApiError = {
       type: 'network',
-      message: 'Cannot reach the XADE backend. Make sure it is running on port 8000.',
+      message: 'Cannot reach the backend. Make sure it is running on port 8000.',
     };
     throw error;
   }
@@ -149,20 +137,36 @@ export async function detectDeepfake(file: File, _vlmProvider?: string): Promise
 }
 
 // ============================================
+// Auth helper
+// ============================================
+
+async function getAccessToken(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw { type: 'network', message: 'Not authenticated. Please log in.' } as ApiError;
+  }
+  return session.access_token;
+}
+
+function authHeaders(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
+
+// ============================================
 // Full analyses flow (upload → analyse → save to DB)
 // ============================================
 
-async function uploadImage(file: File, userId: string): Promise<string> {
+async function uploadImage(file: File, token: string): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/v1/images/upload?user_id=${encodeURIComponent(userId)}`,
-    {
-      method: 'POST',
-      body: formData,
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/v1/images/upload`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: formData,
+  });
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: 'Upload failed' }));
@@ -175,15 +179,14 @@ async function uploadImage(file: File, userId: string): Promise<string> {
 
 async function createAnalysis(
   imageId: string,
-  userId: string,
-  vlmProvider: string
+  vlmProvider: string,
+  token: string
 ): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/analyses/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
     body: JSON.stringify({
       image_id: imageId,
-      user_id: userId,
       vlm_provider: vlmProvider,
     }),
   });
@@ -198,16 +201,13 @@ async function createAnalysis(
 
 export async function analyzeImage(
   file: File,
-  vlmProvider: string = 'openai',
-  userId?: string
+  vlmProvider: string = 'openai'
 ): Promise<DetectionResult> {
-  if (!userId) {
-    throw { type: 'network', message: 'Not authenticated. Please log in.' } as ApiError;
-  }
+  const token = await getAccessToken();
   let imageId: string;
 
   try {
-    imageId = await uploadImage(file, userId);
+    imageId = await uploadImage(file, token);
   } catch {
     throw {
       type: 'network',
@@ -215,7 +215,7 @@ export async function analyzeImage(
     } as ApiError;
   }
 
-  const analysis = await createAnalysis(imageId, userId, vlmProvider);
+  const analysis = await createAnalysis(imageId, vlmProvider, token);
 
   const fakeScore = analysis.deepfake_score ?? 0;
   const realScore = 1 - fakeScore;
@@ -241,34 +241,30 @@ export async function analyzeImage(
 // User history
 // ============================================
 
-export async function fetchUserAnalyses(userId: string): Promise<AnalysisResult[]> {
+export async function fetchUserAnalyses(): Promise<AnalysisResult[]> {
   try {
-    const url = `${API_BASE_URL}/api/v1/analyses/?user_id=${encodeURIComponent(userId)}`;
-    console.log('[XADE] fetchUserAnalyses →', url);
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.warn('[XADE] fetchUserAnalyses failed:', response.status, response.statusText);
-      return [];
-    }
+    const token = await getAccessToken();
+    const response = await fetch(`${API_BASE_URL}/api/v1/analyses/`, {
+      headers: authHeaders(token),
+    });
+    if (!response.ok) return [];
     const data = await response.json();
-    console.log('[XADE] fetchUserAnalyses raw response:', data);
     // Backend returns { analyses: [...], count: N }
-    const list = (
+    return (
       Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])
     ) as AnalysisResult[];
-    console.log('[XADE] fetchUserAnalyses parsed:', list.length, 'items');
-    return list;
   } catch (err) {
-    console.error('[XADE] fetchUserAnalyses error:', err);
+    console.error('fetchUserAnalyses error:', err);
     return [];
   }
 }
 
-export async function fetchUserImages(userId: string): Promise<ImageRecord[]> {
+export async function fetchUserImages(): Promise<ImageRecord[]> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/v1/images/?user_id=${encodeURIComponent(userId)}`
-    );
+    const token = await getAccessToken();
+    const response = await fetch(`${API_BASE_URL}/api/v1/images/`, {
+      headers: authHeaders(token),
+    });
     if (!response.ok) return [];
     const data = await response.json();
     // Backend returns { images: [...], count: N }
@@ -291,17 +287,19 @@ export async function fetchUserImages(userId: string): Promise<ImageRecord[]> {
       }));
     }
 
-    console.warn('[XADE] fetchUserImages: could not generate signed URLs', error);
+    console.warn('fetchUserImages: could not generate signed URLs', error);
     return images;
   } catch (err) {
-    console.error('[XADE] fetchUserImages error:', err);
+    console.error('fetchUserImages error:', err);
     return [];
   }
 }
 
 export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const token = await getAccessToken();
   const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}`, {
     method: 'DELETE',
+    headers: authHeaders(token),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: 'Delete failed' }));

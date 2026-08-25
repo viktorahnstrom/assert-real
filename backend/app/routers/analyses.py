@@ -1,5 +1,5 @@
 """
-Analysis routes for XADE.
+Analysis routes.
 Runs deepfake detection, generates VLM explanations, and stores results in database.
 """
 
@@ -14,9 +14,11 @@ import httpx
 import numpy as np
 import torch
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from PIL import Image
 from pydantic import BaseModel
+
+from app.dependencies.auth import AuthenticatedUser, require_auth
 
 load_dotenv()
 
@@ -26,7 +28,6 @@ router = APIRouter(prefix="/api/v1/analyses", tags=["Analyses"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 
 # ============================================
@@ -34,7 +35,6 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 # ============================================
 class AnalysisRequest(BaseModel):
     image_id: str
-    user_id: str
     vlm_provider: str | None = None
 
 
@@ -96,21 +96,21 @@ class AnalysisListResponse(BaseModel):
 # ============================================
 # Helper functions
 # ============================================
-def get_db_headers() -> dict:
-    """Headers for Supabase Database API."""
+def get_db_headers(access_token: str) -> dict:
+    """Headers for Supabase Database API using the caller's JWT."""
     return {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Prefer": "return=representation",
     }
 
 
-def get_storage_headers() -> dict:
-    """Headers for Supabase Storage API."""
+def get_storage_headers(access_token: str) -> dict:
+    """Headers for Supabase Storage API using the caller's JWT."""
     return {
         "apikey": SUPABASE_ANON_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Authorization": f"Bearer {access_token}",
     }
 
 
@@ -400,7 +400,10 @@ def _build_analysis_response(
 # Routes
 # ============================================
 @router.post("/", response_model=AnalysisResponse)
-async def create_analysis(request: AnalysisRequest):
+async def create_analysis(
+    request: AnalysisRequest,
+    user: AuthenticatedUser = Depends(require_auth),
+):
     """
     Create a new analysis for an uploaded image.
     1. Creates analysis record with 'processing' status
@@ -426,11 +429,13 @@ async def create_analysis(request: AnalysisRequest):
     if model is None:
         raise HTTPException(status_code=503, detail="Detection model not loaded")
 
+    logger.info("Creating analysis for image=%s user=%s", request.image_id, user.id)
+
     async with httpx.AsyncClient() as client:
-        # Fetch image metadata
+        # Fetch image metadata (RLS restricts to owner)
         img_response = await client.get(
             f"{SUPABASE_URL}/rest/v1/images?id=eq.{request.image_id}&select=*",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if img_response.status_code != 200:
@@ -446,14 +451,14 @@ async def create_analysis(request: AnalysisRequest):
         # Create analysis record
         analysis_data = {
             "image_id": request.image_id,
-            "user_id": request.user_id,
+            "user_id": user.id,
             "status": "processing",
             "model_used": "efficientnet-b4",
         }
 
         create_response = await client.post(
             f"{SUPABASE_URL}/rest/v1/analyses",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
             json=analysis_data,
         )
 
@@ -472,13 +477,13 @@ async def create_analysis(request: AnalysisRequest):
         # Download image from storage
         img_download = await client.get(
             f"{SUPABASE_URL}/storage/v1/object/images/{storage_path}",
-            headers=get_storage_headers(),
+            headers=get_storage_headers(user.access_token),
         )
 
         if img_download.status_code != 200:
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
-                headers=get_db_headers(),
+                headers=get_db_headers(user.access_token),
                 json={"status": "failed", "error_message": "Failed to download image"},
             )
             raise HTTPException(status_code=500, detail="Failed to download image from storage")
@@ -710,7 +715,7 @@ async def create_analysis(request: AnalysisRequest):
 
             update_response = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
-                headers=get_db_headers(),
+                headers=get_db_headers(user.access_token),
                 json=update_data,
             )
 
@@ -719,7 +724,7 @@ async def create_analysis(request: AnalysisRequest):
 
             final_response = await client.get(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}&select=*",
-                headers=get_db_headers(),
+                headers=get_db_headers(user.access_token),
             )
 
             final_analysis = final_response.json()[0]
@@ -736,21 +741,19 @@ async def create_analysis(request: AnalysisRequest):
         except Exception as e:
             await client.patch(
                 f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
-                headers=get_db_headers(),
+                headers=get_db_headers(user.access_token),
                 json={"status": "failed", "error_message": str(e)},
             )
             raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
 
 
 @router.get("/", response_model=AnalysisListResponse)
-async def list_analyses(user_id: str | None = None):
-    """List all analyses, optionally filtered by user."""
+async def list_analyses(user: AuthenticatedUser = Depends(require_auth)):
+    """List the authenticated user's analyses. RLS restricts rows to owner."""
     async with httpx.AsyncClient() as client:
         url = f"{SUPABASE_URL}/rest/v1/analyses?select=*&order=created_at.desc"
-        if user_id:
-            url += f"&user_id=eq.{user_id}"
 
-        response = await client.get(url, headers=get_db_headers())
+        response = await client.get(url, headers=get_db_headers(user.access_token))
 
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail="Failed to fetch analyses")
@@ -761,12 +764,12 @@ async def list_analyses(user_id: str | None = None):
 
 
 @router.get("/{analysis_id}", response_model=AnalysisResponse)
-async def get_analysis(analysis_id: str):
-    """Get a specific analysis by ID."""
+async def get_analysis(analysis_id: str, user: AuthenticatedUser = Depends(require_auth)):
+    """Get a specific analysis. Returns 404 if not found or not owned by caller."""
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}&select=*",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if response.status_code != 200:
@@ -780,27 +783,38 @@ async def get_analysis(analysis_id: str):
 
 
 @router.delete("/{analysis_id}")
-async def delete_analysis(analysis_id: str):
-    """Delete a specific analysis record."""
+async def delete_analysis(analysis_id: str, user: AuthenticatedUser = Depends(require_auth)):
+    """Delete an analysis. Returns 404 if not found or not owned by caller."""
+    logger.info("Deleting analysis=%s user=%s", analysis_id, user.id)
     async with httpx.AsyncClient() as client:
+        # PostgREST DELETE with RLS returns 200/204 even if zero rows matched
+        # (the policy simply filters the row out). To distinguish "deleted"
+        # from "not yours / doesn't exist", check existence first.
+        check = await client.get(
+            f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}&select=id",
+            headers=get_db_headers(user.access_token),
+        )
+        if check.status_code != 200 or not check.json():
+            raise HTTPException(status_code=404, detail="Analysis not found")
+
         response = await client.delete(
             f"{SUPABASE_URL}/rest/v1/analyses?id=eq.{analysis_id}",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
         if response.status_code not in [200, 204]:
-            raise HTTPException(
-                status_code=response.status_code, detail="Failed to delete analysis"
-            )
+            raise HTTPException(status_code=404, detail="Analysis not found")
         return {"message": "Analysis deleted"}
 
 
 @router.get("/image/{image_id}", response_model=AnalysisListResponse)
-async def get_analyses_for_image(image_id: str):
-    """Get all analyses for a specific image."""
+async def get_analyses_for_image(
+    image_id: str, user: AuthenticatedUser = Depends(require_auth)
+):
+    """Get all analyses for a specific image. RLS restricts to owner."""
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{SUPABASE_URL}/rest/v1/analyses?image_id=eq.{image_id}&select=*&order=created_at.desc",
-            headers=get_db_headers(),
+            headers=get_db_headers(user.access_token),
         )
 
         if response.status_code != 200:
