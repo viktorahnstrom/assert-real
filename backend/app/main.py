@@ -4,9 +4,7 @@ eXplainable Automated Deepfake Evaluation
 """
 
 import os
-import tempfile
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +16,7 @@ from app.api import detect, vlm
 from app.db import get_postgrest_client
 from app.rate_limit import limiter
 from app.routers import analyses, auth, images, study
+from app.services.gradcam_storage import GRADCAM_DIR
 from app.services.vlm import VLMProviderFactory, get_vlm_config
 
 
@@ -120,9 +119,7 @@ app.add_middleware(
 )
 
 # Serve GradCAM heatmaps as static files
-_gradcam_dir = Path(tempfile.gettempdir()) / "xade_gradcam"
-_gradcam_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/gradcam", StaticFiles(directory=str(_gradcam_dir)), name="gradcam")
+app.mount("/gradcam", StaticFiles(directory=str(GRADCAM_DIR)), name="gradcam")
 
 # Include routers
 app.include_router(auth.router)

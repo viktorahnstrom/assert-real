@@ -1,9 +1,10 @@
 """
-GradCAM heatmap storage utilities for XADE.
+GradCAM heatmap storage utilities.
 """
 
 from __future__ import annotations
 
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -11,8 +12,8 @@ from typing import Optional
 
 from PIL import Image
 
-_TEMP_DIR = Path(tempfile.gettempdir()) / "xade_gradcam"
-_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+GRADCAM_DIR = Path(os.getenv("GRADCAM_DIR", str(Path(tempfile.gettempdir()) / "gradcam")))
+GRADCAM_DIR.mkdir(parents=True, exist_ok=True)
 
 GRADCAM_SERVE_URL = "http://localhost:8000/gradcam"
 
@@ -26,7 +27,7 @@ def save_heatmap_locally(
     file_id = image_id or str(uuid.uuid4())
     ext = "jpg" if fmt.upper() in ("JPEG", "JPG") else fmt.lower()
     filename = f"gradcam_{file_id}.{ext}"
-    filepath = _TEMP_DIR / filename
+    filepath = GRADCAM_DIR / filename
     overlay_image.save(filepath, format=fmt, quality=90)
     return str(filepath)
 
@@ -40,7 +41,7 @@ def get_local_heatmap_url(filepath: str) -> str:
 def save_ela_locally(ela_bytes: bytes) -> str:
     """Save ELA overlay PNG bytes to the local temp directory and return an HTTP URL."""
     filename = f"ela_{uuid.uuid4()}.png"
-    filepath = _TEMP_DIR / filename
+    filepath = GRADCAM_DIR / filename
     filepath.write_bytes(ela_bytes)
     return f"{GRADCAM_SERVE_URL}/{filename}"
 
@@ -59,7 +60,7 @@ def save_evidence_crops(crops: list[dict]) -> list[dict]:
     results = []
     for i, crop in enumerate(crops):
         file_id = f"{uuid.uuid4()}_region{i}"
-        filepath = _TEMP_DIR / f"gradcam_{file_id}.jpg"
+        filepath = GRADCAM_DIR / f"gradcam_{file_id}.jpg"
         crop["image"].save(filepath, format="JPEG", quality=90)
         results.append(
             {
