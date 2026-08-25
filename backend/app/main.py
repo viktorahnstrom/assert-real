@@ -3,9 +3,11 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -126,13 +128,34 @@ if os.getenv("ENABLE_STUDY_ROUTER", "false").lower() in ("true", "1", "yes"):
     app.include_router(study.router)
 
 
-@app.get("/")
-async def read_root():
-    return {
-        "name": "Assert Real API",
-        "version": "0.1.0",
-        "status": "running",
-    }
+# Serve the built React frontend when running in single-container mode
+# (e.g. Hugging Face Spaces). Disabled by default so local dev and the
+# VPS path (separate nginx container) are unaffected.
+_FRONTEND_DIR = Path(os.getenv("FRONTEND_DIR", "/app/frontend"))
+if os.getenv("SERVE_FRONTEND", "false").lower() in ("true", "1", "yes") and _FRONTEND_DIR.is_dir():
+
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(_FRONTEND_DIR / "index.html")
+
+    # SPA fallback: any path not matched by API routers or /gradcam returns
+    # index.html so React Router can handle client-side routes.
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        file_path = _FRONTEND_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(_FRONTEND_DIR / "index.html")
+
+else:
+
+    @app.get("/")
+    async def read_root():
+        return {
+            "name": "Assert Real API",
+            "version": "0.1.0",
+            "status": "running",
+        }
 
 
 @app.get("/health")
