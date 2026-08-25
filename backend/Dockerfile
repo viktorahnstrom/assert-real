@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     libgl1 \
+    libegl1 \
     wget \
     curl \
     && rm -rf /var/lib/apt/lists/*

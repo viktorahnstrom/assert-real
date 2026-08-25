@@ -5,9 +5,9 @@ services:
     image: caddy:2.8-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -29,7 +29,7 @@ services:
     volumes:
       - app_data:/data
     expose:
-      - "8000"
+      - '8000'
     deploy:
       resources:
         limits:
@@ -39,21 +39,21 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   web:
     image: ghcr.io/viktorahnstrom/assert-real-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     expose:
-      - "80"
+      - '80'
     networks:
       - edge
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
 volumes:
   caddy_data:

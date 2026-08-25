@@ -250,9 +250,7 @@ export async function fetchUserAnalyses(): Promise<AnalysisResult[]> {
     if (!response.ok) return [];
     const data = await response.json();
     // Backend returns { analyses: [...], count: N }
-    return (
-      Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])
-    ) as AnalysisResult[];
+    return (Array.isArray(data) ? data : (data.analyses ?? data.items ?? [])) as AnalysisResult[];
   } catch (err) {
     console.error('fetchUserAnalyses error:', err);
     return [];
