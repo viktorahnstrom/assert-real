@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender-dev \
     libgl1 \
     libegl1 \
+    libgles2 \
     wget \
     curl \
     && rm -rf /var/lib/apt/lists/*
