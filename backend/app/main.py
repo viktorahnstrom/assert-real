@@ -129,8 +129,10 @@ app.include_router(auth.router)
 app.include_router(images.router)
 app.include_router(detect.router, prefix="/api", tags=["detection"])
 app.include_router(analyses.router)
-app.include_router(study.router)
 app.include_router(vlm.router, prefix="/api", tags=["vlm"])
+
+if os.getenv("ENABLE_STUDY_ROUTER", "false").lower() in ("true", "1", "yes"):
+    app.include_router(study.router)
 
 
 @app.get("/")
