@@ -125,7 +125,7 @@ async def upload_image(
     # Derive extension from validated MIME type, never from client filename
     file_ext = ALLOWED_TYPES[file.content_type]
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
-    storage_path = f"uploads/{unique_filename}"
+    storage_path = f"{user.id}/{unique_filename}"
 
     checksum = calculate_checksum(content)
 
