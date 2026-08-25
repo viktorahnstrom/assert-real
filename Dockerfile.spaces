@@ -1,0 +1,121 @@
+# Dockerfile.spaces — single-container image for Hugging Face Spaces (free CPU).
+# Builds the React frontend and the FastAPI backend into one image.
+# HF Spaces requires UID 1000 and exposes port 7860.
+
+# ── Stage 1: frontend build ──────────────────────────────────────────────────
+FROM node:20-alpine AS frontend
+
+WORKDIR /repo
+
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1 \
+    npm_config_electron_skip_binary_download=1
+
+COPY package.json package-lock.json ./
+COPY desktop/package.json ./desktop/
+COPY mobile/package.json ./mobile/
+
+RUN npm ci --workspace=desktop --include-workspace-root
+
+COPY tsconfig.json ./
+COPY shared ./shared
+COPY desktop ./desktop
+
+WORKDIR /repo/desktop
+
+ARG VITE_API_BASE_URL=/api
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
+RUN npm run build:web
+
+
+# ── Stage 2: Python dependency builder ───────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+
+RUN pip install --upgrade pip && \
+    pip install --prefix=/install --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.txt
+
+
+# ── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1 \
+    libegl1 \
+    libgles2 \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    OMP_NUM_THREADS=2 \
+    PORT=7860
+
+# HF Spaces runs as UID 1000. Create user first so COPYs get the right owner.
+RUN useradd -m -u 1000 user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+
+# Writable paths: /data persists across restarts on Spaces, /tmp does not.
+# Point every cache at /tmp (disposable) and GRADCAM_DIR at /tmp/gradcam.
+ENV HF_HOME=/tmp/hf_cache \
+    TORCH_HOME=/tmp/torch_cache \
+    XDG_CACHE_HOME=/tmp/cache \
+    GRADCAM_DIR=/tmp/gradcam
+
+# MediaPipe Face Landmarker (float16, ~6 MB)
+RUN mkdir -p /app/models && \
+    wget -q -O /app/models/face_landmarker.task \
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+
+COPY --chown=user backend/app/ ./app/
+COPY --chown=user backend/pyproject.toml .
+COPY --chown=user backend/scripts/prefetch_models.py ./scripts/prefetch_models.py
+
+# Bake every model weight into the image. Fail the build if any is missing.
+RUN PYTHONPATH=/app python scripts/prefetch_models.py
+
+# Copy the built frontend
+COPY --from=frontend --chown=user /repo/desktop/dist ./frontend
+
+# Single-container mode: FastAPI serves the React build.
+ENV SERVE_FRONTEND=true \
+    FRONTEND_DIR=/app/frontend
+
+RUN chown -R user:user /app
+
+USER user
+
+EXPOSE 7860
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl -fsS http://localhost:7860/health || exit 1
+
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --proxy-headers --forwarded-allow-ips '*'"]
