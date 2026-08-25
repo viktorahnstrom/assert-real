@@ -1,0 +1,65 @@
+name: assert-real
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    depends_on:
+      - backend
+      - web
+    networks:
+      - edge
+
+  backend:
+    image: ghcr.io/viktorahnstrom/assert-real-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - app_data:/data
+    expose:
+      - "8000"
+    deploy:
+      resources:
+        limits:
+          memory: 5g
+    networks:
+      - edge
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    image: ghcr.io/viktorahnstrom/assert-real-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - edge
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_data:
+
+networks:
+  edge:
+    driver: bridge

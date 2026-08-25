@@ -1,0 +1,49 @@
+{
+	email {$ACME_EMAIL}
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Reject oversized uploads before they reach FastAPI.
+	request_body {
+		max_size 25MB
+	}
+
+	# Forward API and GradCAM requests to the backend, path intact.
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			transport http {
+				read_timeout 180s
+				write_timeout 180s
+			}
+		}
+	}
+
+	handle /gradcam/* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		reverse_proxy web:80
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+		format json
+	}
+}
