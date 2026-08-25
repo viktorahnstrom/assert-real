@@ -142,11 +142,14 @@ async def read_root():
 
 
 @app.get("/health")
-@app.get("/api/v1/health")
-async def health_check():
-    """Health check endpoint."""
+async def liveness():
+    """Lightweight liveness probe for Docker HEALTHCHECK / load balancers."""
+    return {"status": "ok"}
 
-    # Check database
+
+@app.get("/api/v1/health")
+async def readiness():
+    """Readiness check — reports dependency status for deploy verification."""
     try:
         client = get_postgrest_client()
         client.from_("profiles").select("id").limit(1).execute()
@@ -154,10 +157,7 @@ async def health_check():
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
 
-    # Check detection model
     model_status = "loaded" if detect.model is not None else "not_loaded"
-
-    # Check VLM service
     vlm_status = "initialized" if detect.vlm_factory is not None else "not_initialized"
 
     return {
