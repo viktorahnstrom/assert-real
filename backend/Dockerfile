@@ -14,12 +14,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
+# Single resolution pass with the CPU-only index so torch+torchvision pins
+# resolve there and every transitive dep sees them as already satisfied.
 RUN pip install --upgrade pip && \
-    # CPU-only torch first, so the 2.4GB CUDA wheel is never pulled.
     pip install --prefix=/install --no-cache-dir \
-        torch torchvision \
-        --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --prefix=/install --no-cache-dir -r requirements.txt
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.txt
 
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
@@ -56,9 +56,9 @@ COPY app/ ./app/
 COPY pyproject.toml .
 COPY scripts/prefetch_models.py ./scripts/prefetch_models.py
 
-# Bake every remaining model weight into the image. Without this the first
-# request after a restart waits on several hundred MB of downloads.
-RUN python scripts/prefetch_models.py
+# Bake every model weight into the image so the container never needs
+# network access to serve a request. Fail the build if any model is missing.
+RUN PYTHONPATH=/app python scripts/prefetch_models.py
 
 # Run unprivileged. Cache dirs must be writable by the app user.
 RUN useradd --create-home --uid 10001 appuser \

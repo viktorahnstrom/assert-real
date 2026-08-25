@@ -54,11 +54,10 @@ def main() -> int:
 
     if failed:
         print(
-            "\nOne or more models failed to prefetch. The image will still "
-            "build, but cold starts will be slow and the first request may "
-            "time out.",
+            "\nOne or more models failed to prefetch. Failing the build.",
             file=sys.stderr,
         )
+        return 1
 
     return 0
 
