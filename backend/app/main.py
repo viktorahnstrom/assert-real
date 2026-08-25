@@ -11,9 +11,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api import detect, vlm
 from app.db import get_postgrest_client
+from app.rate_limit import limiter
 from app.routers import analyses, auth, images, study
 from app.services.vlm import VLMProviderFactory, get_vlm_config
 
@@ -93,6 +96,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Base origins always allowed (local dev)
 _CORS_ORIGINS = [

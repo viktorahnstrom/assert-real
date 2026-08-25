@@ -13,8 +13,10 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
+
+from app.rate_limit import RATE_LIMIT_ANALYSES, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +285,8 @@ async def _run_openai_and_attach_region_comments(
 
 
 @router.post("/analyze", response_model=StudyAnalysisResponse)
-async def analyze_for_study(file: UploadFile = File(...)):
+@limiter.limit(RATE_LIMIT_ANALYSES)
+async def analyze_for_study(request: Request, file: UploadFile = File(...)):
     """
     Run deepfake detection + GradCAM + all VLM providers in parallel.
     Used by the user study Phase 2 to generate the three anonymised explanations.

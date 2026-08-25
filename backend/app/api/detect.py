@@ -11,13 +11,14 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 from torchvision import transforms
 from torchvision.models import EfficientNet_B4_Weights, efficientnet_b4
 
 from app.dependencies.auth import require_auth
+from app.rate_limit import RATE_LIMIT_ANALYSES, limiter
 from app.utils.model_loader import load_model_checkpoint
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,9 @@ def load_detection_model():
 
 
 @router.post("/detect", response_model=DetectionResponse)
+@limiter.limit(RATE_LIMIT_ANALYSES)
 async def detect_deepfake(
+    request: Request,
     file: UploadFile = File(...),
     _user=Depends(require_auth),
 ):

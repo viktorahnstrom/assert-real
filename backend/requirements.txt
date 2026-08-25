@@ -42,5 +42,8 @@ mediapipe>=0.10.0
 # BiSeNet face parsing (pixel-accurate masks for 19 face classes, CelebAMask-HQ)
 facexlib>=0.3.0
 
+# Rate limiting
+slowapi>=0.1.9
+
 # Testing
 pytest>=7.0.0
