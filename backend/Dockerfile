@@ -15,11 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 RUN pip install --upgrade pip && \
-    # Install CPU-only torch first to avoid the 2.4GB CUDA wheel
+    # CPU-only torch first, so the 2.4GB CUDA wheel is never pulled.
     pip install --prefix=/install --no-cache-dir \
         torch torchvision \
         --index-url https://download.pytorch.org/whl/cpu && \
-    # Install everything else (torch already satisfied, pip skips it)
     pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 
@@ -35,21 +34,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender-dev \
     libgl1 \
     wget \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
-COPY app/ ./app/
-COPY pyproject.toml .
 
-# Download the MediaPipe Face Landmarker model (float16, ~6 MB)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/app/.cache/huggingface \
+    TORCH_HOME=/app/.cache/torch \
+    XDG_CACHE_HOME=/app/.cache \
+    OMP_NUM_THREADS=2 \
+    PORT=8000
+
+# MediaPipe Face Landmarker (float16, ~6 MB)
 RUN mkdir -p /app/models && \
     wget -q -O /app/models/face_landmarker.task \
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
 
-ENV HF_HOME=/app/.cache/huggingface
-# Railway injects PORT; default to 8000 for local docker run
-ENV PORT=8000
+COPY app/ ./app/
+COPY pyproject.toml .
+COPY scripts/prefetch_models.py ./scripts/prefetch_models.py
 
-EXPOSE ${PORT}
+# Bake every remaining model weight into the image. Without this the first
+# request after a restart waits on several hundred MB of downloads.
+RUN python scripts/prefetch_models.py
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Run unprivileged. Cache dirs must be writable by the app user.
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/.cache /data \
+    && chown -R appuser:appuser /app /data
+USER appuser
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --proxy-headers --forwarded-allow-ips '*'"]

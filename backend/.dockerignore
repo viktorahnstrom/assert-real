@@ -1,36 +1,17 @@
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-*.egg-info/
-
-# ML artifacts — model auto-downloads from HF Hub
-checkpoints/*.pt
-checkpoints/*.pth
-data/
-results/
-runs/
-wandb/
-
-# Datasets — never in Docker
-140k-real-and-fake-faces/
-faceforensics_frames/
-real_vs_fake/
-
-# Archives
-*.zip
-*.tar.gz
-*.rar
-
-# Dev
 .env
-.env.local
-*.log
-.pytest_cache/
-coverage/
-.ipynb_checkpoints/
-
-# OS
-.DS_Store
-Thumbs.db
+.env.*
+!.env.example
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+tests/
+results/
+checkpoints/
+notebooks/
+*.ipynb
+.venv
+venv
+README.md
