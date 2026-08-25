@@ -118,12 +118,18 @@ CREATE POLICY "Users can insert own images" ON images
 CREATE POLICY "Users can delete own images" ON images
     FOR DELETE USING (auth.uid() = user_id);
 
--- Analyses: users can view/create their own analyses
+-- Analyses: users can CRUD their own analyses
 CREATE POLICY "Users can view own analyses" ON analyses
     FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own analyses" ON analyses
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own analyses" ON analyses
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own analyses" ON analyses
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- User preferences: users can CRUD their own preferences
 CREATE POLICY "Users can view own preferences" ON user_preferences
