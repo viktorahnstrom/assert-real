@@ -1,0 +1,45 @@
+{
+	# Use Caddy's internal CA — issues a self-signed cert for localhost.
+	# No ACME / Let's Encrypt involved.
+	local_certs
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+localhost {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	request_body {
+		max_size 25MB
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			transport http {
+				read_timeout 180s
+				write_timeout 180s
+			}
+		}
+	}
+
+	handle /gradcam/* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		reverse_proxy web:80
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
