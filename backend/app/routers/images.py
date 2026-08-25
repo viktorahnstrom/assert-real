@@ -23,9 +23,13 @@ router = APIRouter(prefix="/api/v1/images", tags=["Images"])
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
-# Allowed image types
-ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+# Allowed image types and their canonical extensions
+ALLOWED_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+MAX_FILE_SIZE = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
 
 
 # ============================================
@@ -87,29 +91,42 @@ async def upload_image(
     """
     logger.info("Image upload by user=%s filename=%s", user.id, file.filename)
 
-    # Validate file type
+    # Validate content type before touching the body
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_TYPES)}",
         )
 
-    # Read file content
-    content = await file.read()
-
-    # Validate file size
-    if len(content) > MAX_FILE_SIZE:
+    # Reject obviously oversized uploads before buffering via content-length
+    # (not all clients send it, so we also check after reading)
+    if file.size is not None and file.size > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400,
+            status_code=413,
             detail=f"File too large. Maximum size: {MAX_FILE_SIZE // 1024 // 1024}MB",
         )
 
-    # Generate unique filename
-    file_ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    # Stream-read with a hard cap so a spoofed content-length can't OOM us
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum size: {MAX_FILE_SIZE // 1024 // 1024}MB",
+            )
+        chunks.append(chunk)
+    content = b"".join(chunks)
+
+    # Derive extension from validated MIME type, never from client filename
+    file_ext = ALLOWED_TYPES[file.content_type]
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
     storage_path = f"uploads/{unique_filename}"
 
-    # Calculate checksum for deduplication
     checksum = calculate_checksum(content)
 
     async with httpx.AsyncClient() as client:
