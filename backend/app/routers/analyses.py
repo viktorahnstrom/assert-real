@@ -807,9 +807,7 @@ async def delete_analysis(analysis_id: str, user: AuthenticatedUser = Depends(re
 
 
 @router.get("/image/{image_id}", response_model=AnalysisListResponse)
-async def get_analyses_for_image(
-    image_id: str, user: AuthenticatedUser = Depends(require_auth)
-):
+async def get_analyses_for_image(image_id: str, user: AuthenticatedUser = Depends(require_auth)):
     """Get all analyses for a specific image. RLS restricts to owner."""
     async with httpx.AsyncClient() as client:
         response = await client.get(
