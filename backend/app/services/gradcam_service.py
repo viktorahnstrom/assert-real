@@ -1,5 +1,5 @@
 """
-Class Activation Mapping service for XADE.
+Class Activation Mapping service.
 
 Generates heatmaps that visualize which facial regions the deepfake detection
 model focused on, enabling grounded VLM explanations.

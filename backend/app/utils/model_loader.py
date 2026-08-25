@@ -1,8 +1,6 @@
 """
-XADE Model Loader
-
-Handles downloading and loading the EfficientNet-B4 checkpoint from
-Hugging Face Hub. Uses weights_only=True on all torch.load calls to
+Model loader — downloads and loads the EfficientNet-B4 checkpoint from
+Hugging Face Hub.  Uses weights_only=True on all torch.load calls to
 prevent arbitrary code execution via pickle deserialization.
 """
 
@@ -47,7 +45,7 @@ def load_model_checkpoint() -> dict:
     Downloads (if needed) and loads the model checkpoint safely.
 
     Uses weights_only=True to prevent arbitrary code execution via pickle.
-    This is the only approved way to load torch checkpoints in XADE.
+    This is the only approved way to load torch checkpoints in this project.
 
     Returns:
         The checkpoint dict containing model_state_dict, val_acc,

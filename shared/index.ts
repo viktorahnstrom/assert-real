@@ -1,2 +1,2 @@
-// XADE shared types
+// Shared types
 export {};

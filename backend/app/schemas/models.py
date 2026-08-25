@@ -1,5 +1,5 @@
 """
-XADE Pydantic Schemas
+Pydantic schemas.
 
 These schemas define the data structures for API requests/responses
 and match the Supabase database tables.

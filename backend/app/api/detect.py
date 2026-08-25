@@ -81,15 +81,15 @@ def load_detection_model():
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        print(f"🔧 Using GPU: {torch.cuda.get_device_name(0)}")
+        logger.info("Using GPU: %s", torch.cuda.get_device_name(0))
     elif torch.backends.mps.is_available():
         device = torch.device("mps")
-        print("🔧 Using Apple Silicon GPU (MPS)")
+        logger.info("Using Apple Silicon GPU (MPS)")
     else:
         device = torch.device("cpu")
-        print("🔧 Using CPU")
+        logger.info("Using CPU")
 
-    print("🔧 Loading detection model...")
+    logger.info("Loading detection model...")
 
     try:
         checkpoint = load_model_checkpoint()
@@ -108,14 +108,15 @@ def load_detection_model():
             ]
         )
 
-        print("✅ Detection model loaded successfully")
-        print(f"   Validation accuracy: {checkpoint.get('val_acc', 0):.2f}%")
-        print(f"   Classes: {class_names}")
-        print(f"   Device: {device}")
+        logger.info(
+            "Detection model loaded (val_acc=%.2f%%, classes=%s, device=%s)",
+            checkpoint.get("val_acc", 0),
+            class_names,
+            device,
+        )
 
     except Exception as e:
-        print(f"❌ Failed to load detection model: {e}")
-        print("   Detection endpoints will not be available")
+        logger.error("Failed to load detection model: %s", e)
         model = None
         device = None
         transform = None

@@ -1,5 +1,5 @@
 """
-Authentication routes for XADE.
+Authentication routes.
 Uses Supabase Auth via HTTP.
 """
 

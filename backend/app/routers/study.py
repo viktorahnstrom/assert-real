@@ -1,5 +1,5 @@
 """
-Study routes for XADE user study.
+Study routes for the user study.
 
 Runs deepfake detection + all three VLM providers in parallel for Phase 2
 explanation comparison. Also persists anonymised participant results.
@@ -110,7 +110,7 @@ class StudyResults(BaseModel):
 
 
 def _results_file() -> Path:
-    results_dir = Path(tempfile.gettempdir()) / "xade_study_results"
+    results_dir = Path(tempfile.gettempdir()) / "assert_real_study_results"
     results_dir.mkdir(parents=True, exist_ok=True)
     return results_dir / "study_results.jsonl"
 

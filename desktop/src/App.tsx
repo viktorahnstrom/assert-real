@@ -220,7 +220,7 @@ function DevToolbar({
           <div className="mt-3 border-t border-xade-charcoal/10 pt-3">
             <button
               onClick={() => {
-                localStorage.removeItem('xade-test-completed');
+                localStorage.removeItem('study-completed');
                 window.location.reload();
               }}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-xade-charcoal/5 px-3 py-1.5 text-xs font-medium text-xade-charcoal/60 hover:bg-xade-charcoal/10"
@@ -254,7 +254,7 @@ function SidebarLogo() {
   const { isCollapsed } = useSidebar();
   return (
     <div className="flex items-center gap-2">
-      {!isCollapsed && <span className="text-lg font-semibold text-xade-blue">XADE</span>}
+      {!isCollapsed && <span className="text-lg font-semibold text-xade-blue">Assert Real</span>}
     </div>
   );
 }
@@ -571,7 +571,7 @@ function UploadView({ onResult, apiMode, vlmProvider }: UploadViewProps) {
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="mb-8 text-center">
         <div className="mb-2 h-px w-48 bg-xade-charcoal/20" />
-        <h1 className="text-7xl font-bold tracking-tight text-xade-blue">XADE</h1>
+        <h1 className="text-7xl font-bold tracking-tight text-xade-blue">Assert Real</h1>
         <div className="mt-2 h-px w-48 bg-xade-charcoal/20" />
       </div>
 
@@ -1056,7 +1056,7 @@ function ThankYouScreen() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-6">
       <div className="w-full max-w-md text-center">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">XADE</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">Assert Real</h1>
           <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.2em] text-xade-charcoal/40">
             Deepfake Detection · User Study
           </p>
@@ -1084,14 +1084,14 @@ const STUDY_ONLY = import.meta.env.VITE_STUDY_ONLY !== 'false';
 function AppRouter() {
   const { user, loading } = useAuth();
   const [testCompleted, setTestCompleted] = useState(
-    () => localStorage.getItem('xade-test-completed') !== null
+    () => localStorage.getItem('study-completed') !== null
   );
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-xade-cream">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-xade-blue">XADE</h1>
+          <h1 className="text-2xl font-bold text-xade-blue">Assert Real</h1>
           <p className="mt-2 text-sm text-xade-charcoal/40">Loading…</p>
         </div>
       </div>

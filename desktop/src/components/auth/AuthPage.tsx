@@ -150,7 +150,7 @@ export default function AuthPage() {
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">XADE</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">Assert Real</h1>
           <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.2em] text-xade-charcoal/40">
             Deepfake Detection
           </p>

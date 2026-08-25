@@ -182,7 +182,7 @@ def _run_gradcam(
 
     except Exception as exc:
         logger.error("GradCAM generation failed: %s\n%s", exc, traceback.format_exc())
-        print(f"[XADE] GradCAM FAILED: {exc}\n{traceback.format_exc()}")
+        # already logged above via logger.error
         return None, None, None, [], []
 
 

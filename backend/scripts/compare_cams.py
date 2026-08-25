@@ -1,5 +1,5 @@
 """
-Qualitative side-by-side comparison of Grad-CAM vs LayerCAM on XADE fakes.
+Qualitative side-by-side comparison of Grad-CAM vs LayerCAM on test fakes.
 
 Runs both CAM methods through the existing GradCAMGenerator against the
 deepfake detector checkpoint used in production, and saves a single PNG per

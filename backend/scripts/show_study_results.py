@@ -1,5 +1,5 @@
 """
-Show XADE user study results.
+Show user study results.
 
 Reads the SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY values from
 backend/.env (no external deps — uses stdlib only) and queries the
@@ -354,7 +354,7 @@ def csv_export(rows: list[dict]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Show XADE study results.")
+    parser = argparse.ArgumentParser(description="Show Assert Real study results.")
     parser.add_argument(
         "--comments", action="store_true", help="dump free-text comments at the end"
     )
@@ -374,7 +374,7 @@ def main() -> None:
         detail_one(rows, args.detail)
         return
 
-    print("XADE Study Results")
+    print("Assert Real Study Results")
     print("==================")
     summary_table(rows)
     aggregate_block(rows)

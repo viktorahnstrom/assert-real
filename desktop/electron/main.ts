@@ -13,7 +13,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    title: 'XADE - Deepfake Detection',
+    title: 'Assert Real',
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

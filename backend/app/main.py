@@ -1,8 +1,6 @@
-"""
-XADE Backend API
-eXplainable Automated Deepfake Evaluation
-"""
+"""Assert Real — backend API."""
 
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -19,19 +17,20 @@ from app.routers import analyses, auth, images, study
 from app.services.gradcam_storage import GRADCAM_DIR
 from app.services.vlm import VLMProviderFactory, get_vlm_config
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    print("🚀 Starting XADE Backend...")
+    logger.info("Starting Assert Real backend")
 
     try:
         client = get_postgrest_client()
         client.from_("profiles").select("id").limit(1).execute()
-        print("✓ Database connection successful")
+        logger.info("Database connection successful")
     except Exception as e:
-        print(f"✗ Database connection failed: {e}")
-        print("  (This is OK if you haven't set up .env yet)")
+        logger.warning("Database connection failed: %s", e)
 
     # Load detection model
     detect.load_detection_model()
@@ -41,57 +40,52 @@ async def lifespan(app: FastAPI):
         from app.services.face_category_mapper import FaceCategoryMapper
 
         detect.face_category_mapper = FaceCategoryMapper()
-        print("✓ Face category mapper initialised (MediaPipe Face Mesh)")
+        logger.info("Face category mapper initialised (MediaPipe Face Mesh)")
     except Exception as e:
-        print(f"✗ Face category mapper failed to initialise: {e}")
-        print("  (Region-to-category mapping will use label fallback)")
+        logger.warning("Face category mapper failed to initialise: %s", e)
 
     # Initialize BiSeNet face parser (pixel-accurate masks for 19 face classes)
     try:
         from app.services.face_parser import FaceParser
 
         detect.face_parser = FaceParser()
-        print("✓ Face parser initialised (BiSeNet, weights lazy-loaded)")
+        logger.info("Face parser initialised (BiSeNet)")
     except Exception as e:
-        print(f"✗ Face parser failed to initialise: {e}")
-        print("  (Region-to-category mapping will fall back to landmarks)")
+        logger.warning("Face parser failed to initialise: %s", e)
 
     # Initialize VLM provider factory
     try:
         vlm_config = get_vlm_config()
         factory = VLMProviderFactory(vlm_config)
 
-        # Share factory with API modules
         detect.vlm_factory = factory
         vlm.vlm_factory = factory
 
-        print(f"✓ VLM service initialized (default: {vlm_config.default_provider})")
+        logger.info("VLM service initialized (default: %s)", vlm_config.default_provider)
 
-        # Log available providers
-        providers = factory.list_providers()
-        for p in providers:
-            status = "✓ available" if p.available else "✗ not configured"
-            print(f"  {p.id}: {p.name} — {status}")
+        for p in factory.list_providers():
+            status = "available" if p.available else "not configured"
+            logger.info("  %s: %s — %s", p.id, p.name, status)
 
-        print(
-            f"  Limits: {vlm_config.max_requests_per_day} req/day, "
-            f"${vlm_config.max_monthly_cost_usd:.2f}/month"
+        logger.info(
+            "  Limits: %d req/day, $%.2f/month",
+            vlm_config.max_requests_per_day,
+            vlm_config.max_monthly_cost_usd,
         )
 
     except Exception as e:
-        print(f"✗ VLM service initialization failed: {e}")
-        print("  (Explanations will not be available)")
+        logger.warning("VLM service initialization failed: %s", e)
 
     yield
 
-    print("👋 Shutting down XADE backend...")
+    logger.info("Shutting down Assert Real backend")
     if detect.face_category_mapper is not None:
         detect.face_category_mapper.close()
 
 
 app = FastAPI(
-    title="XADE Backend API",
-    description="API for eXplainable Automated Deepfake Evaluation",
+    title="Assert Real API",
+    description="Deepfake detection and explainability API",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -135,7 +129,7 @@ if os.getenv("ENABLE_STUDY_ROUTER", "false").lower() in ("true", "1", "yes"):
 @app.get("/")
 async def read_root():
     return {
-        "name": "XADE Backend API",
+        "name": "Assert Real API",
         "version": "0.1.0",
         "status": "running",
     }

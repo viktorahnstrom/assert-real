@@ -1,1 +1,1 @@
-"""XADE Backend Services."""
+"""Backend services."""

@@ -168,7 +168,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-xade-cream p-8">
       <div className="w-full max-w-lg">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">XADE</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-xade-blue">Assert Real</h1>
           <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.2em] text-xade-charcoal/40">
             Deepfake Detection · User Study
           </p>
@@ -833,7 +833,7 @@ function CompleteScreen({
   // them on ThankYouScreen instead of restarting the study.
   useEffect(() => {
     if (STUDY_ONLY_MODE) {
-      localStorage.setItem('xade-test-completed', 'true');
+      localStorage.setItem('study-completed', 'true');
     }
   }, []);
 
@@ -1211,7 +1211,7 @@ export default function DeepfakeTest({ onComplete }: DeepfakeTestProps) {
   }
 
   function handleComplete() {
-    localStorage.setItem('xade-test-completed', 'true');
+    localStorage.setItem('study-completed', 'true');
     onComplete();
   }
 

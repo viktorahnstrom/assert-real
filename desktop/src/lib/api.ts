@@ -402,9 +402,9 @@ export async function saveStudyResults(payload: StudyResultsPayload): Promise<vo
       total_idle_discarded_ms: payload.total_idle_discarded_ms,
       completed_at: payload.completed_at,
     });
-    if (error) console.warn('[XADE study] Supabase insert failed:', error.message);
+    if (error) console.warn('[study] Supabase insert failed:', error.message);
   } catch (err) {
-    console.warn('[XADE study] saveStudyResults failed:', err);
+    console.warn('[study] saveStudyResults failed:', err);
   }
 }
 

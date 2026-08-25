@@ -1,5 +1,5 @@
 """
-XADE Database Configuration
+Database configuration.
 
 Uses PostgREST client for database operations with Supabase.
 """
