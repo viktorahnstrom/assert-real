@@ -99,16 +99,14 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Base origins always allowed (local dev)
+# CORS_ORIGINS: comma-separated list of allowed origins.
+# Local dev defaults are always included; set CORS_ORIGINS in production
+# to the public domain, e.g. "https://assertreal.dev".
 _CORS_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8081",
 ]
-
-# CORS_ORIGINS env var: comma-separated list of additional allowed origins.
-# Set this in Railway/Vercel to the production + preview URLs, e.g.:
-#   https://xade.vercel.app,https://xade-git-main-viktorahnstrom.vercel.app
 _extra = os.getenv("CORS_ORIGINS", "")
 if _extra:
     _CORS_ORIGINS.extend(o.strip() for o in _extra.split(",") if o.strip())
@@ -116,7 +114,6 @@ if _extra:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
-    allow_origin_regex=r"https://xade.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
