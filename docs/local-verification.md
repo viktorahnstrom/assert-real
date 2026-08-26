@@ -2,6 +2,12 @@
 
 Run the full production stack locally against the GHCR images CI already built.
 
+> **Apple Silicon note:** The GHCR images are linux/amd64 only.
+> `docker-compose.local.yml` sets `platform: linux/amd64` so Docker Desktop
+> runs them under Rosetta/QEMU emulation. This works but inference is
+> significantly slower than native — timing observations (model loading,
+> detection latency) do not transfer to the amd64 VPS.
+
 ---
 
 ## Prerequisites
