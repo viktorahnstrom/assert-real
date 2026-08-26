@@ -2,11 +2,20 @@
 
 Run the full production stack locally against the GHCR images CI already built.
 
-> **Apple Silicon note:** The GHCR images are linux/amd64 only.
+> **Apple Silicon limitation:** The GHCR images are linux/amd64 only.
 > `docker-compose.local.yml` sets `platform: linux/amd64` so Docker Desktop
-> runs them under Rosetta/QEMU emulation. This works but inference is
-> significantly slower than native — timing observations (model loading,
-> detection latency) do not transfer to the amd64 VPS.
+> runs them under Rosetta/QEMU emulation. However, **MediaPipe's native
+> binary requires AVX instructions**, which emulation does not provide. The
+> backend process dies with SIGILL during startup (exit code 132). This is
+> not a code bug and will not happen on a real amd64 VPS.
+>
+> **Consequence:** On Apple Silicon, checks 2-11 (anything requiring the
+> backend to be running) can only be verified against a real deployment.
+> Check 1 (prefetch with `--network none`) also fails for the same reason.
+> Only the web container and Caddy routing can be tested locally.
+>
+> The checks below are written for a real amd64 host. Run them on the VPS
+> after provisioning, or on an amd64 CI runner.
 
 ---
 

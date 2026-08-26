@@ -37,7 +37,11 @@ async def lifespan(app: FastAPI):
     # Load detection model
     detect.load_detection_model()
 
-    # Initialize face category mapper (MediaPipe Face Mesh)
+    # Initialize face category mapper (MediaPipe Face Mesh).
+    # Note: this try/except only catches Python-level failures.  MediaPipe's
+    # native binary requires AVX; on CPUs without it (e.g. Docker amd64
+    # emulation on Apple Silicon) the process dies with SIGILL, which cannot
+    # be caught.
     try:
         from app.services.face_category_mapper import FaceCategoryMapper
 

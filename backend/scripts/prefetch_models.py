@@ -12,11 +12,23 @@ import sys
 
 
 def prefetch_detection_model() -> None:
-    """EfficientNet-B4 deepfake detection checkpoint from HuggingFace Hub."""
+    """EfficientNet-B4: both the ImageNet base weights and our fine-tuned checkpoint.
+
+    Constructing DeepfakeDetector downloads the torchvision ImageNet pretrained
+    weights (~74 MB) into TORCH_HOME.  load_model_checkpoint downloads our
+    fine-tuned checkpoint from HuggingFace Hub.  Both must be cached at build
+    time so the container never reaches for the network at runtime.
+    """
+    from app.api.detect import DeepfakeDetector
     from app.utils.model_loader import load_model_checkpoint
 
+    # 1. ImageNet base weights (torchvision cache)
+    DeepfakeDetector()
+    print("  torchvision base weights: ok")
+
+    # 2. Fine-tuned checkpoint (HF Hub cache)
     load_model_checkpoint()
-    print("  detection model: ok")
+    print("  detection checkpoint: ok")
 
 
 def prefetch_face_parser() -> None:
